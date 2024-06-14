@@ -7,7 +7,7 @@ import sys
 import random
 from colorama import Fore, Style
 from selenium import webdriver
-#from StockInput import StockInput
+import pkg_resources
 
 class StockResearch:
     def __init__(self, debug=False):

@@ -43,7 +43,7 @@ class Model_Handler:
         return model.execute_model()
 
     def import_model(self, module_name, class_name):
-         """
+        """
         Import a class from a specified module.
 
         Args:

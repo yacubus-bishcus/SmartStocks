@@ -141,7 +141,7 @@ class CAPM:
 
     def get_name(self):
         return "CAPM"
-        
+
     def execute_model(self):
         # Calculate beta (market volatility) and market risk premium for all stocks
         beta_and_market_risk = [self.calculate_beta_and_market_risk_premium(stock) for stock in self.stock_list]
