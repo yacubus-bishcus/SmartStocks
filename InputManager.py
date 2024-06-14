@@ -1,6 +1,7 @@
 import argparse
 from colorama import Fore, Style
 import sys
+import os
 import pkg_resources
 
 class StockInputManager:
@@ -33,10 +34,10 @@ class StockInputManager:
         self.parser.add_argument('--input',              type=str, help='Input File Path to Read Stock Tickers', required=False)
         self.parser.add_argument('--index',              type=str, help='Index to Compare Models. Options- s&p,dow,nas. Default=s&p', required=False, default='s&p')
         self.parser.add_argument('--max_price',          type=str, help='Filter Price', required=False, default="1000.00")
-        self.parser.add_argument('--models',             nargs='+', help= 'List of Models to use in the calculation. Default is a Daily calculation and CAPM model.', required=False, default=['default','capm'])
+        self.parser.add_argument('--models',             nargs='+', help= 'List of Models to use in the calculation. Default is a Daily calculation and CAPM model.', required=False, default=['default','capm','rsi'])
         self.parser.add_argument('--min_price',          type=str, help='Filter Price', required=False, default="1.00")
         self.parser.add_argument('--number_to_highlight',type=str, help='Number of Stocks to Highlight in report. Default is 3.', required=False, default='3')
-        self.parser.add_argument('--number_to_research', type=str, help='Number of Stocks to Research. Default is 5.', required=False, default="5")
+        self.parser.add_argument('--number_to_research', type=str, help='Number of Stocks to Research. Default is 5.', required=False, default="10")
         self.parser.add_argument('--output',             type=str, help='Writes data to an output file as a report', required=False, default=None)
         self.parser.add_argument('--price',              action='store_true', help='Display individual ticker price', required=False, default=False)
         self.parser.add_argument('--recommendations',    action='store_true', help='Display Recommendations for a given stock', required=False, default=False)

@@ -12,9 +12,8 @@ from requests import Session
 from requests_cache import CacheMixin, SQLiteCache
 from requests_ratelimiter import LimiterMixin, MemoryQueueBucket
 from pyrate_limiter import Duration, RequestRate, Limiter
-from StockApp.input_handler_package.StockInputManager import StockInputManager
-from StockApp.input_handler_package.StockInput import StockInput
-from StockApp.stock_analysis.StockAnalysis import Analysis 
+from StockApp.stock_analysis.StockAnalysis import Analysis
+from StockApp.InputManager import StockInput, StockInputManager 
 
 class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
     pass

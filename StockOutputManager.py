@@ -2,6 +2,12 @@ from docx import Document
 from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from datetime import datetime
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from fpdf import FPDF
 
 class WordPrinter:
     _instance = None
@@ -25,22 +31,17 @@ class WordPrinter:
         content = self.remove_invalid_characters(content)
         paragraph = self.doc.add_paragraph()
         run = paragraph.add_run(content)
-
         # Font size
         run.font.size = Pt(font_size)
-
         # Font name
         run.font.name = font_name
-
         # Bold, italic, underline
         run.bold = bold
         run.italic = italic
         run.underline = underline
-
         # Color
         if color:
             run.font.color.rgb = RGBColor(*color) # convert (r,g,b) on scale 0 - 255
-
 
         # Alignment
         if alignment:
@@ -91,7 +92,17 @@ class WordPrinter:
     def save(self):
         self.doc.save(self.filename)
 
-class MyOutput:
+    def add_plots_to_word(self, plots):
+        for plot in plots:
+            # Add a heading for the plot
+            self.doc.add_heading(plot.title, level=1)
+            # add the plot image to the document
+            self.doc.add_picture(plot.image_path, width=Inches(6))
+            # Add a page break after each plot
+            self.doc.add_page_break()
+
+
+class OutputHandler:
     def __init__(self, filename, debug=False):
         self.filename = filename
         self.debug = debug
@@ -101,12 +112,46 @@ class MyOutput:
             print("Closing: ", self.filename)
         pass
 
-    def write_to_word_file(self, content):
-        # Create a new Document object
-        self.doc = Document()
+    def convert_word_to_pdf(self, word_filename, pdf_filename):
+        # Read the Word document
+        doc = Document(word_filename)
 
-        # Add content to the document
-        self.doc.add_paragraph(content)
+        # Create a PDF object
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
 
-        # Save the document to the specified output file
-        self.doc.save(self.filename)
+        # Add each paragraph from the Word document to the PDF
+        for para in doc.paragraphs:
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.cell(200, 10, txt=para.text, ln=True)
+
+        # Save the PDF
+        pdf.output(pdf_filename)
+
+    def email_file(self, filename, email_to, email_subject, email_body, smtp_server, smtp_port, smtp_username, smtp_password):
+        # Create a multipart message
+        msg = MIMEMultipart()
+        msg['From'] = smtp_username
+        msg['To'] = email_to
+        msg['Subject'] = email_subject
+
+        # Add body to email
+        msg.attach(MIMEText(email_body, 'plain'))
+
+        # Open and attach the file to the email
+        attachment = open(filename, "rb")
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f"attachment; filename= {filename}")
+        msg.attach(part)
+
+        # Connect to SMTP server and send email
+        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
+            server.login(smtp_username, smtp_password)
+            server.sendmail(smtp_username, email_to, msg.as_string())
+
+    # Usage example:
+    # output_handler = OutputHandler()
+    # output_handler.email_file("output.pdf", "recipient@example.com", "PDF Report", "Please find atta

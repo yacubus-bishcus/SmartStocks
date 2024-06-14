@@ -47,8 +47,10 @@ class StockResearch:
             ftp_server.quit()
 
     def list_ticker_symbols(self):
-        df = pd.read_csv("nasdaqlisted.txt", sep="|")
-        df2 = pd.read_csv("otherlisted.txt", sep="|")
+        filepath = pkg_resources.resource_filename('StockApp.data', "nasdaqlisted.txt")
+        df = pd.read_csv(filepath, sep="|")
+        filepath = pkg_resources.resource_filename('StockApp.data', "otherlisted.txt")
+        df2 = pd.read_csv(filepath, sep="|")
         # filter out ETFs
         filtered_df1 = df[df['ETF'] != "Y"]
         filtered_df2 = df2[df2['ETF'] != "Y"]
@@ -56,7 +58,7 @@ class StockResearch:
         combined_df = pd.concat([filtered_df1, filtered_df2], ignore_index=True)
         combined_df = combined_df.drop_duplicates(subset=['Symbol'])
         if self.debug:
-            print(combined_df.head(10))
+            print(combined_df.head(3))
             print("StockResearch::list_ticker_symbols Total Tickers: ", len(combined_df))
         tickers = combined_df['Symbol'].to_list()
         filtered_tickers = [value for value in tickers if isinstance(value, str) and not value.startswith("File")]

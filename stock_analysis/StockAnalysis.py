@@ -1,4 +1,5 @@
 from StockApp.stock_analysis.StockResearch import StockResearch
+from StockApp.Model_Handler import Model_Handler
 from datetime import datetime, timedelta
 from colorama import Fore, Style
 import pandas_datareader.data as web
@@ -38,11 +39,11 @@ class Analysis:
             self.args = args
             self.args_set = True
             if self.debug:
-                print("MyAnalysis::set_args_once --> Args set.")
+                print("StockAnalysis::Analysis::set_args_once --> Args set.")
 
         else:
             if self.debug:
-                print("MyAnalysis::set_args_once --> Args already set.")
+                print("StockAnalysis::Analysis::set_args_once --> Args already set.")
 
     def conduct_monthly_report(self, args, output):
         self.set_args_once(args)
@@ -51,7 +52,7 @@ class Analysis:
         research.get_ticker_symbols()
         all_tickers = research.list_ticker_symbols()
         if self.debug:
-            print("MyAnalysis::conduct_monthly_report::Grabbing Market Data")
+            print("StockAnalysis::Analysis::conduct_monthly_report::Grabbing Market Data")
 
         # Ensure you can grab market data and establish risk free rate or MODELS
         # Will not work and program will quit
@@ -60,30 +61,80 @@ class Analysis:
         self.determine_risk_free_rate()
 
         if self.market_data is None:
-            print(Fore.RED + "FATAL ERROR: MyAnalysis::conduct_monthly_report --> market_data is empty. Check Internet Connection." + Style.RESET_ALL)
+            print(Fore.RED + "FATAL ERROR: StockAnalysis::Analysis::conduct_monthly_report --> market_data is empty. Check Internet Connection." + Style.RESET_ALL)
             return
         if self.risk_free_rate is None:
-            print(Fore.RED + "FATAL ERROR: MyAnalysis::conduct_monthly report::determine_risk_free_rate no return. Check Internet Connection." + Style.RESET_ALL)
+            print(Fore.RED + "FATAL ERROR: StockAnalysis::Analysis::conduct_monthly report::determine_risk_free_rate no return. Check Internet Connection." + Style.RESET_ALL)
             return
+
         # Choose Random tickers from nasdaqlisted.txt and otherlisted.txt
-        chosen_tickers = research.choose_tickers(all_tickers, len(args.models))
+        chosen_tickers = research.choose_tickers(all_tickers, int(args.number_to_research))
         # Determine top performances from my input list
-        performers, user_tickers = self.determine_top_performers(self.stock_list, args.models, True)
-        top_performers, top_tickers = self.pull_top_performers(performers, user_tickers, int(args.number_to_highlight))
+        # apply cuts on inputed research list
+        filtered_stocks = []
+        filtered_tickers = []
+        for stock in self.stock_list:
+            stock = MyStock(stock)
+            if not self.apply_cuts(stock):
+                filtered_stocks.append(stock)
+                filtered_tickers.append(stock.symbol)
+
+        performers = self.determine_top_performers(filtered_stocks, args.models)
+        top_performers, top_tickers = self.pull_top_performers(performers, filtered_tickers, int(args.number_to_highlight))
         if top_performers.empty or len(top_tickers) == 0:
             return
-        # Determine top performances from my research list
+        ########################################################################
+        ########## Determine top performances from my research list ############
+        ########################################################################
         research_stocks = [yf.Ticker(symbol) for symbol in chosen_tickers]
-        research_performers = self.determine_top_performers(research_stocks, args.models)
-        research_top_performers, research_top_tickers = self.pull_top_performers(research_performers, chosen_tickers, int(args.number_to_highlight))
+
+        # Apply cuts to researched stocks here
+        filtered_research_stocks = []
+        filtered_research_tickers = []
+        for stock in research_stocks:
+            stock = MyStock(stock)
+            if not self.apply_cuts(stock):
+                filtered_research_stocks.append(stock)
+                filtered_research_tickers.append(stock.symbol)
+
+        research_performers = self.determine_top_performers(filtered_research_stocks, args.models)
+        research_top_performers, research_top_tickers = self.pull_top_performers(research_performers, filtered_research_tickers, int(args.number_to_highlight))
+
         if research_top_performers.empty or len(research_top_tickers) == 0:
             return
 
+        ########################################################################
+        ########## Top Performance gets a Model Graphical Page #################
+        ########################################################################
+        the_number_one, the_number_one_ticker = self.pull_top_performers(performers, filtered_tickers, 1)
+        the_number_one_researched, the_number_one_researched_ticker = self.pull_top_performers(research_performers, filtered_research_tickers, 1)
+
+        target_stock = None
+        target_stock2 = None
+        for myStock in filtered_stocks:
+            if myStock.symbol == the_number_one_ticker:
+                target_stock = myStock
+
+        for myStock in filtered_research_stocks:
+            if myStock.symbol == the_number_one_researched_ticker:
+                target_stock2 = myStock
+
+        number_one_model = Model_Handler(target_stock, self.market_data, self.risk_free_rate, self.time_delta, self.debug)
+        number_one_model.add_all_plotting_models()
+        plot1 = number_one_model.plot_catcher()
+        number_one_research_model = Model_Handler(target_stock2, self.market_data, self.risk_free_rate, self.time_delta, self.debug)
+        number_one_research_model.add_all_plotting_models()
+        plot2 = number_one_research_model.plot_catcher()
+        ########################################################################
+        ##################### Write Results to Output File #####################
+        ########################################################################
         if top_tickers is not None and research_top_tickers is not None:
             # write the header
-            output.create_executive_summary(top_tickers, research_top_tickers)
-            output.create_document_heading()
-            output.create_document_tables(performers, research_stocks, top_performers, research_top_performers)
+            if args.output and not args.debug:
+                output.create_executive_summary(top_tickers, research_top_tickers)
+                output.create_document_heading()
+                output.create_document_tables(performers, research_stocks, top_performers, research_top_performers)
+                output.add_plots_to_word([plot1, plot2])
         else:
             return
 
@@ -96,7 +147,8 @@ class Analysis:
 
         self.market_data = self.index_stock.get_history(index, time_delta)
         if self.debug:
-            print("MyAnalysis::set_market_data: market data --> ", self.market_data)
+            print("StockAnalysis::Analysis::set_market_data: market data --> ")
+            print(self.market_data.head(3))
 
         self.market_data['daily_return'] = self.market_data['Close'].pct_change()
 
@@ -106,48 +158,89 @@ class Analysis:
         treasury_yield_data = None
         treasury_yield_data = web.DataReader('DGS10','fred',self.start_date.date(), self.end_date.date())
         if treasury_yield_data is None:
-            print(Fore.RED + "FATAL ERROR: MyAnalysis::determine_risk_free_rate --> Treasury Yield Data Missing. Check Internet Connection." + Style.RESET_ALL)
+            print(Fore.RED + "FATAL ERROR: StockAnalysis::Analysis::determine_risk_free_rate --> Treasury Yield Data Missing. Check Internet Connection." + Style.RESET_ALL)
             self.risk_free_rate = None
             return
     # Get the latest risk-free rate (last available value)
         self.risk_free_rate = treasury_yield_data['DGS10'].iloc[-1] / 100  # Convert percentage to decimal
 
         if self.debug:
-            print("MyAnalysis::determine_risk_free_rate:Risk Free Rate --> ", self.risk_free_rate)
+            print("StockAnalysis::Analysis::determine_risk_free_rate:Risk Free Rate --> ", self.risk_free_rate)
 
-    def determine_top_performers(self, stock_list, chosen_models=['default','capm'], need_tickers=False):
+    """
+    Outputs a pandas DataFrame containing the normalized sums of each chosen
+    models outputs. In essense create an order of merit rating system for each
+    stock. Input includes a list of MyStock objects and chosen_models to perform.
+    """
+    def determine_top_performers(self, myStock_list, chosen_models=['default','capm']):
         tickers = []
         # iterating over ticker object in a list of ticker objects
         # making a list of ticker symbols
-        for stock in stock_list:
-            tickers.append(stock.info.get('symbol'))
+        for stock in myStock_list:
+            tickers.append(stock.symbol)
 
         if self.debug:
-            print("MyAnalysis::determine_top_performers tickers --> ", tickers)
+            print("StockAnalysis::Analysis::determine_top_performers tickers --> ", tickers)
+        # Initate Model Handler to add models as necessary
+        models = Model_Handler(myStock_list, self.market_data, self.risk_free_rate, self.time_delta, self.debug)
 
-        num_stocks = len(stock_list)
-        number_of_performance_measures = len(chosen_models) + len(args.import_model_class)
-        # Initialize performance array
-        performance = np.zeros((num_stocks, number_of_performance_measures), dtype=float)
+        # Determine the total number of models to be applied to the stock
+        if self.args.import_model_class is not None:
+            number_of_performance_measures = len(chosen_models) + len(self.args.import_model_class)
+        else:
+            number_of_performance_measures = len(chosen_models)
 
-        if args.import_model_class != "":
+        # Initialize performance array based on the number of stocks and the
+        # total number of models to be applied to the stock
+        performance = np.zeros((len(myStock_list), number_of_performance_measures), dtype=float)
+
+        # IF THE USER is assigning their own model to the stock this code will
+        # execute the model using execute_model method and place the output in
+        # the performance array assign models also outputs the model name from
+        # get_name method.
+        if self.args.import_model_class != "" and self.args.import_model_class is not None:
             model_names = []
-            for i, (module, class_name) in enumerate(zip(args.import_model_module, args.import_model_class)):
-                performance[:, i], model_name = self.assign_models(module, class_name, stock_list)
+            for i, (module, class_name) in enumerate(zip(self.args.import_model_module, self.args.import_model_class)):
+                performance[:, i], model_name = self.assign_models(module, class_name, myStock_list)
                 model_names.append(model_name)
 
+        # IF THE USER is assigned their own model AND they want the program
+        # internal models to be used this code executes the program internal
+        # models and adds their outputs to the performance array. Again the
+        # performance array here contains each models output for each given
+        # stock. the data here is yet to be normalized or labled.
         for index, model in enumerate(chosen_models):
-            performance[:, index + len(args.import_model_class)] = models.add_model(model)
+            if self.args.import_model_class is not None:
+                if models.add_model(model) is not None:
+                    performance[:, index + len(self.args.import_model_class)] = models.add_model(model)
+            else:
+                if models.add_model(model) is not None:
+                    performance[:, index] = models.add_model(model)
 
-        columns = model_names + chosen_models
+        # Assign column names based on the models used names
+        if self.args.import_model_class is not None:
+            columns = model_names + chosen_models
+        else:
+            columns = chosen_models
+
+        # create a pandas DataFrame given the performance array and apply labels
         perf_df = pd.DataFrame(performance, columns=columns, index=tickers)
         # if self.debug:
         #     perf_df.to_excel('debugging.xlsx', index=False, sheet_name='Performance')
-        #     print("MyAnalysis::determine_top_performers --> Performance written to excel.")
+        #     print("StockAnalysis::Analysis::determine_top_performers --> Performance written to excel.")
 
         # here i normalize each column will return a zero column if each value
         # is the same
         #norm_df = perf_df.apply(lambda x: (x - x.min()) / (x.max() - x.min()))
+        """
+        The fit_transform method calculates the scaling parameters
+        (e.g., median, IQR) based on the data and then applies the scaling to
+        the data, returning the scaled data as robust_scaled_data. this code
+        snippet scales the data in perf_df using robust scaling, ensuring that
+        the scaling is less influenced by outliers compared to standard scaling
+        methods like MinMaxScaler or StandardScaler. The scaled data is then
+        stored in the DataFrame norm_df for further analysis.
+        """
         scaler = RobustScaler()
         robust_scaled_data = scaler.fit_transform(perf_df)
         norm_df = pd.DataFrame(robust_scaled_data, columns=perf_df.columns, index=perf_df.index)
@@ -162,14 +255,11 @@ class Analysis:
         row_sums = norm_df.sum(axis=1)
         norm_df['Rating'] = row_sums
         # #
-        # if self.debug:
-        #     norm_df.to_excel('debugging.xlsx', index=True, sheet_name='Final')
-        #     print("MyAnalysis::determine_top_performers --> Final written to excel.")
+        if self.debug:
+            norm_df.to_excel('debugging.xlsx', index=True, sheet_name='Final')
+            print("StockAnalysis::Analysis::determine_top_performers --> Final written to excel.")
 
-        if need_tickers:
-            return norm_df, tickers
-        else:
-            return norm_df
+        return norm_df
 
     def pull_top_performers(self, df, tickers, filter=2):
         if len(tickers) > filter:
@@ -177,21 +267,21 @@ class Analysis:
             top_df = pd.DataFrame(top_performers)
             top_df_tickers = top_df.iloc[:,0].tolist()
             if self.debug:
-                print("MyAnalysis::pull_top_performers Top Tickers --> ", top_df_tickers)
+                print("StockAnalysis::Analysis::pull_top_performers Top Tickers --> ", top_df_tickers)
             # if self.debug:
             #     book = load_workbook('debugging.xlsx')
             #     writer = pd.ExcelWriter('debugging.xlsx', engine='openpyxl')
             #     writer.book = book
             #     top_df.to_excel(writer, index=True, sheet_name='Top Performers')
             #     writer.save()
-            #     print("MyAnalysis::pull_top_performers --> Top Performers written to excel.")
+            #     print("StockAnalysis::Analysis::pull_top_performers --> Top Performers written to excel.")
         else:
-            print(Fore.YELLOW + "USER ERROR: MyAnalysis::pull_top_performers --> \
-             Requesting more Performers than Researched. This could result \
-             from too many of the researched stocks being filtered based on \
-             your filters. Try increasing the amount of stocks researched, \
-             change your filters, or decrease your --number_to_highlight and \
-             try again." + Style.RESET_ALL)
+            print(Fore.YELLOW + "USER ERROR: StockAnalysis::Analysis::pull_top_performers -->" \
+             "Requesting more Performers than Researched. This could result " \
+             "from too many of the researched stocks being filtered based on "\
+             "your filters. Try increasing the amount of stocks researched, "\
+             "change your filters, or decrease your --number_to_highlight and "\
+             "try again." + Style.RESET_ALL)
             return pd.DataFrame(), []
         return top_df, top_df_tickers
 
@@ -483,12 +573,12 @@ class Analysis:
                     else:
                         return imported_model.execute_model(), imported_model.get_name()
                 else:
-                    print(Fore.YELLOW + "MyAnalysis::assign_models USER ERROR: USERs imported module " \
+                    print(Fore.YELLOW + "StockAnalysis::Analysis::assign_models USER ERROR: USERs imported module " \
                     "must have two methods: 'execute_model' and 'get_name'"\
                     "execute_model executes the models calculations. SEE EXAMPLE "\
                     "PROVIDED RelativeStrengthIndex Module/class." + Style.RESET_ALL)
             except Exception as e:
-                print(Fore.RED + "MyAnalysis::assign_models Error --> " + Style.RESET_ALL + "{e}")
+                print(Fore.RED + "StockAnalysis::Analysis::assign_models Error --> " + Style.RESET_ALL + "{e}")
                 return None, ""
         else:
             return None, ""
@@ -498,6 +588,24 @@ class Analysis:
     def grab_useful_parameters(self, stock_list):
         return stock_list, self.market_data, self.risk_free_rate, self.time_delta, self.debug
 
+    # Apply Cuts method called in conduct_monthly_report input is a MyStock object
+    def apply_cuts(self, myStock):
+        # filter out any penny stock tickers
+        if myStock.price is None:
+            return True
+        if myStock.price < float(self.args.min_price) or myStock.price > float(self.args.max_price):
+            print(myStock.name, " is out of the price range, skipping.")
+            return True
+        # Filter out any ETFs
+        if myStock.is_etf:
+            return True
+        # Ensure fifty percent is not none
+        if myStock.fifty_percent is None:
+            return True
+
+## -----------------------------------------------------------------------------------------##
+## ----------------------------- INDEX_STOCKS CLASS    ----------- -------------------------##
+## -----------------------------------------------------------------------------------------##
 class Index_Stocks:
     def __init__(self, debug=None):
         self.sap_ticker = '^GSPC'
@@ -540,6 +648,10 @@ class Index_Stocks:
         else:
             print(Fore.YELLOW + "USER ERROR: Index_Stocks::get_history --> Index Name Not Found" + Style.RESET_ALL)
             return None
+
+## -----------------------------------------------------------------------------------------##
+## ----------------------------- CompareStocks CLASS    ----------- ------------------------##
+## -----------------------------------------------------------------------------------------##
 
 class CompareStocks:
     def __init__(self, stock1=None, stock2=None, debug=None, output=None):
@@ -608,41 +720,34 @@ class CompareStocks:
             output_string = self.stock1.name + " is underperforming " + self.stock2.name + " by " + str(self.difference) + " percent."
             self.output.write(output_string, color=(128,0,0))
 
+
+## -----------------------------------------------------------------------------------------##
+## ----------------------------- MyStock CLASS    ----------- ------------------------------##
+## -----------------------------------------------------------------------------------------##
+
 class MyStock:
     # python only reads one __init__
     def __init__(self, stock, debug=None, output=None):
         # initialize attributes
         self.symbol = None
         self.name = None
-        self.recommendations = None
-        self.longBusinessSummary = None
+        self.the_recommendations = None
+        self.the_summary = None
         self.price = 0.
         self.daily_percent = 0.
         self.twohundred_percent = 0.
         self.fifty_percent = 0.
-        # Constructor with 3 arguments
-        if stock is not None and debug is not None and output is not None:
-            if isinstance(stock, list):
-                self.stock = stock[0]
-            else:
-                self.stock = stock
-            self.symbol = self.stock.info['symbol']
-            self.debug = debug
-            self.output = output
-        # Constructor with 2 Arguments
-        elif stock is not None and debug is not None:
-            if isinstance(stock, list):
-                self.stock = stock[0]
-            else:
-                self.stock = stock
+        self.is_etf = False
+        self.the_history = None
 
-            self.symbol = self.stock.info['symbol']
-            self.debug = debug
-        # Constructor with 1 Argument (minimum)
+        if isinstance(stock, list):
+            self.stock = stock[0]
         else:
             self.stock = stock
-            self.debug = False
 
+        self.symbol = self.stock.info['symbol']
+        self.debug = debug
+        self.output = output
         self.is_index = False
         index_funds = ['^IXIC','^DJI','^GSPC']
         if self.symbol in index_funds:
@@ -724,8 +829,12 @@ class MyStock:
                 print(self.info)
             return
 
-        self.summary = self.info.get('longBusinessSummary')
-        self.recommendations = self.stock.recommendations
+        self.the_summary = self.info.get('longBusinessSummary')
+        self.the_recommendations = self.stock.recommendations
+        self.the_history = self.stock.history(period="1y")
+
+        if self.info.get('quoteType') == "ETF":
+            self.is_etf = True
 
     def __del__(self):
         pass
