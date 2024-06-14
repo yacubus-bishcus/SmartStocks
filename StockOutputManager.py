@@ -57,18 +57,30 @@ class WordPrinter:
             for i, value in enumerate(row):
                 table.cell(index+1, i).text = str(value)
 
-    def create_executive_summary(self, top_performers, research_performers):
-        self.executive_summary = "EXECUTIVE SUMMARY: This report checked the \
-        user list provided in Table 3. Additionally, research was conducted on \
-        the tickers provided in Table 4. Your top performing stocks are " + top_performers + \
-        ". The algorithm projects the following researched stocks as the top potential performers " \
-        + research_performers + ". The top performers are summarized in Table 1 and \
-        Table 2 respectively."
+    def create_executive_summary(self, top_performers="", research_performers=""):
+        if top_performers !="" and research_performers !="":
+            self.executive_summary = "EXECUTIVE SUMMARY: This report checked the \
+            user list provided in Table 3. Additionally, research was conducted on \
+            the tickers provided in Table 4. Your top performing stocks are " + top_performers + \
+            ". The algorithm projects the following researched stocks as the top potential performers " \
+            + research_performers + ". The top performers are summarized in Table 1 and \
+            Table 2 respectively."
+        elif top_performers !="" and research_performers == "":
+            self.executive_summary = "EXECUTIVE SUMMARY: This report checked the \
+            user list provided in Table 2. Your top performing stocks are " + top_performers + \
+            ". The top performers are summarized in Table 1."
+        elif top_performers =="" and research_performers !="":
+            self.executive_summary = "EXECUTIVE SUMMARY: This report checked the \
+            researched list provided in Table 2. Your top performing stocks are " + research_performers + \
+            ". The top performers are summarized in Table 1."
+        else:
+            print("StockOutputManager::create_executive_summary FATAL ERROR --> Top Performers are empty strings.")
+            return
 
 
     def create_document_heading(self):
         # creates default document heading for montly reports
-        header = "Stock Market Monthly Report"
+        header = "Stock Market Report Powered by StockApp"
         current_date_time = datetime.now()
         current_date = current_date_time.date()
         header_date = "Report Date: " + str(current_date)
@@ -76,16 +88,28 @@ class WordPrinter:
         self.write(header_date, color=(128,0,0))
         self.write(self.executive_summary)
 
-    def create_document_tables(self, user_list=None, research_list=None, top_perf=None, research_top=None):
-        if top_perf is not None:
-            self.write_table(top_perf, "TABLE 1. User Top Performers")
-        if research_top is not None:
-            self.write_table(research_top, "TABLE 2. Research Top Performers")
-        if user_list is not None:
-            self.write_table(user_list, "TABLE 3. User Listed Stocks")
-        if research_list is not None:
-            self.write_table(research_list, "TABLE 4. Research Listed Stocks")
-
+    def create_document_tables(self, user_list=None, research_list=None, top_perf=None, research_top=None, table_count=0):
+        if table_count == 4:
+            if top_perf is not None:
+                self.write_table(top_perf, "TABLE 1. User Top Performers")
+            if research_top is not None:
+                self.write_table(research_top, "TABLE 2. Research Top Performers")
+            if user_list is not None:
+                self.write_table(user_list, "TABLE 3. User Listed Stocks")
+            if research_list is not None:
+                self.write_table(research_list, "TABLE 4. Research Listed Stocks")
+        elif table_count == 2:
+            if top_perf is not None:
+                self.write_table(top_perf, "TABLE 1. User Top Performers")
+            if research_top is not None:
+                self.write_table(research_top, "TABLE 1. Research Top Performers")
+            if user_list is not None:
+                self.write_table(user_list, "TABLE 2. User Listed Stocks")
+            if research_list is not None:
+                self.write_table(research_list, "TABLE 2. Research Listed Stocks")
+        else:
+            print(Fore.RED + "StockOutputManager::create_document_tables FATAL ERROR --> Table Count must equal 2 or 4." + Style.RESET_ALL)
+            
     def remove_invalid_characters(self, content):
         return content.encode('ascii', 'ignore').decode('ascii')
 

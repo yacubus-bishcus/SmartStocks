@@ -13,7 +13,7 @@ from requests_cache import CacheMixin, SQLiteCache
 from requests_ratelimiter import LimiterMixin, MemoryQueueBucket
 from pyrate_limiter import Duration, RequestRate, Limiter
 from StockApp.stock_analysis.StockAnalysis import Analysis
-from StockApp.InputManager import StockInput, StockInputManager 
+from StockApp.InputManager import StockInput, StockInputManager
 
 class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
     pass
@@ -68,7 +68,7 @@ def main():
     # Okay now check if we are conducting a monthly report
     if args.report:
         report_analysis = Analysis(stock_list=listed_stocks, time_delta=args.time_delta, debug=args.debug)
-        report_analysis.conduct_monthly_report(args, output)
+        report_analysis.conduct_report(args, output)
 
     # Okay now check if we are conducting Research outside of monthly report
     if args.suggest:

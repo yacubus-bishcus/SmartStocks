@@ -45,12 +45,13 @@ class Analysis:
             if self.debug:
                 print("StockAnalysis::Analysis::set_args_once --> Args already set.")
 
-    def conduct_monthly_report(self, args, output):
+    def conduct_report(self, args, output):
         self.set_args_once(args)
         # Grab Research Tickers
-        research = StockResearch(args.debug)
-        research.get_ticker_symbols()
-        all_tickers = research.list_ticker_symbols()
+        if args.research:
+            research = StockResearch(args.debug)
+            research.get_ticker_symbols()
+            all_tickers = research.list_ticker_symbols()
         if self.debug:
             print("StockAnalysis::Analysis::conduct_monthly_report::Grabbing Market Data")
 
@@ -66,9 +67,6 @@ class Analysis:
         if self.risk_free_rate is None:
             print(Fore.RED + "FATAL ERROR: StockAnalysis::Analysis::conduct_monthly report::determine_risk_free_rate no return. Check Internet Connection." + Style.RESET_ALL)
             return
-
-        # Choose Random tickers from nasdaqlisted.txt and otherlisted.txt
-        chosen_tickers = research.choose_tickers(all_tickers, int(args.number_to_research))
         # Determine top performances from my input list
         # apply cuts on inputed research list
         filtered_stocks = []
@@ -86,45 +84,49 @@ class Analysis:
         ########################################################################
         ########## Determine top performances from my research list ############
         ########################################################################
-        research_stocks = [yf.Ticker(symbol) for symbol in chosen_tickers]
+        # Choose Random tickers from nasdaqlisted.txt and otherlisted.txt
+        if args.research:
+            chosen_tickers = research.choose_tickers(all_tickers, int(args.number_to_research))
+            research_stocks = [yf.Ticker(symbol) for symbol in chosen_tickers]
 
-        # Apply cuts to researched stocks here
-        filtered_research_stocks = []
-        filtered_research_tickers = []
-        for stock in research_stocks:
-            stock = MyStock(stock)
-            if not self.apply_cuts(stock):
-                filtered_research_stocks.append(stock)
-                filtered_research_tickers.append(stock.symbol)
+            # Apply cuts to researched stocks here
+            filtered_research_stocks = []
+            filtered_research_tickers = []
+            for stock in research_stocks:
+                stock = MyStock(stock)
+                if not self.apply_cuts(stock):
+                    filtered_research_stocks.append(stock)
+                    filtered_research_tickers.append(stock.symbol)
 
-        research_performers = self.determine_top_performers(filtered_research_stocks, args.models)
-        research_top_performers, research_top_tickers = self.pull_top_performers(research_performers, filtered_research_tickers, int(args.number_to_highlight))
+            research_performers = self.determine_top_performers(filtered_research_stocks, args.models)
+            research_top_performers, research_top_tickers = self.pull_top_performers(research_performers, filtered_research_tickers, int(args.number_to_highlight))
 
-        if research_top_performers.empty or len(research_top_tickers) == 0:
-            return
+            if research_top_performers.empty or len(research_top_tickers) == 0:
+                return
 
         ########################################################################
         ########## Top Performance gets a Model Graphical Page #################
         ########################################################################
         the_number_one, the_number_one_ticker = self.pull_top_performers(performers, filtered_tickers, 1)
-        the_number_one_researched, the_number_one_researched_ticker = self.pull_top_performers(research_performers, filtered_research_tickers, 1)
-
         target_stock = None
-        target_stock2 = None
         for myStock in filtered_stocks:
             if myStock.symbol == the_number_one_ticker:
                 target_stock = myStock
-
-        for myStock in filtered_research_stocks:
-            if myStock.symbol == the_number_one_researched_ticker:
-                target_stock2 = myStock
-
         number_one_model = Model_Handler(target_stock, self.market_data, self.risk_free_rate, self.time_delta, self.debug)
         number_one_model.add_all_plotting_models()
         plot1 = number_one_model.plot_catcher()
-        number_one_research_model = Model_Handler(target_stock2, self.market_data, self.risk_free_rate, self.time_delta, self.debug)
-        number_one_research_model.add_all_plotting_models()
-        plot2 = number_one_research_model.plot_catcher()
+
+        if args.research:
+            the_number_one_researched, the_number_one_researched_ticker = self.pull_top_performers(research_performers, filtered_research_tickers, 1)
+
+            target_stock2 = None
+            for myStock in filtered_research_stocks:
+                if myStock.symbol == the_number_one_researched_ticker:
+                    target_stock2 = myStock
+            number_one_research_model = Model_Handler(target_stock2, self.market_data, self.risk_free_rate, self.time_delta, self.debug)
+            number_one_research_model.add_all_plotting_models()
+            plot2 = number_one_research_model.plot_catcher()
+
         ########################################################################
         ##################### Write Results to Output File #####################
         ########################################################################
@@ -133,9 +135,24 @@ class Analysis:
             if args.output and not args.debug:
                 output.create_executive_summary(top_tickers, research_top_tickers)
                 output.create_document_heading()
-                output.create_document_tables(performers, research_stocks, top_performers, research_top_performers)
+                output.create_document_tables(performers, research_stocks, top_performers, research_top_performers, 4)
                 output.add_plots_to_word([plot1, plot2])
+        elif top_tickers is not None and research_top_tickers is None:
+            if args.output and not args.debug:
+                output.create_executive_summary(top_tickers)
+                output.create_document_heading()
+                output.create_document_tables(user_list=performers, top_perf=top_performers, 2)
+                output.add_plots_to_word([plot1])
+        elif top_tickers is None and research_top_tickers is not None:
+            if args.output and not args.debug:
+                output.create_executive_summary(research_top_tickers)
+                output.create_document_heading()
+                output.create_document_tables(research_list=research_stocks, research_top=research_top_performers, 2)
+                output.add_plots_to_word([plot2])
         else:
+            if self.debug:
+                print(Fore.RED + "StockAnalysis::conduct_report --> FATAL ERROR: Tickers not found." + Style.RESET_ALL)
+
             return
 
     def set_market_data(self, index, time_delta):
@@ -172,12 +189,13 @@ class Analysis:
     models outputs. In essense create an order of merit rating system for each
     stock. Input includes a list of MyStock objects and chosen_models to perform.
     """
-    def determine_top_performers(self, myStock_list, chosen_models=['default','capm']):
+    def determine_top_performers(self, myStock_list, chosen_models=['50 Day','200 Day','capm']):
         tickers = []
         # iterating over ticker object in a list of ticker objects
         # making a list of ticker symbols
         for stock in myStock_list:
             tickers.append(stock.symbol)
+            prices.append(stock.price)
 
         if self.debug:
             print("StockAnalysis::Analysis::determine_top_performers tickers --> ", tickers)
@@ -254,6 +272,7 @@ class Analysis:
         #here I sum the models "scores" after normalizing
         row_sums = norm_df.sum(axis=1)
         norm_df['Rating'] = row_sums
+        norm_df['Price'] = prices 
         # #
         if self.debug:
             norm_df.to_excel('debugging.xlsx', index=True, sheet_name='Final')
@@ -266,6 +285,7 @@ class Analysis:
             top_performers = df.nlargest(filter, 'Rating')
             top_df = pd.DataFrame(top_performers)
             top_df_tickers = top_df.iloc[:,0].tolist()
+
             if self.debug:
                 print("StockAnalysis::Analysis::pull_top_performers Top Tickers --> ", top_df_tickers)
             # if self.debug:
