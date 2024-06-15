@@ -3,6 +3,7 @@ from colorama import Fore, Style
 import sys
 import os
 import pkg_resources
+import pandas as pd
 
 class StockInputManager:
     def __init__(self):
@@ -29,6 +30,7 @@ class StockInputManager:
         self.parser.add_argument('--compare_50',         action='store_true', help='Display 50 day average comparison to Dow, Nasdaq, and S&P500', required=False, default=False)
         self.parser.add_argument('--compare_200',        action='store_true', help='Display 200 day average comparison to Dow, Nasdaq, and S&P500', required=False, default=False)
         self.parser.add_argument('--compare_Daily',      action='store_true', help='Display daily comparison to Dow, Nasdaq, and S&P500', required=False, default=False)
+        self.parser.add_argument('--data',               nargs='+', help='Import Research Ticker Data from list of files. Default is nasdaqlisted.txt and otherlisted.txt', required=False, default=['nasdaqlisted.txt', 'otherlisted.txt'])
         self.parser.add_argument('--debug',              action='store_true', help='Debugging mode for developing', required=False, default=False)
         self.parser.add_argument('--import_model_class', nargs='+', help='Input the class name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
         self.parser.add_argument('--import_model_module',nargs='+', help='Input the module name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
@@ -99,11 +101,13 @@ class StockInputManager:
 
     def apply_input_conditions(self):
         stocks = []
+        if self.args.research:
+            self.clean_import_data()
         # Check if there is an input file to read for tickers
         if self.args.input is not None:
             if(self.args.debug):
                 print("InputManager::apply_input_conditions -- > Reading Input File: ", self.args.input)
-            inputfile = StockInput(self.args.input, self.args.debug)
+            inputfile = StockInput(filename=self.args.input, debug=self.args.debug)
             self.ticker_list = inputfile.read_txt_file()
             if(self.args.debug):
                 print("InputManager::apply_input_conditions --> Analysing the following Tickers: ", self.ticker_list)
@@ -135,25 +139,60 @@ class StockInputManager:
         research_analysis = Analysis(chosen_stocks, self.args)
         research_analysis.execute_stock_program(output)
 
+    def clean_import_data(self):
+        if len(self.args.data) > 0:
+            for filename in self.args.data:
+                input = StockInput(filename, "data", self.args.debug)
+                df = input.clean_data(output_filename=filename)
+
 
 class StockInput:
-    def __init__(self, filename, debug=False):
+    def __init__(self, filename=None, directory=None, debug=False):
         self.filename = filename
+        self.directory = directory
         self.debug = debug
 
     def __del(self):
         pass
 
-    def read_txt_file(self):
-        data = []
-        filepath = pkg_resources.resource_filename('StockApp.user_input', self.filename)
-        if os.path.exists(filepath):
-            with open(filepath, 'r') as file:
-                for line in file:
-                    # Remove newline characters and any leading/trailing whitespaces
-                    line = line.strip()
-                    data.append(line)
-        else:
-            print(f"The file '{self.filename}' does not exist. Please check spelling and retry.")
-            sys.exit(0)
-        return data
+    def read_txt_file(self, input_filename=None):
+        # Read data into a DataFrame
+        if input_filename == None:
+            if self.filename != None:
+                if self.directory == None or self.directory == "user_input":
+                    input_filename = pkg_resources.resource_filename('StockApp.user_input', self.filename)
+                elif self.directory == "data":
+                    input_filename = pkg_resources.resource_filename('StockApp.data', self.filename)
+
+        try:
+            df = pd.read_csv(input_filename, delimiter='|')
+        except FileNotFoundError:
+            print(f"InputManager::read_txt_file --> Error: File '{input_filename}' not found.")
+            exit(1)
+        except pd.errors.EmptyDataError:
+            print(f"InputManager::read_txt_file --> Error: File '{input_filename}' is empty or cannot be read as CSV.")
+            exit(1)
+
+        return df
+
+    def clean_data(self, input_filename=None, output_filename=None):
+        # Read data into a DataFrame
+        df = self.read_txt_file(input_filename)
+        before = len(df)
+        # Filter rows where "ETF" column is not equal to "Y"
+        filtered_df = df[df['ETF'] != 'Y']
+        df_cleaned = filtered_df.dropna(subset=['ETF'])
+        after = len(df_cleaned)
+        # Write filtered data to a new file
+        try:
+            df_cleaned.to_csv(output_filename, sep='|', index=False)  # Writing as tab-delimited data
+            print(f"\nInputManager::clean_data --> Filtered data has been written to '{output_filename}'.")
+            print("InputManager::clean_data Total filtered Rows --> ", before-after)
+        except PermissionError:
+            print(f"InputManager::clean_data --> Error: Permission denied to write to '{output_filename}'.")
+            exit(1)
+        except Exception as e:
+            print(f"InputManager::clean_data --> Error occurred while writing to '{output_filename}': {str(e)}")
+            exit(1)
+
+        return df_cleaned
