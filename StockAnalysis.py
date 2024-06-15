@@ -53,7 +53,7 @@ class Analysis:
     def conduct_report(self, output):
         # Grab Research Tickers
         if self.args.research:
-            research = Research(self.args.debug)
+            research = Research(self.args.data, self.args.debug)
             research.get_ticker_symbols()
             all_tickers = research.list_ticker_symbols()
         if self.debug:
@@ -147,13 +147,13 @@ class Analysis:
             if self.args.output and not self.args.debug:
                 output.create_executive_summary(top_tickers)
                 output.create_document_heading()
-                output.create_document_tables(user_list=performers, top_perf=top_performers, 2)
+                output.create_document_tables(user_list=performers, top_perf=top_performers, table_count=2)
                 output.add_plots_to_word([plot1])
         elif top_tickers is None and research_top_tickers is not None:
             if self.args.output and not self.args.debug:
                 output.create_executive_summary(research_top_tickers)
                 output.create_document_heading()
-                output.create_document_tables(research_list=research_stocks, research_top=research_top_performers, 2)
+                output.create_document_tables(research_list=research_stocks, research_top=research_top_performers, table_count=2)
                 output.add_plots_to_word([plot2])
         else:
             if self.debug:
@@ -906,11 +906,11 @@ class MyStock:
 ## -----------------------------------------------------------------------------------------##
 
 class Research:
-    def __init__(self, debug=False):
+    def __init__(self, filenames=["nasdaqlisted.txt", "otherlisted.txt"], debug=False):
         self.debug = debug
         if self.debug:
-            print("Research::Research --> Grabbing All Tickers...")
-        self.filenames = ["nasdaqlisted.txt", "otherlisted.txt"]
+            print("StockAnalysis::Research --> Grabbing All Tickers...")
+        self.filenames = filenames
 
     def fetch_csv_data(self, url):
         response = requests.get(url)
@@ -920,26 +920,36 @@ class Research:
     def get_ticker_symbols(self):
         # Check if we already have the files
         count = 0
+
+        # Check if we already have the files in the data folder
         for filename in self.filenames:
             filepath = pkg_resources.resource_filename('StockApp.data', filename)
             if os.path.exists(filepath):
                 if self.debug:
-                    print("Research::get_ticker_symbols File -->", filename, " found.")
+                    print(Fore.GREEN + f"StockAnalysis::Research::get_ticker_symbols File '{filename}' found in data folder." + Style.RESET_ALL)
                 count += 1
 
-        if count == 2:
+        # If all files are found in the data folder, skip download
+        if count == len(self.filenames):
             if self.debug:
-                print("Research::get_ticker_symbols --> Skipping Download...")
+                print(Fore.GREEN + "StockAnalysis::Research::get_ticker_symbols Skipping download as all files are already present." + Style.RESET_ALL)
         else:
+            # Connect to FTP server and download missing files
             ftp_server = ftplib.FTP("ftp.nasdaqtrader.com")
             ftp_server.login()
-            ftp_server.encoding = "utf-8"
             ftp_server.cwd('Symboldirectory')
-            ftp_server.dir()
 
             for filename in self.filenames:
-                with open(filename, "wb") as file:
-                    ftp_server.retrbinary(f"RETR {filename}", file.write)
+                local_filepath = pkg_resources.resource_filename('StockApp.data', filename)
+                if not os.path.exists(local_filepath):
+                    with open(local_filepath, "wb") as file:
+                        ftp_server.retrbinary(f"RETR {filename}", file.write)
+                    if self.debug:
+                        print(Fore.GREEN + f"StockAnalysis::Research::get_ticker_symbols Downloaded '{filename}' from FTP server." + Style.RESET_ALL)
+                else:
+                    if self.debug:
+                        print(Fore.GREEN + f"StockAnalysis::Research::get_ticker_symbols File '{filename}' already exists locally." + Style.RESET_ALL)
+
             ftp_server.quit()
 
     def list_ticker_symbols(self):
@@ -955,7 +965,7 @@ class Research:
         combined_df = combined_df.drop_duplicates(subset=['Symbol'])
         if self.debug:
             print(combined_df.head(3))
-            print("Research::list_ticker_symbols Total Tickers: ", len(combined_df))
+            print("StockAnalysis::Research::list_ticker_symbols Total Tickers: ", len(combined_df))
         tickers = combined_df['Symbol'].to_list()
         filtered_tickers = [value for value in tickers if isinstance(value, str) and not value.startswith("File")]
         return filtered_tickers
@@ -976,7 +986,7 @@ class Research:
     def choose_tickers(self, my_list, number):
         random_tickers = random.sample(my_list, number)
         if self.debug:
-            print("Research::choose_tickers Tickers Chosen --> ", random_tickers)
+            print("StockAnalysis::Research::choose_tickers Tickers Chosen --> ", random_tickers)
         return random_tickers
 
     def grab_dogs_of_the_dow(self):
@@ -991,7 +1001,7 @@ class Research:
         # Parse the HTML content using BeautifulSoup
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         # if self.debug:
-        #     print("Research::grab_dogs_of_the_dow --> Soup: ", soup)
+        #     print("StockAnalysis::Research::grab_dogs_of_the_dow --> Soup: ", soup)
         # Find the table containing the tickers
         table = soup.find('table', class_='tablepress tablepress-id-5 tablepress-responsive dataTable no-footer')
         # Extract tickers from the table
@@ -1002,13 +1012,13 @@ class Research:
                 tickers.append(ticker)
             if self.debug:
                 # Print the extracted tickers
-                print("Research::grab_dogs_of_the_dow --> " \
+                print("StockAnalysis::Research::grab_dogs_of_the_dow --> " \
                 "Tickers from Dogs of the Dow:")
                 for ticker in tickers:
                     print(ticker)
 
         else:
-            print(Fore.RED + "FATAL ERROR Research::grab_dogs_of_the_dow " \
+            print(Fore.RED + "FATAL ERROR StockAnalysis::Research::grab_dogs_of_the_dow " \
             "--> Failed to find Table of tickers." + Style.RESET_ALL)
 
         driver.quit()

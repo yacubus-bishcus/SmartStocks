@@ -131,7 +131,7 @@ class StockInputManager:
             self.execute_research()
 
     def execute_research(self):
-        research = StockResearch()
+        research = Research(self.args.data, self.args.debug)
         research.get_ticker_symbols()
         all_tickers = research.list_ticker_symbols()
         chosen_tickers = research.choose_tickers(all_tickers, int(self.args.number_to_research))
