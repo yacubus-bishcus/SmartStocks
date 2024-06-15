@@ -13,6 +13,7 @@ class StockInputManager:
 
     def _set_stockapp_parser(self):
         self.parser = argparse.ArgumentParser(description="Python Coded Stock Analysis.")
+        self.parser.add_argument('--as_pdf',             action='store_true', help='Writes report in PDF format.', required=False, default=False)
         self.parser.add_argument('--change',             action='store_true', help='Display individual ticker current day change', required=False, default=False)
         self.parser.add_argument('--change_50',          action='store_true', help='Display individual ticker 50 day change', required=False, default=False)
         self.parser.add_argument('--change_200',         action='store_true', help='Display individual ticker 200 day change', required=False, default=False)
@@ -38,11 +39,11 @@ class StockInputManager:
         self.parser.add_argument('--min_price',          type=str, help='Filter Price', required=False, default="1.00")
         self.parser.add_argument('--number_to_highlight',type=str, help='Number of Stocks to Highlight in report. Default is 3.', required=False, default='3')
         self.parser.add_argument('--number_to_research', type=str, help='Number of Stocks to Research. Default is 5.', required=False, default="10")
-        self.parser.add_argument('--output',             type=str, help='Writes data to an output file as a report', required=False, default=None)
+        self.parser.add_argument('--output',             type=str, help='Writes data to an output file .txt and as a word document report. Apply --as_pdf to output a PDF instead.', required=False, default=None)
         self.parser.add_argument('--price',              action='store_true', help='Display individual ticker price', required=False, default=False)
         self.parser.add_argument('--recommendations',    action='store_true', help='Display Recommendations for a given stock', required=False, default=False)
         self.parser.add_argument('--report',             action='store_true', help='Create Montly Report', required=False, default=False)
-        self.parser.add_argument('--suggest',            action='store_true', help='Suggests Tickers that are outperforming Indices. If input is provided it will read from tickers provided. Otherwise will randomly search 100 tickers.', required=False, default=None)
+        self.parser.add_argument('--research',            action='store_true', help='Use in conjunction with --report if you want randomly selected stocks to be included in the report. Otherwise --research will execute any of the other provided functions E.g. --compare.', required=False, default=None)
         self.parser.add_argument('--summary',            action='store_true', help='Display individual ticker business summary', required=False, default=False)
         self.parser.add_argument('--ticker',             type=str, help='Use for individual ticker analysis', required=False)
         self.parser.add_argument('--time_delta',         type=str, help='Time Delta for calculating analysis. Default is 1mo', required=False, default="1mo")
@@ -60,10 +61,7 @@ class StockInputManager:
             return False
 
         # If importing own finance model you MUST input a Module name and class name
-        if self.args.import_model_class is not None and self.args.import_model_module is None:
-            print(Fore.YELLOW + "USER INPUT ERROR: If importing own finance model must input both a module name and a class name." + Style.RESET_ALL)
-            return False
-        if self.args.import_model_class is None and self.args.import_model_module is not None:
+        if self.args.import_model_class is not None != self.args.import_model_module is None:
             print(Fore.YELLOW + "USER INPUT ERROR: If importing own finance model must input both a module name and a class name." + Style.RESET_ALL)
             return False
         # Index input must be one of the three indexes
@@ -81,23 +79,62 @@ class StockInputManager:
             if self.args.ticker is not None:
                 print(Fore.YELLOW + "USER ERROR: When report flag is selected Ticker flag cannot be utilized.")
                 return False
-            elif self.args.input is None:
-                print(Fore.YELLOW + "USER ERROR: When report flag is selected input flag must be given with an input filename.")
-                return False
-            elif self.args.suggest is not None:
-                print(Fore.YELLOW + "USER ERROR: When report flag is detected. Suggest flag cannot be utilized.")
-                return False
-            elif self.args.summary or self.args.change or self.args.change_50 or self.args.change_200 or self.args.recommendations:
+            elif any([self.args.summary, self.args.change, self.args.change_50, self.args.change_200, self.args.recommendations]):
                 print(Fore.YELLOW + "USER ERROR: When report flag is detected. Individual Ticket Flags cannot be utilized.")
                 return False
 
-        else:
-            return True
+        # Print disclaimer about report and research
+        if self.args.report and self.args.research:
+            print(Fore.YELLOW + "InputManager::conduct_stockapp_input_checks " \
+            "WARNING --> When the flags for --report and --research are called " \
+            "the report will contain randomly selected stocks from the data " \
+            "files. No additional calculations will be ran on the researched" \
+            "stocks even if another flag is passed since no individual stock" \
+            "calculations can be conducted with the --report flag.")
 
         return True
 
     def grab_args(self):
         return self.args
+
+    def apply_input_conditions(self):
+        stocks = []
+        # Check if there is an input file to read for tickers
+        if self.args.input is not None:
+            if(self.args.debug):
+                print("InputManager::apply_input_conditions -- > Reading Input File: ", self.args.input)
+            inputfile = StockInput(self.args.input, self.args.debug)
+            self.ticker_list = inputfile.read_txt_file()
+            if(self.args.debug):
+                print("InputManager::apply_input_conditions --> Analysing the following Tickers: ", self.ticker_list)
+
+            #Form the stocks only once from the List
+            stocks = [yf.Ticker(symbol) for symbol in ticker_list]
+
+        # Conduct analysis with only one stock
+        if self.args.ticker is not None:
+            stocks = [yf.Ticker(self.args.ticker)]
+
+        analysis = Analysis(stocks, self.args)
+
+        if self.args.report:
+            analysis.conduct_report(output)
+        else:
+            analysis.execute_stock_program(output)
+
+        # Okay now check if we are conducting Research outside of monthly report
+        if self.args.research and not self.args.report:
+            self.execute_research()
+
+    def execute_research(self):
+        research = StockResearch()
+        research.get_ticker_symbols()
+        all_tickers = research.list_ticker_symbols()
+        chosen_tickers = research.choose_tickers(all_tickers, int(self.args.number_to_research))
+        chosen_stocks = yf.Tickers(chosen_tickers)
+        research_analysis = Analysis(chosen_stocks, self.args)
+        research_analysis.execute_stock_program(output)
+
 
 class StockInput:
     def __init__(self, filename, debug=False):

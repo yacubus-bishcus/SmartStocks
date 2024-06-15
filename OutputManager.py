@@ -109,7 +109,7 @@ class WordPrinter:
                 self.write_table(research_list, "TABLE 2. Research Listed Stocks")
         else:
             print(Fore.RED + "StockOutputManager::create_document_tables FATAL ERROR --> Table Count must equal 2 or 4." + Style.RESET_ALL)
-            
+
     def remove_invalid_characters(self, content):
         return content.encode('ascii', 'ignore').decode('ascii')
 
@@ -136,9 +136,9 @@ class OutputHandler:
             print("Closing: ", self.filename)
         pass
 
-    def convert_word_to_pdf(self, word_filename, pdf_filename):
+    def convert_word_to_pdf(self):
         # Read the Word document
-        doc = Document(word_filename)
+        doc = Document(self.filename)
 
         # Create a PDF object
         pdf = FPDF()
@@ -149,7 +149,7 @@ class OutputHandler:
             pdf.add_page()
             pdf.set_font("Arial", size=12)
             pdf.cell(200, 10, txt=para.text, ln=True)
-
+        pdf_filename = self.filename.replace(".doc", ".pdf")
         # Save the PDF
         pdf.output(pdf_filename)
 
