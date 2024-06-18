@@ -4,7 +4,7 @@ This program allows the user to run various financial models on a group of user 
 Financial Disclaimer
 ==
 
-The creator referenced shall be know as Jacob E Bickus.
+The creator referenced shall be known as Jacob E Bickus.
 The Content is for informational purposes only, you should not construe any such
 information or other material as legal, tax, investment, financial, or other
 advice. Nothing contained on the StockApp Program constitutes a solicitation, recommendation, endorsement, or offer by the creator or any third party service provider to buy or sell any securities or other financial instruments in this or in in any other jurisdiction in which such solicitation or offer would be unlawful under the securities laws of such jurisdiction.

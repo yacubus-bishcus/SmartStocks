@@ -1,6 +1,11 @@
 from colorama import Fore, Style
 import inspect
 from StockApp.Models import *
+import logging
+from collections import namedtuple
+
+
+logger = logging.getLogger(__name__)
 
 """
 Model Handler Class allows each model whether internal to the program or imported
@@ -8,13 +13,20 @@ from the users model class access to the list of MyStock objects, market data df
 risk free rate, time period to look at the models and debugging capabilities.
 """
 class Model_Handler:
-    def __init__(self, myStock_list=None, market_data=None, risk_free_rate=None, time_delta="1mo", debug=False):
+    def __init__(self, myStock_list=None, market_data=None, risk_free_rate=None, args=None):
         # Initialize attributes
         self.stock_list = myStock_list
         self.market_data = market_data
         self.risk_free_rate = risk_free_rate
-        self.time_delta = time_delta
-        self.debug = debug
+        self.args = args
+        if args is not None:
+            self.time_delta = self.args.model_time_delta
+        else:
+            self.time_delta = "1y"
+
+        self.futures_data = []
+        self.sim_market_data = []
+        self.sim_market_stock = None
 
     def __del__(self):
         pass
@@ -23,93 +35,131 @@ class Model_Handler:
     method will return the results from each models execute_model method.
     """
     def add_model(self, model_name):
-        if self.debug:
-            print("Model_Handler::add_model Adding Model -->", model_name)
+        #logger.info(f"Adding Model --> {model_name}")
 
-        if model_name.lower() == "50":
+        if model_name.lower() == "fifty day":
             return self.get_50_model()
-        elif model_name.lower() == "200":
+        elif model_name.lower() == "two hundred day":
             return self.get_200_model()
         elif model_name.lower() == "capm":
             return self.get_capm_model()
         elif model_name.lower() == "rsi":
             return self.get_rsi_model()
-        elif model_name.lower() == "fibonacci":
+        elif model_name.lower() == "fibo":
             return self.get_fibonnaci_model()
-        elif model_name.lower() == "stocastic_oscillator":
+        elif model_name.lower() == "stochastic":
             return self.get_stochastic_oscillator_model()
         elif model_name.lower() == "macd":
             return self.get_macd_model()
         else:
-            print(Fore.RED + "USER ERROR: Model_Handler::add_model model_name not found." + Style.RESET_ALL)
+            logger.error(Fore.RED + "USER ERROR: Model_Handler::add_model model_name not found." + Style.RESET_ALL)
             return None
 
     def set_models(self, model_instances):
         self.model_instances = model_instances
 
+    # only plot future prices, macd with future prices and rsi
+    # to add more requires additional debugging with datetime objects causing
+    # issues
     def add_all_plotting_models(self):
-        self.set_models([self.get_capm_instance, self.get_rsi_instance, self.get_fibonnaci_instance, self.get_stochastic_oscillator_instance, self.get_macd_instance])
+        self.set_models([self.get_futures_instance, self.get_macd_instance, self.get_rsi_instance])
 
-    def plot_catcher(self):
-        fig, axes = plt.subplots(len(self.model_instances), figsize=(10,6* len(self.model_instances)))
+    """
+    Function 'catches' all model instances and plots each of the calcuations.
+    Those plots are tossed to a list and return alongside their plot captions
+    """
+    def plot_catcher(self, output_filename):
+        # Plot = namedtuple('Plot',['title', 'image_path'])
+        plt.ioff()
+        #fig, axes = plt.subplots(len(self.model_instances), figsize=(10,6* len(self.model_instances)))
+        figures = []
         for i, model_instance in enumerate(self.model_instances):
-            ax = axes[i] if len(self.model_instances) > 1 else axes
-            model_instance.plot(ax)
+            #ax = axes[i] if len(self.model_instances) > 1 else axes
+            plot_obj = model_instance()  # Assuming model_instance is callable and returns a plot object
+            figure = plot_obj.plot(stock_name=self.stock_list.symbol)
+            caption = plot_obj.get_caption()
+            figure.text(0.5,-0.2, caption, ha='center', fontsize=8)
+            figure.tight_layout(pad=2.0)
+            figures.append(figure)
 
-        plt.tight_layout()
-        return fig 
+        return figures
+
     ## -----------------------GETTERS Functions-----------------------------##
 
     def get_50_model(self):
-        model = Fifty_Day_Model(self.stock_list, self.debug)
+        model = Fifty_Day_Model(self.stock_list)
         return model.execute_model()
 
     def get_200_model(self):
-        model = TwoHundred_Day_Model(self.stock_list, self.debug)
+        model = TwoHundred_Day_Model(self.stock_list)
         return model.execute_model()
 
+    def pass_futures_data(self, futures_data): # here futures data is a dataframe of the best stock to plot
+        # here i convert the Dataframe into a series
+        self.futures_data = futures_data.mean(axis=0)
+        self.futures_data.name = 'Price'
+        # here i want the x axis to be future dates
+
+        dates = [datetime.today() + timedelta(days=i) for i in range(len(self.futures_data))]
+        #dates.append(date.strftime('%Y-%m-%d'))
+        futures = self.futures_data.to_frame().reset_index(drop=True)
+        futures['Date'] = dates
+        futures.set_index('Date', inplace=True)
+        self.futures_data = futures
+
+    def pass_futures_market_data(self, market_data):
+        self.sim_market_data = market_data
+
+    def pass_market_stock(self, myStock):
+        self.sim_market_stock = myStock
+
     def get_capm_model(self):
-        model = CAPM(self.stock_list, self.market_data, self.risk_free_rate, self.time_delta, self.debug)
+        model = CAPM(myStock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate, td=self.time_delta)
         return model.execute_model()
 
     def get_rsi_model(self):
-        model = RSI(stock_list=self.stock_list, debug=self.debug)
+        model = RSI(myStock_list=self.stock_list, time_period=self.time_delta)
         return model.execute_model()
 
     def get_fibonnaci_model(self):
-        model = FIBONACCI(myStock_list=self.stock_list, time_delta=self.time_delta, debug=self.debug)
+        model = FIBONACCI(myStock_list=self.stock_list, time_period=self.time_delta)
         return model.execute_model()
 
     def get_stochastic_oscillator_model(self):
-        model = STOCHASTIC_OCSILLATOR(myStock_list=self.stock_list, time_delta=self.time_delta, debug=self.debug)
+        model = STOCHASTIC(myStock_list=self.stock_list, time_period=self.time_delta)
         return model.execute_model()
 
     def get_macd_model(self):
-        model = MACD(myStock_list=self.stock_list, debug=self.debug)
+        model = MACD(myStock_list=self.stock_list, time_period=self.time_delta)
         return model.execute_model()
 
+    def get_futures_instance(self):
+        model = FUTURES(self.futures_data, self.sim_market_data, self.sim_market_stock, self.args)
+        model.execute_model()
+        return model
+
     def get_capm_instance(self):
-        model = CAPM(self.stock_list, self.market_data, self.risk_free_rate, self.time_delta, self.debug)
+        model = CAPM(myStock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate, td=self.time_delta, futures_data=self.futures_data)
         model.execute_model()
         return model
 
     def get_rsi_instance(self):
-        model = RSI(myStock_list=self.stock_list, debug=self.debug)
+        model = RSI(myStock_list=self.stock_list, futures_data=self.futures_data, time_period=self.time_delta)
         model.execute_model()
         return model
 
     def get_fibonnaci_instance(self):
-        model = FIBONACCI(myStock_list=self.stock_list, time_delta=self.time_delta, debug=self.debug)
+        model = FIBONACCI(myStock_list=self.stock_list, time_period=self.time_delta, futures_data=self.futures_data)
         model.execute_model()
         return model
 
     def get_stochastic_oscillator_instance(self):
-        model = STOCHASTIC_OCSILLATOR(myStock_list=self.stock_list, time_delta=self.time_delta, debug=self.debug)
+        model = STOCHASTIC(myStock_list=self.stock_list, time_period=self.time_delta, futures_data=self.futures_data)
         model.execute_model()
         return model
 
     def get_macd_instance(self):
-        model = MACD(myStock_list=self.stock_list, debug=self.debug)
+        model = MACD(myStock_list=self.stock_list, futures_data=self.futures_data, time_period = self.time_delta)
         model.execute_model()
         return model
     """
