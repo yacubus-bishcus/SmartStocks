@@ -13,14 +13,10 @@ from sklearn.preprocessing import RobustScaler, StandardScaler, PowerTransformer
 import os
 import sys
 import pkg_resources
-from tqdm import tqdm
 import logging
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
-from scipy.stats import poisson, gamma
-from scipy.optimize import minimize
-from scipy.special import gamma, gammaln
 
 
 logger = logging.getLogger(__name__)
@@ -31,11 +27,7 @@ class Analysis:
         self.myIndexStock = None
         self.risk_free_rate = None
         self.args = args
-        self.today = datetime.today()
         self.total_cuts = 0
-        # total time for fred data will be a year
-        self.start_date = self.today - timedelta(days=30 * 12) # fred data will always start a year ago
-        self.end_date = self.today - timedelta(days=1) # fred data will always end on yesterday
 
     def __del__(self):
         pass
@@ -53,97 +45,6 @@ class Analysis:
             logger.debug("StockAnalysis::Analysis::set_args_once --> Args set.")
         else:
             logger.debug("StockAnalysis::Analysis::set_args_once --> Args already set.")
-
-    def conduct_report(self, output, sheet_name):
-        # Initialize local variables
-        top_tickers = []
-        performers = pd.DataFrame()
-        top_performers = pd.DataFrame()
-        filename = ""
-        figures = []
-
-        if self.args.output.endswith(".docx"):
-            filename = self.args.output.replace(".docx", ".png")
-        filepath = pkg_resources.resource_filename('StockApp.output', filename)
-
-        logger.info("Grabbing Market Data...")
-        # Ensure you can grab market data and establish risk free rate or MODELS
-        # Five year market data
-        market_data = self.get_market_data(self.args.index)
-        logger.info("Grabbing Simulated Market Data...")
-        # user selected sim_market period time
-        sim_market_data = self.get_market_data(self.args.index, self.args.model_time_delta)
-        self.determine_risk_free_rate()
-        logger.info("Market Data Acquired.")
-
-        if market_data is None:
-            logger.error(Fore.RED + "conduct_report --> market_data is empty. Check Internet Connection." + Style.RESET_ALL)
-            return
-
-        if sim_market_data is None:
-            logger.error(Fore.RED + "conduct_report --> market_data for simulations is empty. Check Internet Connection." + Style.RESET_ALL)
-            return
-
-        if self.risk_free_rate is None:
-            logger.error(Fore.RED + "conduct_monthly report::determine_risk_free_rate no return. Check Internet Connection." + Style.RESET_ALL)
-            return
-
-        # Determine top performances from list
-        # apply cuts as necessary prior to determine_top_performers
-        if len(self.stock_list) > 0:
-            total_stocks = output.grab_report_card_value('total_stocks')
-            total_stocks += len(self.stock_list)
-            output.add_to_report_card('total_stocks', total_stocks)
-            filtered_stocks = []
-            filtered_tickers = []
-            logger.info("Processing Stocks...")
-            for stock in tqdm(self.stock_list, desc="Stocks"):
-                my_stock = MyStock(stock, self.args)
-                if not self.apply_cuts(my_stock):
-                    filtered_stocks.append(my_stock)
-                    filtered_tickers.append(my_stock.symbol)
-            logger.info("Data Processing Complete.")
-            logger.info(f"Total Number of Stocks Cut --> {self.total_cuts}")
-            logger.info("Determining Top Performers...")
-            performers_df, future_prices = self.determine_top_performers(filtered_stocks, market_data, self.args.models, output)
-            # Write to excel file for historic comparison
-            sheet_name = sheet_name + self.today.strftime('%Y_%m_%d')
-            self.write_to_excel(performers_df, sheet_name)
-            logger.info(f"--> Performance Data written to {sheet_name}")
-            top_performers, top_tickers, empty_place_holder = self.pull_top_performers(df=performers_df, tickers=filtered_tickers, filter=int(self.args.number_to_highlight))
-            if top_performers.empty or len(top_tickers) == 0:
-                return
-
-        ########################################################################
-        ########## Top Performance gets a Model Graphical Page #################
-        ########################################################################
-        if len(self.stock_list) > 0:
-            # pull_top_performers returns the dataframe and currently a number
-            the_number_one, the_number_one_ticker, one_sim_df = self.pull_top_performers(df=performers_df, tickers=filtered_tickers, filter=1, future_prices=future_prices) # future_prices here is a list of dataframes for each stock
-            target_stock = None
-            for myStock in filtered_stocks:
-                if myStock.symbol == the_number_one_ticker[0]:
-                    target_stock = myStock
-            if target_stock is None:
-                logger.warning("Top Ticker Not Found.")
-                return
-            else:
-                the_number_one_ticker = the_number_one_ticker[0]
-                logger.info(f"Top Ticker Found: {the_number_one_ticker}")
-
-            # Write the number one predicted stocks predicted future prices for reference
-            sheet_name2 = "Future_Prices_" + the_number_one_ticker + self.today.strftime('%Y_%m_%d')
-            self.write_to_excel(one_sim_df.mean(axis=0), sheet_name2)
-            logger.info(f"--> Future Data written to {sheet_name2}")
-            # here the model handler will be based off the user's input for time_delta
-            number_one_model = Model_Handler(myStock_list=target_stock, market_data=market_data, risk_free_rate=self.risk_free_rate, args=self.args)
-            number_one_model.pass_futures_data(one_sim_df)
-            number_one_model.pass_futures_market_data(sim_market_data)
-            number_one_model.pass_market_stock(self.myIndexStock)
-            number_one_model.add_all_plotting_models()
-            figures = number_one_model.plot_catcher(filepath)
-
-        return figures, top_tickers, the_number_one_ticker, sheet_name
 
     def get_market_data(self, index, time_delta="5y"):
         # Check if index_stock object already exists that way you only set indexes
@@ -181,7 +82,7 @@ class Analysis:
         treasury_yield_data = None
         logger.info("Determining Risk Free Rate From FRED DATA...")
         try:
-            treasury_yield_data = web.DataReader('DGS10','fred',self.start_date.date(), self.end_date.date())
+            treasury_yield_data = web.DataReader('DGS10','fred',(datetime.today() - timedelta(days=30 * 12)).date(), (datetime.today() - timedelta(days=1)).date())
         except requests.exceptions.ConnectionError as e:
             logger.exception("Error Unable to connect to FRED. Please check your internet connection and try again.")
             sys.exit(1)
@@ -201,22 +102,17 @@ class Analysis:
     """
     Outputs a pandas DataFrame containing the normalized sums of each chosen
     models outputs. In essense create an order of merit rating system for each
-    stock. Also outputs a pandas Dataframe of the simulations output.
-    Input includes a list of MyStock objects and chosen_models to perform.
+    stock. Input includes a list of MyStock objects, market data, chosen_models
+    to perform, and the output object.
     """
     def determine_top_performers(self, myStock_list, market_data, chosen_models, output):
         tickers = []
         prices = []
-        histories= []
         # iterating over ticker object in a list of ticker objects
         # making a list of ticker symbols
         for stock in myStock_list:
             tickers.append(stock.symbol)
             prices.append(stock.price)
-            if stock.the_5y_history is not None:
-                histories.append(stock.the_5y_history) # dataframe of the stocks 5year history
-            else:
-                histories.append(stock.the_year_history)
 
         logger.debug(f"determine_top_performers tickers --> {tickers}")
         # Initate Model Handler to add models as necessary all calculated ratings will be from a years data
@@ -260,7 +156,6 @@ class Analysis:
             columns = model_names + chosen_models
         else:
             columns = chosen_models
-
 
         # create a pandas DataFrame given the performance array and apply labels
         perf_df = pd.DataFrame(performance, columns=columns, index=tickers)
@@ -306,48 +201,6 @@ class Analysis:
         y_pred_all = regression_model.predict(X_all_scaled_df)
         norm_df['SAM'] = y_pred_all
 
-        # Perform monte carlo simulation for each stock
-        expected_future_prices = []
-        simulated_prices = []
-        logger.info("Conducting Monte Carlo Simulation on Each Stock...")
-        sim_analysis = Simulation_Analysis(self.args)
-        for history in tqdm(histories, desc='Stocks Simulation'):
-            drift, volatility = sim_analysis.calculate_drift_and_volatility(history['Close']) # takes series of the closed prices
-
-            if self.args.price_processing_model == "high_low":
-                monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_high_low)
-            elif self.args.price_processing_model == "close_open":
-                monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_close_open)
-
-            monte.calculate_initial_condition(['avg_prices', 'historical_returns'])
-
-            if self.args.processes > 1:
-                if self.args.simulation_model == "gaussian":
-                    simulated_price = monte.execute_normal_simulation_with_mp(drift=drift, volatility=volatility)
-                elif self.args.simulation_model == "poisson-gamma":
-                    simulated_price = monte.execute_poisson_gamma_simulation_with_mp()
-            else:
-                if self.args.simulation_model == "gaussian":
-                    simulated_price = monte.execute_normal_simulation(drift=drift, volatility=volatility) # all simulated prices for individual stock
-                elif self.args.simulation_model == "poisson-gamma":
-                    beta_guess = np.var(history['Close']) / np.mean(history['Close'])
-                    alpha_guess = (np.mean(history['Close']) / np.var(history['Close'])) **2.
-                    simulated_price = monte.execute_poisson_gamma_simulation(alpha_guess, beta_guess)
-
-            sim_df = pd.DataFrame(simulated_price) # write to 2-D dataframe
-            expected_future_price = simulated_price[:,-1].mean() # at the given time period e.g. at 30 days
-            expected_future_prices.append(expected_future_price) # writes it to list for all stocks
-            simulated_prices.append(sim_df) # all simulations on all stocks as a list of pandas dataframes
-
-        logger.info("Simulations complete.")
-        # convert expected future prices to a pandas series
-        expected_future_prices = pd.Series(expected_future_prices, index=tickers)
-        #here I sum the models "scores" after normalizing
-        # Apply weights if provided. need to be provided as a dictionary with keys
-        # matching models used
-
-        future_key = "MCFP " + str(self.args.sim_time) + " Days"
-        norm_df[future_key] = expected_future_prices
         # After calculations format for output
         norm_df['Price'] = prices
         norm_df.insert(0, 'Symbol', tickers)
@@ -356,7 +209,38 @@ class Analysis:
         # return dataframe of performance metrics and a list of dataframes of
         #simualation results where each index of the list is the simulation for
         #a given stock
-        return norm_df, simulated_prices
+        return norm_df
+
+    def conduct_simulations(self, history):
+        sim_analysis = Simulation_Analysis(self.args)
+        drift, volatility = sim_analysis.calculate_drift_and_volatility(history['Close']) # takes series of the closed prices
+
+        if self.args.price_processing_model == "high_low":
+            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_high_low)
+        elif self.args.price_processing_model == "close_open":
+            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_close_open)
+
+        monte.calculate_initial_condition(['avg_prices', 'historical_returns'])
+
+        if self.args.processes > 1:
+            if self.args.simulation_model == "gaussian":
+                simulated_price = monte.execute_normal_simulation_with_mp(drift=drift, volatility=volatility)
+            elif self.args.simulation_model == "poisson-gamma":
+                simulated_price = monte.execute_poisson_gamma_simulation_with_mp()
+        else:
+            if self.args.simulation_model == "gaussian":
+                simulated_price = monte.execute_normal_simulation(drift=drift, volatility=volatility) # all simulated prices for individual stock
+            elif self.args.simulation_model == "poisson-gamma":
+                beta_guess = np.var(history['Close']) / np.mean(history['Close'])
+                alpha_guess = (np.mean(history['Close']) / np.var(history['Close'])) **2.
+                simulated_price = monte.execute_poisson_gamma_simulation(alpha_guess, beta_guess)
+
+        sim_df = pd.DataFrame(simulated_price) # write to 2-D dataframe
+
+        del simulated_price
+
+        return sim_df.mean(axis=0) # returns just one price per day
+
 
     def write_to_excel(self, df, sheet_name):
         # Write to excel file for historic comparison
@@ -373,7 +257,7 @@ class Analysis:
                 df.to_excel(writer, index=True, sheet_name=sheet_name)
                 writer.save()
 
-    def pull_top_performers(self, df, tickers, filter=3, future_prices=None):
+    def pull_top_performers(self, df, tickers, filter=3):
         top_history_df = pd.DataFrame()
         if len(tickers) > filter:
             try:
@@ -382,13 +266,6 @@ class Analysis:
                 logger.info(df)
                 logger.exception(Fore.RED + f"FATAL ERROR {e}" + Style.RESET_ALL)
                 sys.exit(1)
-            if future_prices is not None:
-                # convert the list of dataframes into a series
-                future_prices_series = pd.Series(future_prices, index=df.index)
-                index = top_performers.index
-                top_history_df = future_prices_series.loc[index] # grabs dataframe of the top stock for writing to excel and plotting
-                top_history_df = pd.concat(top_history_df.tolist(), keys=index)
-                #top_history_df = top_history_df.mean(axis=1)
 
             top_df = pd.DataFrame(top_performers)
             top_df_tickers = top_df.iloc[:,0].tolist()
@@ -401,9 +278,9 @@ class Analysis:
              "try again." + Style.RESET_ALL)
             sys.exit(1)
 
-        return top_df, top_df_tickers, top_history_df
+        return top_df, top_df_tickers
 
-    def pull_worst_performers(self, df, tickers, filter=3, future_prices=None):
+    def pull_worst_performers(self, df, tickers, filter=3):
         low_history_df = pd.DataFrame()
         if len(tickers) > filter:
             try:
@@ -412,12 +289,6 @@ class Analysis:
                 logger.info(df)
                 logger.exception(Fore.RED + f"FATAL ERROR {e}" + Style.RESET_ALL)
                 sys.exit(1)
-            if future_prices is not None:
-                # convert the list of dataframes into a series
-                future_prices_series = pd.Series(future_prices, index=df.index)
-                index = low_performers.index
-                low_history_df = future_prices_series.loc[index] # grabs dataframe of the top stock for writing to excel and plotting
-                low_history_df = pd.concat(low_history_df.tolist(), keys=index)
 
             low_df = pd.DataFrame(low_performers)
             low_df_tickers = low_df.iloc[:,0].tolist()
@@ -430,12 +301,137 @@ class Analysis:
              "try again." + Style.RESET_ALL)
             sys.exit(1)
 
-        return low_df, low_df_tickers, low_history_df
+        return low_df, low_df_tickers
 
+    """
+    Very Important function. Assigns models and returns their outputs. These
+    outputs will be distributed over the same time period for a given report
+    that way the stocks can be compared 'apples to apples'. This function allows
+    user to add models to Models.py directly or, as preferred, there own module
+    and class. Any imported models must have the following methods: execute_model,
+    get_name, get_caption, and plot for the model to be used properly.
+    """
+
+    def assign_models(self, module, class_name, stock_list, market_data):
+        # Initiate Model_Handler class must input anything required for models
+        models = Model_Handler(stock_list, market_data, self.risk_free_rate, self.args)
+
+        # Check if user is importing their own model
+        # User model must have two methods 'enter_inputs' and 'execute_model'
+        if self.args.import_model_class != "" and self.import_model_module != "":
+            try:
+                imported_model = models.import_model(module, class_name)
+                attributes = ['execute_model', 'get_name', 'get_caption', 'plot']
+                if all(hasattr(imported_model, attr) for attr in attributes):
+                    # Provide user the option to pull from default models parameters
+                    # this function with inputs has not been tested
+                    if models.requires_inputs(imported_model.execute_model):
+                        inputs = self.grab_useful_parameters(stock_list, market_data)
+                        return imported_model.execute_model(*inputs), imported_model.get_name()
+                    else:
+                        return imported_model.execute_model(), imported_model.get_name()
+                else:
+                    logger.error(Fore.RED + "USER ERROR: USERs imported module " \
+                    "must have four methods: 'execute_model', 'get_name'"\
+                    ", 'get_caption', and 'plot'."\
+                    "execute_model executes the models calculations." \
+                    "get_name returns the name of the model" \
+                    "get_caption returns the plot caption for the model" \
+                    "plot returns the plotting figure for the model calculation"\
+                    "SEE EXAMPLES PROVIDED in Models.py." + Style.RESET_ALL)
+            except Exception as e:
+                logger.exception(Fore.RED + f"Error --> {e}" + Style.RESET_ALL)
+                return None, ""
+        else:
+            return None, ""
+
+    # Return parameters used by our Model_Handler class
+    def grab_useful_parameters(self, stock_list, market_data):
+        return stock_list, market_data, self.risk_free_rate, self.time_delta
+
+    # Apply Cuts method called in conduct_report input is a MyStock object
+    def apply_cuts(self, myStock):
+        # filter out any penny stock tickers
+        # Additionally if a stock does not have a price check if its from one
+        # of the research files and filter it out for future reference
+        if myStock.price is None:
+            self.total_cuts += 1
+            logger.warning(f"{myStock.name} does not have a price, cutting.")
+            return True
+        if myStock.price < float(self.args.min_price) or myStock.price > float(self.args.max_price):
+            self.total_cuts += 1
+            logger.warning(f"{myStock.name} is out of the price range, cutting.")
+            return True
+        # Filter out any ETFs
+        if myStock.is_etf:
+            self.total_cuts += 1
+            logger.warning(f"{myStock.name} is an etf, cutting.")
+            return True
+        # Ensure fifty percent is not none
+        if myStock.fifty_percent is None:
+            self.total_cuts += 1
+            logger.warning(f"{myStock.name} does not have a 50 day, cutting.")
+            return True
+        # Ensure two hundred percent is not none
+        if myStock.twohundred_percent is None:
+            self.total_cuts += 1
+            logger.warning(f"{myStock.name} does not have a 200 day, cutting")
+            return True
+
+        # make sure stocks have history we need
+        # Ensure history is not none
+        if self.args.model_time_delta == "1y":
+            if myStock.the_year_history is None:
+                self.total_cuts += 1
+                logger.warning(f"{myStock.name} does not have a year history, cutting.")
+                return True
+        elif self.args.model_time_delta == "ytd":
+            if myStock.the_ytd_history is None:
+                self.total_cuts +=1
+                logger.warning(f"{myStock.name} does not have a ytd history, cutting.")
+                return True
+        elif self.args.model_time_delta == "6mo":
+            if myStock.the_6mo_history is None:
+                self.total_cuts +=1
+                logger.warning(f"{myStock.name} does not have a 6mo history, cutting.")
+                return True
+        elif self.args.model_time_delta == "3mo":
+            if myStock.the_3mo_history is None:
+                self.total_cuts +=1
+                logger.warning(f"{myStock.name} does not have a 3mo history, cutting.")
+                return True
+        elif self.args.model_time_delta == "1mo":
+            if myStock.the_month_history is None:
+                self.total_cuts += 1
+                logger.warning(f"{myStock.name} does not have a month history, cutting.")
+                return True
+        elif self.args.model_time_delta == "5d":
+            if myStock.the_5d_history is None:
+                self.total_cuts +=1
+                logger.warning(f"{myStock.name} does not have a 5d history, cutting.")
+                return True
+        elif self.args.model_time_delta == "1d":
+            if myStock.the_day_history is None:
+                self.total_cuts +=1
+                logger.warning(f"{myStock.name} does not have a 1d history, cutting.")
+                return True
+
+    def read_table(self, sheet_name):
+        filepath = pkg_resources.resource_filename('StockApp.output', "Historicals.xlsx")
+        df = pd.DataFrame()
+        try:
+            df = pd.read_excel(filepath, sheet_name=sheet_name)
+        except Exception as e:
+            logger.exception(Fore.RED + f"Error --> {e}" + Style.RESET_ALL)
+        return df
 ## -----------------------------------------------------------------------------------------##
 ## -----------------------------EXECUTE STOCK PROGRAM ----------- --------------------------##
 ## -----------------------------------------------------------------------------------------##
-
+    """
+    Early design functions for simple tasks such as compare two stocks 50 day
+    averages and the like. No reporting methods, modeling methods
+    or simulation methods below.
+    """
     def execute_stock_program(self, args, output):
         if len(self.stock_list) > 1:
             for item in self.stock_list:
@@ -691,119 +687,6 @@ class Analysis:
                 stock_compare.print_difference()
                 stock_compare2.print_difference()
                 stock_compare3.print_difference()
-
-    """
-    Very Important function. Assigns models and returns their outputs. These
-    outputs will be distributed over the same time period for a given report
-    that way the stocks can be compared 'apples to apples'. This function allows
-    user to add models to Models.py directly or, as preferred, there own module
-    and class. Any imported models must have the following methods: execute_model,
-    get_name, get_caption, and plot for the model to be used properly.
-    """
-
-    def assign_models(self, module, class_name, stock_list, market_data):
-        # Initiate Model_Handler class must input anything required for models
-        models = Model_Handler(stock_list, market_data, self.risk_free_rate, self.args)
-
-        # Check if user is importing their own model
-        # User model must have two methods 'enter_inputs' and 'execute_model'
-        if self.args.import_model_class != "" and self.import_model_module != "":
-            try:
-                imported_model = models.import_model(module, class_name)
-                attributes = ['execute_model', 'get_name', 'get_caption', 'plot']
-                if all(hasattr(imported_model, attr) for attr in attributes):
-                    # Provide user the option to pull from default models parameters
-                    # this function with inputs has not been tested
-                    if models.requires_inputs(imported_model.execute_model):
-                        inputs = self.grab_useful_parameters(stock_list, market_data)
-                        return imported_model.execute_model(*inputs), imported_model.get_name()
-                    else:
-                        return imported_model.execute_model(), imported_model.get_name()
-                else:
-                    logger.error(Fore.RED + "USER ERROR: USERs imported module " \
-                    "must have four methods: 'execute_model', 'get_name'"\
-                    ", 'get_caption', and 'plot'."\
-                    "execute_model executes the models calculations." \
-                    "get_name returns the name of the model" \
-                    "get_caption returns the plot caption for the model" \
-                    "plot returns the plotting figure for the model calculation"\
-                    "SEE EXAMPLES PROVIDED in Models.py." + Style.RESET_ALL)
-            except Exception as e:
-                logger.exception(Fore.RED + "Error --> " + Style.RESET_ALL + "{e}")
-                return None, ""
-        else:
-            return None, ""
-
-    # Return parameters used by our Model_Handler class
-    def grab_useful_parameters(self, stock_list, market_data):
-        return stock_list, market_data, self.risk_free_rate, self.time_delta
-
-    # Apply Cuts method called in conduct_report input is a MyStock object
-    def apply_cuts(self, myStock):
-        # filter out any penny stock tickers
-        # Additionally if a stock does not have a price check if its from one
-        # of the research files and filter it out for future reference
-        if myStock.price is None:
-            self.total_cuts += 1
-            logger.warning(f"{myStock.name} does not have a price, cutting.")
-            return True
-        if myStock.price < float(self.args.min_price) or myStock.price > float(self.args.max_price):
-            self.total_cuts += 1
-            logger.warning(f"{myStock.name} is out of the price range, cutting.")
-            return True
-        # Filter out any ETFs
-        if myStock.is_etf:
-            self.total_cuts += 1
-            logger.warning(f"{myStock.name} is an etf, cutting.")
-            return True
-        # Ensure fifty percent is not none
-        if myStock.fifty_percent is None:
-            self.total_cuts += 1
-            logger.warning(f"{myStock.name} does not have a 50 day, cutting.")
-            return True
-        # Ensure two hundred percent is not none
-        if myStock.twohundred_percent is None:
-            self.total_cuts += 1
-            logger.warning(f"{myStock.name} does not have a 200 day, cutting")
-            return True
-
-        # make sure stocks have history we need
-        # Ensure history is not none
-        if self.args.model_time_delta == "1y":
-            if myStock.the_year_history is None:
-                self.total_cuts += 1
-                logger.warning(f"{myStock.name} does not have a year history, cutting.")
-                return True
-        elif self.args.model_time_delta == "ytd":
-            if myStock.the_ytd_history is None:
-                self.total_cuts +=1
-                logger.warning(f"{myStock.name} does not have a ytd history, cutting.")
-                return True
-        elif self.args.model_time_delta == "6mo":
-            if myStock.the_6mo_history is None:
-                self.total_cuts +=1
-                logger.warning(f"{myStock.name} does not have a 6mo history, cutting.")
-                return True
-        elif self.args.model_time_delta == "3mo":
-            if myStock.the_3mo_history is None:
-                self.total_cuts +=1
-                logger.warning(f"{myStock.name} does not have a 3mo history, cutting.")
-                return True
-        elif self.args.model_time_delta == "1mo":
-            if myStock.the_month_history is None:
-                self.total_cuts += 1
-                logger.warning(f"{myStock.name} does not have a month history, cutting.")
-                return True
-        elif self.args.model_time_delta == "5d":
-            if myStock.the_5d_history is None:
-                self.total_cuts +=1
-                logger.warning(f"{myStock.name} does not have a 5d history, cutting.")
-                return True
-        elif self.args.model_time_delta == "1d":
-            if myStock.the_day_history is None:
-                self.total_cuts +=1
-                logger.warning(f"{myStock.name} does not have a 1d history, cutting.")
-                return True
 
 
 ## -----------------------------------------------------------------------------------------##

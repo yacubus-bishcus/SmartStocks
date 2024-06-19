@@ -6,8 +6,6 @@ import logging
 import sys
 from datetime import datetime, timedelta
 import numpy as np
-from StockApp.Simulation_Analysis import Simulation_Analysis
-from StockApp.MonteCarlo import MonteCarlo
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +28,8 @@ class Models:
     def get_caption(self):
         return #self.caption
 
-    def set_history(self, myStock, futures_data, time_period):
-        # Create DataFrame from MyStock's history
-        if time_period == "1y":
+    def set_history(self, myStock, time_period):
+        if time_period == "1y": #Create DataFrame from MyStock's history
             df = pd.DataFrame(myStock.the_year_history)
         elif time_period == "ytd":
             df = pd.DataFrame(myStock.the_ytd_history)
@@ -50,44 +47,14 @@ class Models:
             logger.error(f"Time Period must be one of the following options: 1yr, ytd, 6mo, 3mo, 1mo, 5d, 1d. Your time period: {time_period}")
             sys.exit(1)
 
-        if futures_data is not None:
-            if not isinstance(futures_data, pd.DataFrame):
-                futures_data = pd.DataFrame(futures_data)
-
-            # if 'Date' in futures_data.index.names:
-            #     # Reset index to make data a regular column
-            #     futures_data.reset_index(inplace=True)
-            # Ensure 'Date' column is in datetime format
-            futures_data.index = pd.to_datetime(futures_data.index)
-            futures_data.index = futures_data.index.date
-            if 'Price' not in futures_data.columns:
-                logger.warning("Price not in Future Data Column. Potential data formating will lead to improper plotting.")
-
-            # Extract 'Date' and 'Close' prices from MyStock's history
-            history = pd.DataFrame(df['Close'])
-            # if 'Date' in history.index.names:
-            #     history.reset_index(inplace=True)
-            history.columns = ['Price']
-            history.index = pd.to_datetime(history.index)
-            history.index = history.index.date
-
-            # Concatenate history and futures_data along rows
-            combined_history = pd.concat([history, futures_data], axis=0, ignore_index=False)
-            combined_history.index = combined_history.index.rename('Date')
-            # Convert 'Date' column to datetime and set timezone to 'America/New_York'
-            #combined_history['Date'] = pd.to_datetime(history['Date'], utc=True).dt.tz_convert('America/New_York')
-            combined_series = combined_history['Price']
-
-            return combined_series
-        else:
-            # If no futures_data provided, just use 'Close' prices from MyStock's history
-            try:
-                series = df['Close']
-            except:
-                logger.warning(f"{myStock.name} failed to grab {time_period} history.")
-                logger.exception(df)
-                sys.exit(1)
-            return df['Close']
+        try:
+            series = df['Close']
+        except:
+            logger.warning(f"{myStock.name} failed to grab {time_period} history.")
+            logger.exception(df)
+            sys.exit(1)
+            
+        return df['Close']
 
     def execute_model(self):
         pass
@@ -230,7 +197,11 @@ class RSI:
         if isinstance(self.stock_list, list):
             if len(self.stock_list) > 1:
                 for stock in self.stock_list:
-                    history = models.set_history(stock, self.futures_data, self.time_period)
+                    if self.futures_data is None:
+                        history = models.set_history(stock, self.time_period)
+                    else:
+                        history = self.futures_data
+
                     self.first_period, self.smooth_period = self.calculate_periods(len(history))
                     self.rsi = self.calculate_model(history, self.first_period)
                     # provides a smoothed RSI for a year of data good for plotting
@@ -241,7 +212,11 @@ class RSI:
 
                 return rsi_list
         else:
-            history = models.set_history(self.stock_list, self.futures_data, self.time_period)
+            if self.futures_data is None:
+                history = models.set_history(self.stock_list, self.time_period)
+            else:
+                history = self.futures_data
+
             self.first_period, self.smooth_period = self.calculate_periods(len(history))
             self.rsi = self.calculate_model(history, self.first_period)
             self.smoothed_rsi = self.smooth_rsi(self.rsi, self.smooth_period)
@@ -386,7 +361,7 @@ class CAPM:
 
     def calculate_history(self):
         models = Models(myStockList=self.stock_list)
-        return models.set_history(self.stock_list, self.futures_data, self.time_delta)
+        return models.set_history(self.stock_list, self.time_delta)
 
     def calculate_expected_return(self, beta, mrp):
         return self.risk_free_rate + beta * mrp
@@ -454,12 +429,12 @@ class FIBONACCI:
         if isinstance(self.stock_list, list):
             if len(self.stock_list) > 1:
                 for stock in self.stock_list:
-                    history = models.set_history(stock, self.futures_data, self.time_period)
+                    history = models.set_history(stock, self.time_period)
                     self.fibo = self.calculate_model(history)
                     fibo_list.append(self.fibo)
                 return fibo_list
         else:
-            history = models.set_history(self.stock_list, self.futures_data, self.time_period)
+            history = models.set_history(self.stock_list, self.time_period)
             self.fibo = self.calculate_model(history)
             return self.fibo
 
@@ -541,7 +516,10 @@ class STOCHASTIC:
         if isinstance(self.stock_list, list):
             if len(self.stock_list) > 1:
                 for stock in self.stock_list:
-                    history = models.set_history(stock, self.futures_data, self.time_period)
+                    if self.futures_data is None:
+                        history = models.set_history(stock, self.time_period)
+                    else:
+                        history = self.futures_data
                     self.k, self.d = self.calculate_model(stock, history)
                     # the %k and %d are pretty similar so just taking the average of the
                     # two to output as our performance measure.
@@ -549,7 +527,11 @@ class STOCHASTIC:
                     output_list.append(output)
                 return output_list
         else:
-            history = models.set_history(self.stock_list, self.futures_data, self.time_period)
+            if self.futures_data is None:
+                history = models.set_history(self.stock_list, self.time_period)
+            else:
+                history = self.futures_data
+
             self.k, self.d = self.calculate_model(self.stock_list, history)
             output = self.calculate_performance_score().mean()
             return output
@@ -641,14 +623,22 @@ class MACD:
         if isinstance(self.stock_list, list):
             if len(self.stock_list) > 1:
                 for stock in self.stock_list:
-                    history = model.set_history(stock, self.futures_data, self.time_period)
+                    if self.futures_data is None:
+                        history = model.set_history(stock, self.time_period)
+                    else:
+                        history = self.futures_data
+
                     macd_line, signal_line, macd_histogram = self.calculate_model(stock, history)
                     output = self.calculate_performance_score()
                     output_list.append(output)
 
                 return output_list
         else:
-            history = model.set_history(self.stock_list, self.futures_data, self.time_period)
+            if self.futures_data is None:
+                history = model.set_history(self.stock_list, self.time_period)
+            else:
+                history = self.futures_data
+
             macd_line, signal_line, macd_histogram = self.calculate_model(self.stock_list, history)
             output = self.calculate_performance_score()
             return output
@@ -721,95 +711,4 @@ class MACD:
         if show:
             plt.show()
 
-        return fig
-
-## ---------------------------------------------------------------------------##
-## ----------------------------- FUTURES CLASS -------------------------------##
-## ---------------------------------------------------------------------------##
-
-class FUTURES:
-    def __init__(self, futures_data=None, market_data=None, market_stock=None, args=None):
-        self.futures_data = futures_data
-        self.market_data = market_data
-        self.market_stock = market_stock
-        self.args = args
-        self.sim_time = 30
-        self.simulations = 100
-        self.processes = 1
-        self.model_time_delta = '1mo'
-        self.price_processing_model = 'close_open'
-        self.simulation_model = 'gaussian'
-        if self.args is not None:
-            self.sim_time = self.args.sim_time
-            self.simulations = self.args.simulations
-            self.processes = self.args.processes
-            self.model_time_delta = self.args.model_time_delta
-            self.price_processing_model = self.args.price_processing_model
-            self.simulation_model = self.args.simulation_model
-
-        self.analysis = Simulation_Analysis(self.args)
-        self.caption = """
-        Future prices here are calculated from a monte carlo calculation incorporating
-        drift, volatility and jumps of a stock over the desired time horizon.
-        The jump threshold standard deviation used was two standard deviations.
-        """
-
-    def __del__(self):
-        pass
-
-    def get_name(self, name):
-        return "FUTURES"
-
-    def get_caption(self):
-        return self.caption
-
-    def set_number_of_simulations(self, num_sim):
-        self.simulations = num_sim
-
-    def set_sim_time(self, sim_time):
-        self.sim_time = sim_time
-
-    def set_processes(self, processes):
-        self.processes = processes
-
-    def execute_model(self):
-        drift, volatility = self.analysis.calculate_drift_and_volatility(self.market_data['Close']) # takes series of the closed prices
-        if self.price_processing_model == "close_open":
-            monte = MonteCarlo(data=self.market_data, num_simulations=self.simulations, sim_time=self.sim_time, processes=self.processes, jump_param=self.args.jump_parameter, apply_function=self.analysis.stock_price_processing_close_open)
-        elif self.price_processing_model == 'high_low':
-            monte = MonteCarlo(data=self.market_data, num_simulations=self.simulations, sim_time=self.sim_time, processes=self.processes, jump_param=self.args.jump_parameter, apply_function=self.analysis.stock_price_processing_high_low)
-
-        monte.calculate_initial_condition(['avg_prices', 'historical_returns'])
-
-        if self.processes > 1:
-            simulated_price = monte.execute_normal_simulation_with_mp(drift=drift, volatility=volatility)
-        else:
-            simulated_price = monte.execute_normal_simulation(drift=drift, volatility=volatility) # all simulated prices for individual stock
-
-        market_sim_df = pd.DataFrame(simulated_price) # write to 2-D dataframe
-        market_sim_series = market_sim_df.mean(axis=0)
-        market_sim_series.name = 'Price'
-        dates = [datetime.today() + timedelta(days=i) for i in range(len(market_sim_series))]
-        futures = market_sim_series.to_frame().reset_index(drop=True)
-        futures['Date'] = dates
-        futures.set_index('Date', inplace=True)
-        model = Models()
-        self.market_combined_df = model.set_history(self.market_stock, futures, self.model_time_delta)
-
-    def plot(self, stock_name=None, ax=None):
-        plt.ioff()
-        string_title = stock_name + " Future Prices"
-        fig, ax1 = plt.subplots(figsize=(10,6))
-        ax1.plot(self.futures_data.index, self.futures_data.values, label='Predicted Price', color='blue')
-        xlabel_string = "Date"
-        ax1.set_xlabel(xlabel_string)
-        ax1.set_ylabel("Predicted Price")
-        ax1.legend(loc='upper left')
-
-        ax2 = ax1.twinx()
-        ax2.plot(self.market_combined_df.index, self.market_combined_df.values, label='Market Predicted Price', color='red')
-        ax2.set_ylabel("Market Predicted Price")
-        ax2.legend(loc='upper right')
-        plt.title(string_title)
-        fig.autofmt_xdate()
         return fig

@@ -23,17 +23,10 @@ class Research:
         self._get_ticker_symbols()
         for filename in self.filenames:
             self.clean_data(filename, filename)
-        if self.args.report:
-            all_tickers = self.list_ticker_symbols()
-            chosen_tickers = self.choose_tickers(all_tickers, int(self.args.number_to_research))
-            if self.args.u:
-                # add dow stocks
-                self.stock_list = self.stock_list + self.use_dow()
-                self.stock_list = list(set(self.stock_list))
-                
-            self.stock_list = [yf.Ticker(symbol) for symbol in chosen_tickers]
-            # use composition technique to reuse conduct_report method
-            self.analysis = Analysis(self.stock_list, self.args)
+            logger.info(f"{filename} data cleaned.")
+
+        all_tickers = self.list_ticker_symbols()
+        self.chosen_tickers = self.choose_tickers(all_tickers, int(self.args.number_to_research))
 
 
     def fetch_csv_data(self, url):
@@ -71,6 +64,9 @@ class Research:
                     logger.debug(Fore.GREEN + f"get_ticker_symbols File '{filename}' already exists locally." + Style.RESET_ALL)
 
             ftp_server.quit()
+
+    def grab_research_tickers(self):
+        return self.chosen_tickers
 
     def list_ticker_symbols(self):
         filepath = pkg_resources.resource_filename('StockApp.data', "nasdaqlisted.txt")
@@ -237,18 +233,3 @@ class Research:
             except Exception as e:
                 logger.exception(f"InputManager::clean_data --> Error occurred while writing to '{output_filename}': {str(e)}")
                 exit(1)
-
-    def conduct_report(self, output, sheet_name):
-        self.analysis.conduct_report(output, sheet_name)
-
-    def execute_stock_program(self, args, output):
-        self.analysis.execute_stock_program(args, output)
-
-    # lazy coding but whatevs
-    def use_dow(self):
-        dow30_stocks = [
-    'AAPL', 'AMGN', 'AXP', 'BA', 'CAT', 'CRM', 'CSCO', 'CVX', 'DIS', 'DOW',
-    'GS', 'HD', 'HON', 'IBM', 'INTC', 'JNJ', 'JPM', 'KO', 'MCD', 'MMM',
-    'MRK', 'MSFT', 'NKE', 'PG', 'TRV', 'UNH', 'V', 'VZ', 'WBA', 'WMT'
-        ]
-        return dow30_stocks

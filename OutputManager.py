@@ -48,14 +48,9 @@ class WordPrinter:
 
     def _create_report_card(self):
         # the report card is a dictionary data structure with every output for the report
-        self.report_card = {'filename':'', 'filepath':'', 'executive_summary':'',
-        'input_stock_list':[], 'research_stock_list':[], 'input_top_performers':[],
-        'research_top_performers':[], 'input_table':pd.DataFrame(), 'research_table':pd.DataFrame(),
-        'input_top_table':pd.DataFrame(), 'research_top_table':pd.DataFrame(),
-        'calc_time':'', 'header':'', 'date':'','recommendations':pd.DataFrame(),
-        'disclaimer':'', 'input_figures':[], 'research_figures':[] ,'input_1':'',
-        'research_1':'', 'total_stocks':0, 'input_sheet_name':'', 'research_sheet_name':'',
-        'mse':0,'r_squared':0
+        self.report_card = {'filename':'', 'filepath':'',
+        'top_performers':[], 'table_sheet_name':'', 'figures':[] ,'best':'',
+        'total_stocks':0,'mse':0,'r_squared':0
         } # add any additional report outputs to the report card
 
     def add_to_report_card(self, key, value):

@@ -8,6 +8,7 @@ import itertools
 import yfinance as yf
 from StockApp.StockAnalysis import Analysis
 from StockApp.Research import Research
+from StockApp.Report import Report
 import logging
 import ast
 import multiprocessing as mp
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 class StockInputManager:
     def __init__(self):
         self._set_stockapp_parser()
-
+        self.ticker_list = []
     def __del__(self):
         pass
 
@@ -144,54 +145,51 @@ class StockInputManager:
         if not 0.001 <= self.args.jump_parameter <= 5.:
             logger.error(Fore.YELLOW + f"USER ERROR: Ensure jump parameter is between 0.001 and 5. Your parameter was {self.jump_parameter}")
             return False
-            
+
         return True
 
     def grab_args(self):
         return self.args
 
-    def apply_input_conditions(self, output=None):
-        stocks = []
-        # Conduct analysis with only one stock
+    def collect_tickers(self):
         if self.args.ticker is not None:
-            stocks = [yf.Ticker(self.args.ticker)]
-            analysis = Analysis(stocks, self.args)
-            analysis.execute_stock_program(args=self.args, output=output)
-            return
+            self.ticker_list = self.args.ticker
 
         # Check if there is an input file to read for tickers
         if self.args.input is not None:
-            self.ticker_list = self.read_txt_file(self.args.input)
+            self.ticker_list = self.ticker_list + self.read_txt_file(self.args.input)
             if self.args.u:
                 # add the dow 30 to any on list and then remove duplicates
                 self.ticker_list = self.ticker_list + self.use_dow()
-                self.ticker_list = list(set(self.ticker_list))
-
-            stocks = [yf.Ticker(symbol) for symbol in self.ticker_list]
-            analysis = Analysis(stocks, self.args)
-            if self.args.report:
-                figures, tickers, best_ticker, sheetname = analysis.conduct_report(output, sheet_name="User_List_Stocks")
-                # write report values here
-                top_ticker_string = 'The users list best performers are ' + ", ".join(tickers) + "."
-                output.add_to_report_card('input_sheet_name', sheetname)
-                output.add_to_report_card('input_figures', figures)
-                output.add_to_report_card('input_top_performers', top_ticker_string)
-                output.add_to_report_card('input_1', best_ticker)
-            else:
-                analysis.execute_stock_program(args=self.args, output=output)
 
         if self.args.research:
             research = Research(self.args)
-            if self.args.report:
-                figures, top_tickers, best_ticker, sheetname = research.conduct_report(output, sheet_name="Research_Stocks")
-                # write report values here
-                top_ticker_string = 'The research list best performers are ' + ", ".join(tickers) + "."
-                output.add_to_report_card('research_sheet_name', sheetname)
-                output.add_to_report_card('research_figures', figures)
-                output.add_to_report_card('research_top_performers', top_ticker_string)
-                output.add_to_report_card('research_1', best_ticker)
-            else:
-                research.execute_stock_program(args=self.args, output=output)
+            self.ticker_list = self.ticker_list + research.grab_research_tickers()
+
+        self.ticker_list = list(set(self.ticker_list))
+
+    def apply_input_conditions(self, output=None):
+        self.collect_tickers()
+        stocks = [yf.Ticker(symbol) for symbol in self.ticker_list]
+        output.add_to_report_card('total_stocks', len(stocks))
+        analysis = Analysis(stocks, self.args)
+        if self.args.report and output is not None:
+            report = Report(output, self.args)
+            report.conduct_report(stocks, analysis)
+            report.write_report(analysis)
+
+            if self.args.e:
+                # email the output file to given email
+                handler = OutputHandler(args.output)
+                email_to = input("Email Recipient: ")
+                username = input("Username: ")
+                password = input("Password: ")
+                logger.info(f"Sending Email to {email_to}")
+                handler.email_file(email_to=email_to, smtp_username=username, smtp_password=password)
+                logger.info("Email sent.")
+
+        else:
+            analysis.execute_stock_program(args=self.args, output=output)
 
     def use_dow(self):
         dow30_stocks = [
@@ -291,11 +289,3 @@ class StockInputManager:
         except FileNotFoundError:
             logger.exception(f"Error: File '{input_filename}' not found.")
             return []
-
-    def read_table(self, sheet_name):
-        filepath = pkg_resources.resource_filename('StockApp.output', "Historicals.xlsx")
-        try:
-            df = pd.read_excel(filepath, sheet_name=sheet_name)
-        except Exception as e:
-            logger.exception(Fore.RED + "Error --> " + Style.RESET_ALL + "{e}")
-        return df

@@ -3,7 +3,7 @@ import inspect
 from StockApp.Models import *
 import logging
 from collections import namedtuple
-
+from StockApp.Futures import Futures
 
 logger = logging.getLogger(__name__)
 
@@ -94,18 +94,8 @@ class Model_Handler:
         model = TwoHundred_Day_Model(self.stock_list)
         return model.execute_model()
 
-    def pass_futures_data(self, futures_data): # here futures data is a dataframe of the best stock to plot
-        # here i convert the Dataframe into a series
-        self.futures_data = futures_data.mean(axis=0)
-        self.futures_data.name = 'Price'
-        # here i want the x axis to be future dates
-
-        dates = [datetime.today() + timedelta(days=i) for i in range(len(self.futures_data))]
-        #dates.append(date.strftime('%Y-%m-%d'))
-        futures = self.futures_data.to_frame().reset_index(drop=True)
-        futures['Date'] = dates
-        futures.set_index('Date', inplace=True)
-        self.futures_data = futures
+    def pass_futures_data(self, futures_data):
+        self.futures_data = futures_data
 
     def pass_futures_market_data(self, market_data):
         self.sim_market_data = market_data
@@ -134,17 +124,17 @@ class Model_Handler:
         return model.execute_model()
 
     def get_futures_instance(self):
-        model = FUTURES(self.futures_data, self.sim_market_data, self.sim_market_stock, self.args)
+        model = Futures(self.futures_data, self.sim_market_data, self.args)
         model.execute_model()
         return model
 
     def get_capm_instance(self):
-        model = CAPM(myStock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate, td=self.time_delta, futures_data=self.futures_data)
+        model = CAPM(myStock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate, td=self.time_delta, futures_data=self.futures_data.iloc[:,0])
         model.execute_model()
         return model
 
     def get_rsi_instance(self):
-        model = RSI(myStock_list=self.stock_list, futures_data=self.futures_data, time_period=self.time_delta)
+        model = RSI(myStock_list=self.stock_list, futures_data=self.futures_data.iloc[:,0], time_period=self.time_delta)
         model.execute_model()
         return model
 
@@ -159,7 +149,7 @@ class Model_Handler:
         return model
 
     def get_macd_instance(self):
-        model = MACD(myStock_list=self.stock_list, futures_data=self.futures_data, time_period = self.time_delta)
+        model = MACD(myStock_list=self.stock_list, futures_data=self.futures_data.iloc[:,0], time_period = self.time_delta)
         model.execute_model()
         return model
     """
