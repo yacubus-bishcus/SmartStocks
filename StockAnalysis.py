@@ -1,7 +1,7 @@
-from StockApp.Model_Handler import Model_Handler
-from StockApp.Stock import MyStock, Index_Stocks
-from StockApp.MonteCarlo import MonteCarlo
-from StockApp.Simulation_Analysis import Simulation_Analysis
+from .Model_Handler import Model_Handler
+from .Stock import MyStock, Index_Stocks
+from .MonteCarlo import MonteCarlo
+from .Simulation_Analysis import Simulation_Analysis
 from datetime import datetime, timedelta
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from colorama import Fore, Style
@@ -17,7 +17,7 @@ import logging
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
-
+from yfinance import Ticker
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,9 @@ class Analysis:
         self.risk_free_rate = None
         self.args = args
         self.total_cuts = 0
+        self.summary = ""
+        self.recommendations = None
+        #self.index_stock = None
 
     def __del__(self):
         pass
@@ -46,13 +49,16 @@ class Analysis:
         else:
             logger.debug("StockAnalysis::Analysis::set_args_once --> Args already set.")
 
-    def get_market_data(self, index, time_delta="5y"):
+    def get_market_data(self, index=None, time_delta="5y"):
         # Check if index_stock object already exists that way you only set indexes
         # once
         if self.myIndexStock is None:
             index_stock = Index_Stocks()  # lazy initialization
             # creates
-            self.myIndexStock = index_stock.create_my_index_stock(self.args.index, self.args)
+            if index is not None:
+                self.myIndexStock = index_stock.create_my_index_stock(index, self.args)
+            else:
+                self.myIndexStock = index_stock.create_my_index_stock(self.args.index, self.args)
 
         if time_delta == "5y":
             market_data = self.myIndexStock.the_5y_history
@@ -68,6 +74,7 @@ class Analysis:
             market_data = self.myIndexStock.the_5d_history
         elif time_delta == "1d":
             market_data = self.myIndexStock.the_day_history
+            logger.info("Market Data grabbed Day History.")
         else:
             logger.error(f"Get Market Data Time Delta {time_delta} not available, exiting.")
             sys.exit(1)
@@ -433,38 +440,54 @@ class Analysis:
     or simulation methods below.
     """
     def execute_stock_program(self, args, output):
-        if len(self.stock_list) > 1:
+        if not isinstance(self.stock_list, Ticker):
             for item in self.stock_list:
-                self.define_stock_program(item, args, output)
+                result = self.define_stock_program(item, args, output)
         else:
-            self.define_stock_program(self.stock_list, args, output)
+            result = self.define_stock_program(self.stock_list, args, output)
+
+        return result
 
     def define_stock_program(self, item, args, output):
-        if not hasattr(self, 'index_stock'):
-            index_stock = Index_Stocks()
-            index_stock.set_index_info()
+        stock_compare = None
+        stock_compare2 = None
+        stock_compare3 = None
 
-        stock = MyStock(item, self.args)
+        if not hasattr(self, 'index_stock'):
+            logger.info("Initializing Index_Stocks")
+            self.index_stock = Index_Stocks()
+            self.index_stock.set_index_info()
+
+        stock = MyStock(item)
 
         ## ------------------ APPLY FILTERS HERE ------------------------##
         # filter out any penny stock tickers
         if stock.price is None:
+            logger.warning("NO STOCK PRICE FOUND!")
             return
-        if stock.price < float(args.min_price) or stock.price > float(args.max_price):
-            logger.warning(f"{stock.name} is out of the price range, skipping.")
-            return
+
+        if not isinstance(self.stock_list, Ticker):
+            if stock.price < float(args.min_price) or stock.price > float(args.max_price):
+                logger.warning(f"{stock.name} is out of the price range, skipping.")
+                return
 
         if args.r:
             if output is not None:
                 stock.output_recommendations()
             else:
-                print(stock.recommendations)
+                print(stock.the_recommendations)
+
+            self.recommendations = stock.the_recommendations
+            logger.info(f"Recommendations Updated: {self.recommendations}")
 
         if args.summary:
             if output is not None:
                 stock.output_summary()
             else:
                 stock.print_summary()
+
+            self.summary = stock.the_summary
+            logger.info(f"Summary Updated: {self.summary}")
 
         if args.c:
             if output is not None:
@@ -486,9 +509,9 @@ class Analysis:
 
         if args.c_Dow:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.dow_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.dow_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.dow_stock, args), args.debug)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.dow_stock, args), args.debug)
 
             stock_compare.compare_daily_stocks()
 
@@ -501,9 +524,10 @@ class Analysis:
 
         if args.c_Nas:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.nas_stock,args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.nas_stock,args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.nas_stock, args), args.debug)
+                logger.debug("c_Nas called comparing stocks.")
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.nas_stock, args), args.debug)
 
             stock_compare.compare_daily_stocks()
 
@@ -516,9 +540,10 @@ class Analysis:
 
         if args.c_Sap:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
+                logger.debug('c_Sap called comparing stocks.')
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
 
             stock_compare.compare_daily_stocks()
 
@@ -531,9 +556,9 @@ class Analysis:
 
         if args.c_50_Dow:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
 
             stock_compare.compare_50_day_stocks()
 
@@ -545,9 +570,10 @@ class Analysis:
 
         if args.c_50_Nas:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
+                logger.debug("c_50_Nas called comparing stocks.")
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
 
             stock_compare.compare_50_day_stocks()
 
@@ -559,9 +585,9 @@ class Analysis:
 
         if args.c_50_Sap:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
 
             stock_compare.compare_50_day_stocks()
 
@@ -573,9 +599,9 @@ class Analysis:
 
         if args.c_200_Dow:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.dow_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.dow_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.dow_stock, args), args.debug)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.dow_stock, args), args.debug)
 
             stock_compare.compare_200_day_stocks()
 
@@ -587,9 +613,9 @@ class Analysis:
 
         if args.c_200_Nas:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.nas_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.nas_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.nas_stock, args), args.debug)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.nas_stock, args), args.debug)
 
             stock_compare.compare_200_day_stocks()
 
@@ -601,9 +627,9 @@ class Analysis:
 
         if args.c_200_Sap:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
 
             stock_compare.compare_200_day_stocks()
 
@@ -615,13 +641,13 @@ class Analysis:
 
         if args.c_Daily:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
-                stock_compare2 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
-                stock_compare3 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
+                stock_compare2 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
+                stock_compare3 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
-                stock_compare2 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
-                stock_compare3 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
+                stock_compare2 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
+                stock_compare3 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
 
             stock_compare.compare_daily_stocks()
             stock_compare2.compare_daily_stocks()
@@ -640,13 +666,13 @@ class Analysis:
 
         if args.co_50:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
-                stock_compare2 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
-                stock_compare3 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
+                stock_compare2 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
+                stock_compare3 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
-                stock_compare2 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
-                stock_compare3 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
+                stock_compare2 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
+                stock_compare3 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
 
             stock_compare.compare_50_day_stocks()
             stock_compare2.compare_50_day_stocks()
@@ -664,14 +690,14 @@ class Analysis:
 
         if args.co_200:
             if output is not None:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
-                stock_compare2 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
-                stock_compare3 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug, output)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
+                stock_compare2 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
+                stock_compare3 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug, output)
 
             else:
-                stock_compare = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
-                stock_compare2 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
-                stock_compare3 = CompareStocks(stock, MyStock(index_stock.sap_stock, args), args.debug)
+                stock_compare = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
+                stock_compare2 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
+                stock_compare3 = CompareStocks(stock, MyStock(self.index_stock.sap_stock, args), args.debug)
 
             stock_compare.compare_200_day_stocks()
             stock_compare2.compare_200_day_stocks()
@@ -688,41 +714,40 @@ class Analysis:
                 stock_compare2.print_difference()
                 stock_compare3.print_difference()
 
+        if all([stock_compare, stock_compare2, stock_compare3]):
+            return stock_compare.return_string_difference(), stock_compare2.return_string_difference(), stock_compare3.return_string_difference()
+        else:
+            return stock_compare.return_string_difference()
+
+    def return_summary_info(self):
+        return self.summary
+
+    def return_recommendations(self):
+        return self.recommendations
 
 ## -----------------------------------------------------------------------------------------##
 ## ----------------------------- CompareStocks CLASS    ----------- ------------------------##
 ## -----------------------------------------------------------------------------------------##
 
 class CompareStocks:
-    def __init__(self, stock1=None, stock2=None, output=None):
+    def __init__(self, stock1=None, stock2=None, output=None, args=None):
         # Constructor with 4 arguments
-        if stock1 is not None and stock2 is not None and output is not None:
-            self.stock1 = stock1
-            self.stock2 = stock2
-            self.output = output
-        # Constructor with 3 arguments
-        elif stock1 is not None and stock2 is not None:
-            self.stock1 = stock1
-            self.stock2 = stock2
-        # Constructor with 2 arguments defaults debug to false (minimum)
-        else:
-            self.stock1 = stock1
-            self.stock2 = stock2
-
-        #Initialize variables
-        self.difference = 0
-
+        self.stock1 = stock1
+        self.stock2 = stock2
+        self.output = output
+        self.args = args
+        self.difference = 0.
 
     def compare_daily_stocks(self):
         if self.stock1.daily_percent and self.stock2.daily_percent:
             self.difference = round(self.stock1.daily_percent - self.stock2.daily_percent, 2)
+
 
     def compare_50_day_stocks(self):
         if self.stock1.fifty_percent and self.stock2.fifty_percent:
             self.difference = round(self.stock1.fifty_percent - self.stock2.fifty_percent, 2)
         else:
             logger.error("DATA ERROR: compare_50_day_stocks")
-
 
     def compare_200_day_stocks(self):
         if self.stock1.twohundred_percent and self.stock2.twohundred_percent:
@@ -754,3 +779,11 @@ class CompareStocks:
             #output_string = self.stock1.name + " is underperforming " + self.stock2.name+ " by "+ Fore.RED + str(self.difference) + Style.RESET_ALL + " percent."
             output_string = self.stock1.name + " is underperforming " + self.stock2.name + " by " + str(self.difference) + " percent."
             self.output.write(output_string, color=(128,0,0))
+
+    def return_string_difference(self):
+        if self.difference > 0:
+            string = self.stock1.name + " is outperforming " + self.stock2.name + " by " + str(self.difference) + " percent."
+        else:
+            string = self.stock1.name + " is underperforming " + self.stock2.name, " by " + str(self.difference) + " percent."
+
+        return string

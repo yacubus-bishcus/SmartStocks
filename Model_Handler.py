@@ -1,9 +1,9 @@
 from colorama import Fore, Style
 import inspect
-from StockApp.Models import *
+from .Models import *
 import logging
 from collections import namedtuple
-from StockApp.Futures import Futures
+from .Futures import Futures
 
 logger = logging.getLogger(__name__)
 

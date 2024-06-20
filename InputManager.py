@@ -6,30 +6,38 @@ import pkg_resources
 import pandas as pd
 import itertools
 import yfinance as yf
-from StockApp.StockAnalysis import Analysis
-from StockApp.Research import Research
-from StockApp.Report import Report
+from .StockAnalysis import Analysis
+from .Research import Research
+from .Report import Report
 import logging
 import ast
 import multiprocessing as mp
+from .ArgsParser import ArgsParser
 
 logger = logging.getLogger(__name__)
 
 
 class StockInputManager:
-    def __init__(self):
-        self._set_stockapp_parser()
+    def __init__(self, app=False):
+        if not app:
+            self._set_stockapp_parser()
+        else:
+            self.parser = ArgsParser()
+            self.args = self.parser.parse_args('-a')
         self.ticker_list = []
+        self.stocks = []
+        self.analysis = None
+
     def __del__(self):
         pass
 
     def _set_stockapp_parser(self):
         self.parser = argparse.ArgumentParser(description="Python Coded Stock Analysis.")
-        self.parser.add_argument('-c',             action='store_true', help='Display individual ticker current day change', required=False, default=False)
-        self.parser.add_argument('--c_50',          action='store_true', help='Display individual ticker 50 day change', required=False, default=False)
-        self.parser.add_argument('--c_200',         action='store_true', help='Display individual ticker 200 day change', required=False, default=False)
-        self.parser.add_argument('--c_Dow',        action='store_true', help='Display daily comparison to Dow Jones Index', required=False, default=False)
-        self.parser.add_argument('--c_Nas',        action='store_true', help='Display daily comparison to Nasdaq Index', required=False, default=False)
+        self.parser.add_argument('-c',                   action='store_true', help='Display individual ticker current day change', required=False, default=False)
+        self.parser.add_argument('--c_50',               action='store_true', help='Display individual ticker 50 day change', required=False, default=False)
+        self.parser.add_argument('--c_200',              action='store_true', help='Display individual ticker 200 day change', required=False, default=False)
+        self.parser.add_argument('--c_Dow',              action='store_true', help='Display daily comparison to Dow Jones Index', required=False, default=False)
+        self.parser.add_argument('--c_Nas',              action='store_true', help='Display daily comparison to Nasdaq Index', required=False, default=False)
         self.parser.add_argument('--c_Sap',              action='store_true', help='Display daily comparison to S&P500 Index', required=False, default=False)
         self.parser.add_argument('--c_50_Dow',           action='store_true', help='Display 50 day average comparison to Dow Jones Index', required=False, default=False)
         self.parser.add_argument('--c_50_Nas',           action='store_true', help='Display 50 day average comparison to Nasdaq Index', required=False, default=False)
@@ -48,7 +56,7 @@ class StockInputManager:
         self.parser.add_argument('--input',              type=str, help='Input File Path to Read Stock Tickers', required=False)
         self.parser.add_argument('--index',              type=str, help='Index to Compare Models. Options- s&p,dow,nas. Default=s&p', required=False, default='s&p')
         self.parser.add_argument('--jump_parameter',     type=float, help='Number of standard deviations away from the mean that qualifies as a jump in the stock price. Range 0.001 - 5. Default=1.', required=False, default=1.)
-        self.parser.add_argument('--max_price',          type=str, help='Filter Price', required=False, default="1000.00")
+        self.parser.add_argument('--max_price',          type=str, help='Filter Price', required=False, default="10000.00")
         self.parser.add_argument('--models',             nargs='+', help= 'List of Models to use in the calculation. Default is Fifty Day, Two Hundred Day, CAPM, FIBO, MACD, RSI, Stochastic', required=False, default=['Fifty Day','Two Hundred Day','CAPM', 'MACD', 'RSI', 'Stochastic'])
         self.parser.add_argument('--model_time_delta',   type=str, help='Time Delta for model plots. This is the amount of time prior to today the models will compare to future prices. Default is 1mo. Options are 1d, 5d, 1mo, 3mo, 6mo, 1y, ytd', required=False, default="1mo")
         self.parser.add_argument('--min_price',          type=str, help='Filter Price', required=False, default="1.00")
@@ -63,10 +71,10 @@ class StockInputManager:
         self.parser.add_argument('--research',           action='store_true', help='Use in conjunction with --report if you want randomly selected stocks to be included in the report. Otherwise --research will execute any of the other provided functions E.g. --compare.', required=False, default=None)
         self.parser.add_argument('--seed',               type=int, help='The Seed used for the simulation for recreation purposes...stock prices do change though.', required=False, default=42)
         self.parser.add_argument('--sim_time',           type=int, help='The number of days to calculate future prices. The default is 30.', required=False, default=30)
-        self.parser.add_argument('--simulations',        type=int, help='Number of Simulations to run on each stock to predict future price. Default is 1000000 (1e6)', required=False, default=1e6)
+        self.parser.add_argument('--simulations',        type=int, help='Number of Simulations to run on each stock to predict future price. Default is 1000000 (1e6)', required=False, default=1)
         self.parser.add_argument('--simulation_model',   type=str, help='Type of distribution used for simulation can either be Gaussian (normal) or Poisson-Gamma (non-normal)', required=False, default='gaussian')
         self.parser.add_argument('--summary',            action='store_true', help='Display individual ticker business summary', required=False, default=False)
-        self.parser.add_argument('--ticker',             type=str, help='Use for individual ticker analysis', required=False)
+        self.parser.add_argument('--ticker',             type=str, help='Comma-Separated List of tickers for analysis.', required=False)
         self.parser.add_argument('-u',                   action='store_true', help='Use the Dow Jones stocks in addition to any inputs.', required=False, default=False)
         self.parser.add_argument('--weights',            type=dict, help='Apply weights to models as a dictionary where the key matches the model name and the value is the weight you want to apply to that model. Weights must sum to 1.', required=False, default={'Fifty Day':0.1, 'Two Hundred Day':0.1, 'CAPM':0.2, 'MACD':0.05, 'RSI':0.3, 'Stochastic':0.25})
         self.args = self.parser.parse_args()
@@ -151,32 +159,60 @@ class StockInputManager:
     def grab_args(self):
         return self.args
 
+    def grab_stocks(self):
+        return self.stocks
+
+    def set_args(self, args):
+        self.args = args
+
+    def reset_tickers(self):
+        self.args.ticker = None
+        self.ticker_list = []
+        self.stocks = []
+        logger.info("Ticker reset.")
+        logger.debug(f"Ticker: {self.args.ticker}")
+        logger.debug(f"Ticker_list: {self.ticker_list}")
+
     def collect_tickers(self):
         if self.args.ticker is not None:
-            self.ticker_list = self.args.ticker
-
-        # Check if there is an input file to read for tickers
+            self.ticker_list = self.args.ticker.split(',')
+            # Check if there is an input file to read for tickers
         if self.args.input is not None:
-            self.ticker_list = self.ticker_list + self.read_txt_file(self.args.input)
+            self.ticker_list += self.read_txt_file(self.args.input)
             if self.args.u:
                 # add the dow 30 to any on list and then remove duplicates
-                self.ticker_list = self.ticker_list + self.use_dow()
+                self.ticker_list += self.use_dow()
 
         if self.args.research:
             research = Research(self.args)
-            self.ticker_list = self.ticker_list + research.grab_research_tickers()
+            self.ticker_list += research.grab_research_tickers()
 
-        self.ticker_list = list(set(self.ticker_list))
+        if self.args.ticker is None:
+            if self.ticker_list is not None:
+                self.ticker_list = list(set(self.ticker_list))
 
-    def apply_input_conditions(self, output=None):
-        self.collect_tickers()
-        stocks = [yf.Ticker(symbol) for symbol in self.ticker_list]
-        output.add_to_report_card('total_stocks', len(stocks))
-        analysis = Analysis(stocks, self.args)
+        return self.ticker_list
+
+    def apply_input_conditions(self, output=None, args=None):
+        self.ticker_list = self.collect_tickers()
+        logger.info(f"apply input conditions tickers {self.ticker_list}")
+        if self.ticker_list:
+            self.stocks = [yf.Ticker(symbol) for symbol in self.ticker_list]
+        else:
+            logger.error("Ticker List is empty.")
+            logger.warning(f"Your Ticker: {self.args.ticker}")
+            return
+
+        if output is not None:
+            output.add_to_report_card('total_stocks', len(self.stocks))
+
+        self.analysis = Analysis(self.stocks, self.args)
+
+
         if self.args.report and output is not None:
             report = Report(output, self.args)
-            report.conduct_report(stocks, analysis)
-            report.write_report(analysis)
+            report.conduct_report(self.stocks, self.analysis)
+            report.write_report(self.analysis)
 
             if self.args.e:
                 # email the output file to given email
@@ -189,8 +225,20 @@ class StockInputManager:
                 logger.info("Email sent.")
 
         else:
-            analysis.execute_stock_program(args=self.args, output=output)
+            if args is None:
+                return self.analysis.execute_stock_program(args=self.args, output=output)
+            else:
+                return self.analysis.execute_stock_program(args=args, output=output)
 
+    def grab_market_data(self, index, time_delta):
+        return self.analysis.get_market_data(index, time_delta)
+
+    def grab_summary(self):
+        return self.analysis.return_summary_info()
+
+    def grab_recommendations(self):
+        return self.analysis.return_recommendations()
+        
     def use_dow(self):
         dow30_stocks = [
     'AAPL', 'AMGN', 'AXP', 'BA', 'CAT', 'CRM', 'CSCO', 'CVX', 'DIS', 'DOW',

@@ -23,13 +23,14 @@ class Index_Stocks:
 
     def create_my_index_stock(self, index, args):
         if not self.info_set:
-            if index.lower() == "s&p":
+            if index.lower() == "s&p500":
                 self.myIndexStock = MyStock(yf.Ticker(self.sap_ticker), args)
                 self.info_set = True
-            elif index.lower() == "dow":
+                logger.debug("S&P500 stock created.")
+            elif index.lower() == "dow jones":
                 self.myIndexStock = MyStock(yf.Ticker(self.dow_ticker), args)
                 self.info_set = True
-            elif index.lower() == "nas":
+            elif index.lower() == "nasdaq":
                 self.myIndexStock = MyStock(yf.Ticker(self.nas_ticker), args)
                 self.info_set = True
             else:
@@ -44,7 +45,7 @@ class Index_Stocks:
             self.sap_stock = self.index_stocks.tickers[self.sap_ticker]
             self.dow_stock = self.index_stocks.tickers[self.dow_ticker]
             self.nas_stock = self.index_stocks.tickers[self.nas_ticker]
-            logger.debug("--> Stocks Set.")
+            logger.debug("--> Index Stocks Set.")
             self.info_set = True
         else:
             logger.debug("--> Info already fetched.")
@@ -97,6 +98,8 @@ class MyStock:
         self.model_time_delta = '1mo'
         if self.args is not None:
             self.model_time_delta = self.args.model_time_delta
+        else:
+            logger.info("Default model_time_delta used 1mo")
 
         self.symbol = None
         self.name = None
@@ -259,7 +262,7 @@ class MyStock:
                 except:
                     logger.warning("fetch_stock_info --> 5d not found trying 1d...")
                     try:
-                        self.the_month_history = self.stock.history(period="1d")
+                        self.the_month_history = self.stock.history(period="1d", interval='5m')
                     except:
                         logger.warning(f"fetch_stock_info --> history cannot be found for {self.name}")
 
@@ -269,11 +272,12 @@ class MyStock:
             except:
                 logger.warning(f"fetch_stock_info --> 5d History not found for {self.name}")
 
-        if self.model_time_delta == "1d":
-            try:
-                self.the_day_history = self.history(period='1d')
-            except:
-                logger.warning(f"fetch_stock_info --> 1d History not found for {self.name}")
+
+        try:
+            self.the_day_history = self.history(period='1d', interval='5m')
+            logger.info(f"{self.name} one day history set.")
+        except:
+            logger.warning(f"fetch_stock_info --> 1d History not found for {self.name}")
 
     def __del__(self):
         pass

@@ -1,7 +1,7 @@
 ## -----------------------------------------------------------------------------------------##
 ## ----------------------------- Research CLASS    ----------- -----------------------------##
 ## -----------------------------------------------------------------------------------------##
-from StockApp.StockAnalysis import Analysis
+from .StockAnalysis import Analysis
 import logging
 from colorama import Fore, Style
 import yfinance as yf
