@@ -56,9 +56,10 @@ class Analysis:
             index_stock = Index_Stocks()  # lazy initialization
             # creates
             if index is not None:
-                self.myIndexStock = index_stock.create_my_index_stock(index, self.args)
+                print("get market data code should come here.")
+                self.myIndexStock = MyStock(index_stock.create_my_index_stock(index, self.args), time_period=time_delta)
             else:
-                self.myIndexStock = index_stock.create_my_index_stock(self.args.index, self.args)
+                self.myIndexStock = MyStock(index_stock.create_my_index_stock(self.args.index, self.args), time_period=time_delta)
 
         if time_delta == "5y":
             market_data = self.myIndexStock.the_5y_history
@@ -68,6 +69,8 @@ class Analysis:
             market_data = self.myIndexStock.the_6mo_history
         elif time_delta == "3mo":
             market_data = self.myIndexStock.the_3mo_history
+            logger.info("Market Data grabbed 3mo history.")
+            logger.info(market_data)
         elif time_delta == "1mo":
             market_data = self.myIndexStock.the_month_history
         elif time_delta == "5d":
@@ -79,7 +82,11 @@ class Analysis:
             logger.error(f"Get Market Data Time Delta {time_delta} not available, exiting.")
             sys.exit(1)
 
-        market_data['daily_return'] = market_data['Close'].pct_change()
+        if market_data is not None:
+            market_data['daily_return'] = market_data['Close'].pct_change()
+        else:
+            logger.error("Get market data returning empty. Printing market data for debugging.")
+            logger.warning(market_data)
 
         return market_data
 

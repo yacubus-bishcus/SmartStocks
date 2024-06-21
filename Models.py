@@ -53,7 +53,7 @@ class Models:
             logger.warning(f"{myStock.name} failed to grab {time_period} history.")
             logger.exception(df)
             sys.exit(1)
-            
+
         return df['Close']
 
     def execute_model(self):
@@ -166,8 +166,6 @@ class RSI:
         self.stock_list = myStock_list
         self.futures_data = futures_data
         self.time_period = time_period
-        self.first_period = None
-        self.smooth_period = None
         # Initalize variables for plotting
         self.rsi = None
         self.smoothed_rsi = None
@@ -192,9 +190,11 @@ class RSI:
         return self.caption
 
     def execute_model(self):
+        print("Executing RSI Model.")
         models = Models(myStockList=self.stock_list)
         rsi_list = []
         if isinstance(self.stock_list, list):
+            print("isinstance?")
             if len(self.stock_list) > 1:
                 for stock in self.stock_list:
                     if self.futures_data is None:
@@ -202,24 +202,38 @@ class RSI:
                     else:
                         history = self.futures_data
 
-                    self.first_period, self.smooth_period = self.calculate_periods(len(history))
-                    self.rsi = self.calculate_model(history, self.first_period)
+                    #self.first_period, self.smooth_period = self.calculate_periods(len(history))
+                    self.rsi = self.calculate_model(history)
                     # provides a smoothed RSI for a year of data good for plotting
-                    self.smoothed_rsi = self.smooth_rsi(self.rsi, self.smooth_period)
+                    self.smoothed_rsi = self.smooth_rsi(self.rsi)
                     # Here i need a single value not the full year's data
                     smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
                     rsi_list.append(smoothed_rsi_last_value)
 
                 return rsi_list
+            else:
+                if self.futures_data is None:
+                    print("RSI Setting History")
+                    history = models.set_history(self.stock_list[0], self.time_period)
+                    print(history)
+                else:
+                    history = self.futures_data
+
+                #self.first_period, self.smooth_period = self.calculate_periods(len(history))
+                self.rsi = self.calculate_model(history)
+                self.smoothed_rsi = self.smooth_rsi(self.rsi)
+                smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
         else:
             if self.futures_data is None:
+                print("RSI Setting History")
                 history = models.set_history(self.stock_list, self.time_period)
+                print(history)
             else:
                 history = self.futures_data
 
-            self.first_period, self.smooth_period = self.calculate_periods(len(history))
-            self.rsi = self.calculate_model(history, self.first_period)
-            self.smoothed_rsi = self.smooth_rsi(self.rsi, self.smooth_period)
+            #self.first_period, self.smooth_period = self.calculate_periods(len(history))
+            self.rsi = self.calculate_model(history)
+            self.smoothed_rsi = self.smooth_rsi(self.rsi)
             smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
             return smoothed_rsi_last_value
 
@@ -233,15 +247,15 @@ class RSI:
         self.time_delta = time_delta
 
 
-    def calculate_model(self, history, period=14):
+    def calculate_model(self, history):
         self.history = history
         data = self.history
         delta = data.diff(1)
         gain = delta.where(delta > 0, 0)
         loss = -delta.where(delta < 0, 0)
 
-        avg_gain = gain.rolling(window=period, min_periods=1).mean()
-        avg_loss = loss.rolling(window=period, min_periods=1).mean()
+        avg_gain = gain.rolling(window=14, min_periods=1).mean()
+        avg_loss = loss.rolling(window=14, min_periods=1).mean()
 
         rs = avg_gain / avg_loss
         rsi = 100 - (100 / (1 + rs))
@@ -249,26 +263,30 @@ class RSI:
         filtered_df = rsi.iloc[2:]
         return filtered_df
 
-    def calculate_periods(self, total_period):
-        first_period = int(round(14*total_period/365))
-        if first_period < 1:
-            first_period = 1
-        smooth_period = int(round(3*total_period/365))
-        if smooth_period < 1:
-            smooth_period = 2
+    # def calculate_periods(self, total_period):
+    #     first_period = 14
+    #     smooth_period = 3
+
 
         return first_period, smooth_period
 
-    def smooth_rsi(self, rsi, smoothing_period=3):
+    def smooth_rsi(self, rsi):
         # Apply exponential moving average to smooth RSI
-        smoothed_rsi = rsi.ewm(span=smoothing_period).mean()
+        smoothed_rsi = rsi.ewm(span=3).mean()
         return smoothed_rsi
 
-    def plot(self, stock_name, log_scale=False, subplot=True, ax=None):
-        title_string = stock_name + " RSI vs Price"
+    def plot(self, stock_name=None, log_scale=False, subplot=True, show=False, ax=None):
+        if stock_name is not None:
+            title_string = stock_name + " RSI vs Price"
+        else:
+            title_string = "RSI vs Price"
+
         plt.ioff()
         fig = None
-        logger.info(f"RSI Model First Period: {self.first_period} Smoothing Period: {self.smooth_period}")
+
+        print(self.smoothed_rsi)
+        print(self.history)
+        print(self.rsi)
         if subplot:
             fig, ax1 = plt.subplots()
             ax1.plot(self.smoothed_rsi, color='red',label='Smoothed RSI')
@@ -293,6 +311,9 @@ class RSI:
             plt.legend()
         ax1.xaxis.set_major_formatter(mdates.DateFormatter('%b %d'))
         plt.title(title_string)
+        if show:
+            plt.plot()
+
         return fig
 
 ## ---------------------------------------------------------------------------##
@@ -400,6 +421,7 @@ class FIBONACCI:
 
         self.time_period = time_period
         self.futures_data = futures_data
+        self.history = None
         self.fib_levels = [0.236, 0.382, 0.5, 0.618, 1.0]
         self.caption = """
         Fibonacci retracement levels—stemming from the Fibonacci sequence—are
@@ -433,6 +455,9 @@ class FIBONACCI:
                     self.fibo = self.calculate_model(history)
                     fibo_list.append(self.fibo)
                 return fibo_list
+            else:
+                history = models.set_history(self.stock_list[0], self.time_period)
+                self.fibo = self.calculate_model(history)
         else:
             history = models.set_history(self.stock_list, self.time_period)
             self.fibo = self.calculate_model(history)
@@ -454,14 +479,14 @@ class FIBONACCI:
             period = 1
         return period
 
-    def plot(self, stock_name, ax=None):
+    def plot(self, stock_name=None, ax=None):
         plt.ioff()
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
         else:
             fig = ax.figure
         #fig, ax = plt.subplots(figsize=(10, 6))
-        title_string = stock_name + " Fibonacci"
+        title_string = " Fibonacci"
         ax.plot(self.history.index, self.history.values, label='Stock Price', color='green')
         for i, level in enumerate(self.fib_levels):
             retracement_level = self.retracement_levels[i]
@@ -501,12 +526,8 @@ class STOCHASTIC:
         return self.caption
 
     def calculate_periods(self, total_period):
-        window_period = int(round(14*total_period/365))
-        smooth_period = int(round(3*total_period/365))
-        if window_period < 1:
-            window_period = 1
-        if smooth_period < 1:
-            smooth_period = 1
+        window_period = 14
+        smooth_period = 3
 
         return window_period, smooth_period
 
@@ -526,6 +547,14 @@ class STOCHASTIC:
                     output = self.calculate_performance_score().mean()
                     output_list.append(output)
                 return output_list
+            else:
+                if self.futures_data is None:
+                    history = models.set_history(self.stock_list[0], self.time_period)
+                else:
+                    history = self.futures_data
+
+                self.k, self.d = self.calculate_model(self.stock_list[0], history)
+                output = self.calculate_performance_score().mean()
         else:
             if self.futures_data is None:
                 history = models.set_history(self.stock_list, self.time_period)
@@ -554,9 +583,12 @@ class STOCHASTIC:
         result_df = pd.DataFrame({'Average_Percent':avg_percent})
         return result_df
 
-    def plot(self, stock_name, ax=None):
+    def plot(self, stock_name=None, ax=None):
         plt.ioff()
-        string_title = stock_name + " Stochastic"
+        if stock_name is not None:
+            string_title = stock_name + " Stochastic"
+        else:
+            string_title = "Stochastic Oscillator"
         fig, ax1 = plt.subplots()
         ax1.plot(self.history, label='Stock Price', color='green')
         ax1.set_ylabel('Price', color='green')
@@ -576,13 +608,11 @@ class STOCHASTIC:
 ## ---------------------------------------------------------------------------##
 
 class MACD:
-    def __init__(self, myStock_list=None, futures_data=None, time_period="1mo"):
+    def __init__(self, myStock_list=None, futures_data=None, time_period="1mo", debug=False):
         self.stock_list = myStock_list
         self.time_period = time_period
         self.futures_data = futures_data
-        self.short_period = 0
-        self.long_period = 0
-        self.signal_period = 0
+        self.debug = debug
         self.macd_line = None
         self.signal_line = None
         self.macd_histogram = None
@@ -604,21 +634,23 @@ class MACD:
     def get_caption(self):
         return self.caption
 
-    def calculate_periods(self, total_period):
-        short_period = int(round(12*total_period/365,1))
-        if short_period < 1:
-            short_period = 1
-        long_period = int(round(26*total_period/365,1))
-        if long_period < 1:
-            long_period = short_period + 2
-        signal_period = int(round(9*total_period/365,1))
-        if signal_period < 1 or signal_period <= short_period:
-            signal_period = short_period + 1
-
-        return short_period, long_period, signal_period
+    # def calculate_periods(self, total_period):
+    #     #short_period = int(round(12*365/total_period,1))
+    #     short_period = 12
+    #     if short_period < 1:
+    #         short_period = 1
+    #     #long_period = int(round(26*365/total_period,1))
+    #     long_period = 26
+    #     if long_period < 1:
+    #         long_period = short_period + 2
+    #     #signal_period = int(round(9*365/total_period,1))
+    #     signal_period = 9
+    #
+    #     return short_period, long_period, signal_period
 
     def execute_model(self):
         output_list = []
+        output = None
         model = Models(myStockList=self.stock_list)
         if isinstance(self.stock_list, list):
             if len(self.stock_list) > 1:
@@ -633,6 +665,15 @@ class MACD:
                     output_list.append(output)
 
                 return output_list
+            else:
+                if self.futures_data is None:
+                    history = model.set_history(self.stock_list[0], self.time_period)
+                else:
+                    history = self.futures_data
+
+                macd_line, signal_line, macd_histogram = self.calculate_model(self.stock_list[0], history)
+                output = self.calculate_performance_score()
+
         else:
             if self.futures_data is None:
                 history = model.set_history(self.stock_list, self.time_period)
@@ -641,18 +682,18 @@ class MACD:
 
             macd_line, signal_line, macd_histogram = self.calculate_model(self.stock_list, history)
             output = self.calculate_performance_score()
-            return output
+
+        return output
 
     def calculate_model(self, myStock, history):
         self.history = history
-        if self.short_period == 0:
-            self.short_period, self.long_period, self.signal_period = self.calculate_periods(len(self.history))
-        short_ema = self.history.ewm(span=self.short_period, min_periods=self.short_period, adjust=False).mean()
-        long_ema = self.history.ewm(span=self.long_period, min_periods=self.long_period, adjust=False).mean()
+        short_ema = self.history.ewm(span=12, min_periods=1, adjust=False).mean()
+        long_ema = self.history.ewm(span=26, min_periods=1, adjust=False).mean()
         # Calculate MACD Line
         self.macd_line = short_ema - long_ema
+        logger.info(self.macd_line)
         # Calculate signal line
-        self.signal_line = self.macd_line.ewm(span=self.signal_period, min_periods=self.signal_period, adjust=False).mean()
+        self.signal_line = self.macd_line.ewm(span=9, min_periods=1, adjust=False).mean()
         self.macd_histogram = self.macd_line - self.signal_line
         return self.macd_line, self.signal_line, self.macd_histogram
 
@@ -669,8 +710,12 @@ class MACD:
 
         return performance_score
 
-    def plot(self, stock_name, show=False, ax=None):
-        string_title = stock_name + " MACD"
+    def plot(self, stock_name=None, show=False, ax=None):
+        if stock_name is not None:
+            string_title = stock_name + " MACD"
+        else:
+            string_title = "MACD"
+
         fig, ax1 = plt.subplots(figsize=(10, 6))
         ax1.plot(self.macd_line, label='MACD Line', color='blue')
         ax1.plot(self.signal_line, label='Signal Line', color='magenta')
@@ -680,9 +725,6 @@ class MACD:
         hist_values = self.macd_histogram.values
         pos_to_neg = np.where((hist_values[:-1] > 0) & (hist_values[1:] <= 0))[0]
         neg_to_pos = np.where((hist_values[:-1] < 0) & (hist_values[1:] >= 0))[0]
-
-        # Log information
-        logger.info(f"MACD Model Short Period: {self.short_period} Long Period: {self.long_period} Signal Period: {self.signal_period}")
 
         ymin, _ = ax1.get_ylim()  # Get the current y-axis minimum
 

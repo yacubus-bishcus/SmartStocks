@@ -26,7 +26,7 @@ class Index_Stocks:
             if index.lower() == "s&p500":
                 self.myIndexStock = MyStock(yf.Ticker(self.sap_ticker), args)
                 self.info_set = True
-                logger.debug("S&P500 stock created.")
+                logger.info("S&P500 stock created.")
             elif index.lower() == "dow jones":
                 self.myIndexStock = MyStock(yf.Ticker(self.dow_ticker), args)
                 self.info_set = True
@@ -92,12 +92,14 @@ class Index_Stocks:
 
 class MyStock:
     # python only reads one __init__
-    def __init__(self, stock, args=None):
+    def __init__(self, stock, time_period=None, args=None):
         # initialize attributes
         self.args = args
         self.model_time_delta = '1mo'
         if self.args is not None:
             self.model_time_delta = self.args.model_time_delta
+        elif time_period is not None:
+            self.model_time_delta = time_period
         else:
             logger.info("Default model_time_delta used 1mo")
 
@@ -240,21 +242,23 @@ class MyStock:
             except:
                 logger.warning(f"fetch_stock_info --> ytd History not found for {self.name}.")
 
-        if self.model_time_delta == "6mo":
-            try:
-                self.the_6mo_history = self.history(period="6mo")
-            except:
-                logger.warning(f"fetch_stock_info --> 6mo History not found for {self.name}")
 
-        if self.model_time_delta == "3mo":
-            try:
-                self.the_3mo_history = self.history(period="3mo")
-            except:
-                logger.warning(f"fetch_stock_info --> 3mo History not found for {self.name}")
+        try:
+            self.the_6mo_history = self.history(period="6mo")
+        except:
+            logger.warning(f"fetch_stock_info --> 6mo History not found for {self.name}")
+
+
+        try:
+            self.the_3mo_history = self.history(period="3mo")
+            logger.info(f"fetch_stock_info --> 3mo history found for {self.name}")
+        except:
+            logger.warning(f"fetch_stock_info --> 3mo History not found for {self.name}")
         # set 1mo
         if self.model_time_delta == "1mo":
             try:
                 self.the_month_history = self.history(period='1mo')
+                logger.info(f"fetch_stock_info --> 1mo History is set for {self.name}.")
             except:
                 logger.warning("fetch_stock_info --> 1mo not found trying 5d...")
                 try:
