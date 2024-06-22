@@ -1,9 +1,7 @@
-from .Model_Handler import Model_Handler
-from .Stock import MyStock, Index_Stocks
-from .MonteCarlo import MonteCarlo
-from .Simulation_Analysis import Simulation_Analysis
 from datetime import datetime, timedelta
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH as WD_PARAGRAPH_ALIGNMENT
+import warnings
+warnings.filterwarnings('ignore', category=PendingDeprecationWarning)
 from colorama import Fore, Style
 import pandas_datareader.data as web
 import numpy as np
@@ -18,6 +16,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from yfinance import Ticker
+
+# My Modules
+from Model_Handler import Model_Handler
+from Stock import MyStock, Index_Stocks
+from MonteCarlo import MonteCarlo
+from Simulation_Analysis import Simulation_Analysis
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +60,6 @@ class Analysis:
             index_stock = Index_Stocks()  # lazy initialization
             # creates
             if index is not None:
-                print("get market data code should come here.")
                 self.myIndexStock = MyStock(index_stock.create_my_index_stock(index, self.args), time_period=time_delta)
             else:
                 self.myIndexStock = MyStock(index_stock.create_my_index_stock(self.args.index, self.args), time_period=time_delta)
@@ -69,15 +72,12 @@ class Analysis:
             market_data = self.myIndexStock.the_6mo_history
         elif time_delta == "3mo":
             market_data = self.myIndexStock.the_3mo_history
-            logger.info("Market Data grabbed 3mo history.")
-            logger.info(market_data)
         elif time_delta == "1mo":
             market_data = self.myIndexStock.the_month_history
         elif time_delta == "5d":
             market_data = self.myIndexStock.the_5d_history
         elif time_delta == "1d":
             market_data = self.myIndexStock.the_day_history
-            logger.info("Market Data grabbed Day History.")
         else:
             logger.error(f"Get Market Data Time Delta {time_delta} not available, exiting.")
             sys.exit(1)
@@ -481,11 +481,8 @@ class Analysis:
         if args.r:
             if output is not None:
                 stock.output_recommendations()
-            else:
-                print(stock.the_recommendations)
 
             self.recommendations = stock.the_recommendations
-            logger.info(f"Recommendations Updated: {self.recommendations}")
 
         if args.summary:
             if output is not None:

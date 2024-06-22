@@ -3,45 +3,74 @@ import pandas as pd
 from datetime import datetime
 import logging
 import matplotlib.pyplot as plt
+import matplotlib
 import random
+from tabulate import tabulate
+import traceback
 
 # Kivy Imported Modules
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.behaviors import ButtonBehavior
+from kivy.uix.switch import Switch
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.screenmanager import ScreenManager, Screen
+from kivymd.uix.screen import MDScreen
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.image import Image
 from kivy.uix.floatlayout import FloatLayout
 from kivy.graphics import Color, Line, Rectangle
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.widget import Widget
-from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
+# Figure modules
+#from kivy.garden.matplotlib.backend_kivy import FigureCanvasKivy
+from kivy.garden.matplotlib.backend_kivyagg import NavigationToolbar2Kivy
+
+#from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg as FigureCanvas
+#from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
+
 from kivy.uix.spinner import Spinner
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.core.window import Window
+from kivy.lang import Builder
+from kivy.utils import get_color_from_hex
+#from kivymd.uix.appbar import MDTopAppBar
+
 # My Imported Modules
-from .InputManager import StockInputManager
-from .ArgsParser import ArgsParser
-from .customoptions import CustomCheckBox, BackgroundColorBoxLayout
-from .Models import RSI, FIBONACCI, STOCHASTIC, MACD
-from .Stock import MyStock
+from InputManager import StockInputManager
+from ArgsParser import ArgsParser
+from customoptions import CustomCheckBox, BackgroundColorBoxLayout, CustomBanner, MyFigure
+from Models import RSI, FIBONACCI, STOCHASTIC, MACD
+from Stock import MyStock
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
+Builder.load_string('''
+<CompareStocksOutputScreen>:
+    MyFigure:
+        id: my_figure
+''')
 
-class CompareStocksScreen(Screen):
+class CompareStocksScreen(MDScreen):
     def __init__(self, **kwargs):
         super(CompareStocksScreen, self).__init__(**kwargs)
         layout = BackgroundColorBoxLayout(orientation='vertical', padding=30, spacing=30)
         self.screen_width = Window.width
         self.screen_height = Window.height
 
+
+
+        # # Create a colored banner with a Label
+        # banner_color = get_color_from_hex('#3498db')  # Example color
+        # banner = BoxLayout(size_hint_y=None, height=10, background_color=banner_color)
+        # banner_label = Label(text='Compare Stocks', font_size=24, color=(1, 1, 1, 1))
+        # banner.add_widget(banner_label)
         # Tooltip Section (Top Left)
         tooltip_layout = AnchorLayout(anchor_x='left', anchor_y='top')
         fibo_tip = """
@@ -196,6 +225,20 @@ class CompareStocksScreen(Screen):
         centered_layout_buttons.add_widget(compare_buttons_layout)
         layout.add_widget(centered_layout_buttons)
 
+        # Switch for Clear Plots
+        clear_plots_layout = BoxLayout(orientation='vertical', size_hint=(None, None), size=(300, 150))
+        clear_plots_label = Label(text="Clear Plots", font_size='24sp', size_hint=(None, None), size=(300, 50), color=(0, 0, 0, 1))
+
+        self.clear_plots_switch = Switch(active=False, size_hint=(None, None), size=(300, 50))
+        self.clear_plots_switch.bind(active=self.on_clear_plots_switch_active)
+
+        clear_plots_layout.add_widget(clear_plots_label)
+        clear_plots_layout.add_widget(self.clear_plots_switch)
+
+        centered_layout_clear_plots = AnchorLayout(anchor_x='center')
+        centered_layout_clear_plots.add_widget(clear_plots_layout)
+        layout.add_widget(centered_layout_clear_plots)
+
         # Back Button
         back_button_layout = AnchorLayout(anchor_x='right', anchor_y='bottom')
         back_button = Button(text="Back to Menu", size_hint=(None, None), size=(200, 50), color=(0, 0, 0, 1))
@@ -216,6 +259,15 @@ class CompareStocksScreen(Screen):
     #     # Update the progress bar based on current step and total steps
     #     progress = (current_step + 1) / total_steps
     #     self.loader_spinner.value = progress * self.loader_spinner.max
+
+    def on_clear_plots_switch_active(self, instance, value):
+        if value:
+            logger.info("Switch is ON - Clear Plots")
+            self.manager.get_screen('compare_stocks_output').clear_plots()
+            # Add your clear plots logic here
+        else:
+            logger.info("Switch is OFF - Keep Plots")
+            # Add your keep plots logic here
 
     def compare_daily(self, instance):
         input_instance = StockInputManager(True)
@@ -238,7 +290,7 @@ class CompareStocksScreen(Screen):
         output = None
         input_instance.set_args(args)
         output_text = str(input_instance.apply_input_conditions(args=args))
-        summary_info = input_instance.grab_recommendations()
+        recommendations = input_instance.grab_recommendations()
 
         stocks = input_instance.grab_stocks()
         if self.dow_jones_checkbox.active:
@@ -253,8 +305,9 @@ class CompareStocksScreen(Screen):
 
         plot_data = [stock.history(period="1d", interval='5m')['Close'] for stock in stocks]
         compare_output_screen = self.manager.get_screen('compare_stocks_output')
-        compare_output_screen.update_output(output_text, summary_info, plot_data, stocks, market_data, self.model_spinner.text, '1d')
         self.manager.current = 'compare_stocks_output'
+        compare_output_screen.update_output(output_text, recommendations, plot_data, stocks, market_data, self.model_spinner.text, '1d')
+        # self.manager.current = 'compare_stocks_output'
 
     def compare_50day(self, instance):
         input_instance = StockInputManager(True)
@@ -277,7 +330,7 @@ class CompareStocksScreen(Screen):
         output = None
         input_instance.set_args(args)
         output_text = str(input_instance.apply_input_conditions(args=args))
-        summary_info = input_instance.grab_recommendations()
+        recommendations = input_instance.grab_recommendations()
 
         stocks = input_instance.grab_stocks()
         if self.dow_jones_checkbox.active:
@@ -292,7 +345,7 @@ class CompareStocksScreen(Screen):
 
         plot_data = [stock.history(period="3mo")['Close'] for stock in stocks]
         compare_output_screen = self.manager.get_screen('compare_stocks_output')
-        compare_output_screen.update_output(output_text, summary_info, plot_data, stocks, market_data, self.model_spinner.text, '3mo')
+        compare_output_screen.update_output(output_text, recommendations, plot_data, stocks, market_data, self.model_spinner.text, '3mo')
         self.manager.current = 'compare_stocks_output'
 
     def compare_200day(self, instance):
@@ -316,7 +369,11 @@ class CompareStocksScreen(Screen):
         output = None
         input_instance.set_args(args)
         output_text = str(input_instance.apply_input_conditions(args=args))
-        summary_info = input_instance.grab_recommendations()
+        recommendations = input_instance.grab_recommendations()
+        logger.info("Output text:")
+        logger.info(output_text)
+        logger.info("Recommendations:")
+        logger.info(recommendations)
 
         stocks = input_instance.grab_stocks()
         if self.dow_jones_checkbox.active:
@@ -331,145 +388,147 @@ class CompareStocksScreen(Screen):
 
         plot_data = [stock.history(period="6mo")['Close'] for stock in stocks]
         compare_output_screen = self.manager.get_screen('compare_stocks_output')
-        compare_output_screen.update_output(output_text, summary_info, plot_data, stocks, market_data, self.model_spinner.text, '6mo')
+        compare_output_screen.update_output(output_text, recommendations, plot_data, stocks, market_data, self.model_spinner.text, '6mo')
         self.manager.current = 'compare_stocks_output'
 
     def back_to_menu(self, instance):
         self.manager.current = 'menu'
 
-    def build_args_from_gui(self):
-        self.args = {}
-        # Set all defaults
-        self.args['c'] = False
-        self.args['c_50'] = False
-        self.args['c_200'] = False
-        self.args['c_Dow'] = False
-        self.args['c_Nas'] = False
-        self.args['c_Sap'] = False
-        self.args['c_50_Dow'] = False
-        self.args['c_50_Nas'] = False
-        self.args['c_c_50_Sap'] = False
-        self.args['c_200_Dow'] = False
-        self.args['c_200_Nas'] = False
-        self.args['c_200_Sap'] = False
-        self.args['co_200'] = False
-        self.args['c_Daily'] = False
-        self.args['data'] = ['nasdaqlisted.txt', 'otherlisted.txt']
-        self.args['d'] = False
-        self.args['e'] = False
-        self.args['import_model_class'] = []
-        self.args['import_model_module'] = []
-        self.args['input'] = ''
-        self.args['index'] = 's&p'
-        self.args['jump_parameter'] = 1.
-        self.args['max_price'] = "10000."
-        self.args['models'] = ['Fifty Day','Two Hundred Day','CAPM', 'MACD', 'RSI', 'Stochastic']
-        self.args['model_time_delta'] = "1mo"
-        self.args['min_price'] = "1.00"
-        self.args['number_to_highlight'] = '3'
-        self.args['number_to_research'] = "10"
-        self.args['output'] = None
-        self.args['p'] = False
-        self.args['price_processing_model'] = 'close_open'
-        self.args['processes'] = 1
-        self.args['r'] = False
-        self.args['report'] = False
-        self.args['research'] = False
-        self.args['seed'] = 42
-        self.args['sim_time'] = 30
-        self.args['simulations'] = 0
-        self.args['simulation_model'] = 'gaussian'
-        self.args['summary'] = False
-        self.args['ticker'] = None
-        self.args['u'] = False
-        self.args['weights'] = {'Fifty Day':0.1, 'Two Hundred Day':0.1, 'CAPM':0.2, 'MACD':0.05, 'RSI':0.3, 'Stochastic':0.25}
-
-    def set_args_from_gui(self, the_arg, the_value):
-        self.args[the_arg] = the_value
 
 class CompareStocksOutputScreen(Screen):
     def __init__(self, **kwargs):
         super(CompareStocksOutputScreen, self).__init__(**kwargs)
-        self.layout = BoxLayout(orientation='vertical')
+        self.create_layout()
 
-        self.plot_area = BoxLayout(size_hint_y=0.75)
-        self.layout.add_widget(self.plot_area)
+    def create_layout(self):
+        # Set the Matplotlib datapath
+        #matplotlib.rcParams['datapath'] = '/home/jbickus/Python_Files/stockenv3.10/lib/python3.10/site-packages/matplotlib/mpl-data'
+        layout = BackgroundColorBoxLayout(orientation='vertical', padding=30, spacing=30)
 
-        self.output_label = Label(text="Output will be displayed here.", size_hint_y=0.20) # change to 0.10 once we add table of information
-        self.layout.add_widget(self.output_label)
+        # # Create an instance of CustomBanner and add it at the top
+        # self.custom_banner = CustomBanner(size_hint_y=None, height='10dp') # Adjust height as needed
+        # self.layout.add_widget(self.custom_banner)
+        # self.fig, self.ax = Figure(figsize=(6, 4)), None
+        # self.canvas = FigureCanvas(self.fig)
+        # self.plot_area = BoxLayout(size_hint_y=0.75)
+        # self.toolbar = NavigationToolbar2Kivy(self.canvas, boxplot_area=self.plot_area)
+        # fig = Figure(figsize=(16,10))
+        # self.plot_area = fig.add_subplot(111)
+        self.my_figure = MyFigure()
+        layout.add_widget(self.my_figure)
+
+        # Create a wrapper widget for the toolbar
+        #toolbar = NavigationToolbar2Kivy(self.canvas)
+        #toolbar_wrapper = Widget(size_hint_y=None)
+        #self.init_toolbar(toolbar)
+        #toolbar_wrapper.height = toolbar.height
+        #toolbar_wrapper.add_widget(toolbar)
+        #layout.add_widget(self.canvas)
+        #layout.add_widget(toolbar_wrapper)
+
+        self.output_label = Label(text="Output will be displayed here.", font_size='16sp', size_hint_y=0.05, color=(0,0,0,1)) # change to 0.10 once we add table of information
+        layout.add_widget(self.output_label)
+        self.output_label2 = Label(text="Recommendations Table will be displayed here.", font_size='14sp', size_hint_y=0.15, color=(0,0,0,1)) # change to 0.10 once we add table of information
+        layout.add_widget(self.output_label2)
 
         self.back_button = Button(text="Back to Compare Stocks", size_hint_y=0.05)
         self.back_button.bind(on_press=self.back_to_compare)
-        self.layout.add_widget(self.back_button)
+        layout.add_widget(self.back_button)
 
-        self.add_widget(self.layout)
+        self.add_widget(layout)
 
+    def init_toolbar(self, toolbar):
+            # Perform any additional toolbar initialization here if needed
+            toolbar._init_toolbar()  # Initialize the toolbar
 
-    def display_table(self, data):
-        # Clear previous table
-        self.layout.clear_widgets()
-
-        # Add table headers
-        headers = ["Stock", "Price", "Change", "Volume"]
-        for header in headers:
-            self.layout.add_widget(Label(text=header, bold=True))
-
-        # Add data rows
-        for row in data:
-            for cell in row:
-                self.layout.add_widget(Label(text=str(cell)))
+            # Example: Set specific actions or adjust toolbar properties
 
     def back_to_compare(self, instance):
         self.manager.current = 'compare_stocks'
 
-    def update_output(self, output_text, summary_info, plot_data, stocks, indexes, model, time_period='1mo'):
-        self.output_label.text = output_text
-        #self.output_label2.text = summary_info
-        self.plot_area.clear_widgets()
+    def clear_plots(self):
+        self.my_figure.clear_widgets()
 
-        fig, ax = plt.subplots(figsize=(20,12))
-        df = pd.DataFrame(plot_data)
-        df = df.T
-        #df.index = df.index.date
-        df.columns = [stock.info.get('longName') for stock in stocks]
-        df2 = pd.DataFrame(indexes)
-        df2['Time'] = df2.index
-        df2['Time'] = pd.to_datetime(df2['Time'])
-        df2.set_index('Time', inplace=True)
-        #df2.index = df.index.date
-        df2.columns = ['Market Price']
+    # Function to add padding to column headers
+    def pad_headers(self, headers, pad=0):
+        return [f' {header} '.center(len(header) + pad) for header in headers]
 
-        if model == "Index Comparison":
-            ax.plot(df.index, df.values, label=df.columns)
-            ax.set_xlabel("Date/Time")
-            ax.set_ylabel("Price")
-            ax.legend(loc='upper left')
-            ax2 = ax.twinx()
-            ax2.plot(df2.index, df2.values, label=df2.columns, color='black', linestyle='--')
-            ax2.set_ylabel("Index Price")
-            ax2.legend(loc='upper right')
-            title_string = "Your Stock vs Market Price"
-            plt.title(title_string)
-            fig.autofmt_xdate()
-        elif model == "Fibonacci Retracement":
-            my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
-            fibo = FIBONACCI(myStock_list=my_stocks, time_period=time_period) # defaults to 1mo for now
-            fibo.execute_model()
-            fig = fibo.plot()
-        elif model == "MACD":
-            my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
-            macd = MACD(myStock_list=my_stocks, time_period=time_period) # defaults to 1mo for now
-            macd.execute_model()
-            fig = macd.plot()
-        elif model == "RSI":
-            my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
-            rsi = RSI(myStock_list=my_stocks, time_period=time_period)
-            rsi.execute_model()
-            fig = rsi.plot()
-        elif model == "Stochastic":
-            my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
-            stoch = STOCHASTIC(myStock_list=my_stocks, time_period=time_period)
-            stoch.execute_model()
-            fig = stoch.plot()
+    # Function to pad DataFrame cells
+    def pad_dataframe(self, df, pad=50):
+        return df.map(lambda x: f' {str(x)} '.center(len(str(x)) + pad))
 
-        self.plot_area.add_widget(FigureCanvasKivyAgg(fig))
+    def update_output(self, output_text, recommendation_info, plot_data, stocks, indexes, model, time_period='1mo'):
+        try:
+
+            df = pd.DataFrame(plot_data)
+            df = df.T
+            #df.index = df.index.date
+            df.columns = [stock.info.get('longName') for stock in stocks]
+            df2 = pd.DataFrame(indexes)
+            df2['Time'] = df2.index
+            df2['Time'] = pd.to_datetime(df2['Time'])
+            df2.set_index('Time', inplace=True)
+            #df2.index = df.index.date
+            df2.columns = ['Market Price']
+
+            if model == "Index Comparison":
+                fig, ax1 = plt.subplots(figsize=(16,10))
+                x = df.index.values
+                y = df.values
+                ax1.plot(x, y, label=df.columns)
+                ax1.set_xlabel("Date/Time")
+                ax1.set_ylabel("Price")
+                ax1.legend(loc='upper left')
+                ax2 = ax1.twinx()
+                x2 = df2.index.values
+                y2 = df2.values
+                ax2.plot(x2, y2, label=df2.columns, color='black', linestyle='--')
+                ax2.set_ylabel("Index Price")
+                ax2.legend(loc='upper right')
+                title_string = "Your Stock vs Market Price"
+                plt.title(title_string)
+                fig.autofmt_xdate()
+            elif model == "Fibonacci Retracement":
+                my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
+                fibo = FIBONACCI(myStock_list=my_stocks, time_period=time_period) # defaults to 1mo for now
+                fibo.execute_model()
+                fig = fibo.plot()
+            elif model == "MACD":
+                my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
+                macd = MACD(myStock_list=my_stocks, time_period=time_period) # defaults to 1mo for now
+                macd.execute_model()
+                fig = macd.plot()
+            elif model == "RSI":
+                my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
+                rsi = RSI(myStock_list=my_stocks, time_period=time_period)
+                rsi.execute_model()
+                fig = rsi.plot()
+            elif model == "Stochastic":
+                my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
+                stoch = STOCHASTIC(myStock_list=my_stocks, time_period=time_period)
+                stoch.execute_model()
+                fig = stoch.plot()
+
+            self.my_figure.add_plot(fig)
+            # Updating output label
+            self.output_label.text = output_text if isinstance(output_text, str) else str(output_text)
+            print("output_label updated:", self.output_label.text)
+
+            recommendation_df = pd.DataFrame(recommendation_info)
+            # New headers
+            new_headers = ['Period', '+Buy', 'Buy', 'Hold', 'Sell', 'Strong Sell']
+            # Rename the columns to the new headers
+            recommendation_df.columns = new_headers
+            padded_headers = self.pad_headers(recommendation_df.columns)
+            padded_df = self.pad_dataframe(recommendation_df)
+            recommendation_string = tabulate(padded_df, headers=padded_headers, tablefmt='plain', numalign='right', stralign='left', showindex=False)
+            self.output_label2.text = recommendation_string
+            print("output_label2 updated:", self.output_label2.text)
+
+        except Exception as e:
+            print(f"Exception in update_output: {e}")
+            traceback.print_exc()
+            self.output_label.text = f"An error occurred: {e}"
+
+        finally:
+            plt.close(fig)

@@ -1,7 +1,6 @@
 ## -----------------------------------------------------------------------------------------##
 ## ----------------------------- Research CLASS    ----------- -----------------------------##
 ## -----------------------------------------------------------------------------------------##
-from .StockAnalysis import Analysis
 import logging
 from colorama import Fore, Style
 import yfinance as yf
@@ -12,6 +11,9 @@ import os
 import random
 from selenium import webdriver
 import pkg_resources
+
+# My Modules
+from StockAnalysis import Analysis
 
 logger = logging.getLogger(__name__)
 

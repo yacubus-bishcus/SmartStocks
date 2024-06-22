@@ -10,7 +10,7 @@ from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.image import Image
 
 # App Imported Modules
-from .customoptions import BackgroundColorBoxLayout
+from customoptions import BackgroundColorBoxLayout
 
 
 import logging

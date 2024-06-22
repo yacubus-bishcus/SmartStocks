@@ -6,13 +6,15 @@ import pkg_resources
 import pandas as pd
 import itertools
 import yfinance as yf
-from .StockAnalysis import Analysis
-from .Research import Research
-from .Report import Report
 import logging
 import ast
 import multiprocessing as mp
-from .ArgsParser import ArgsParser
+
+# My Modules
+from ArgsParser import ArgsParser
+from StockAnalysis import Analysis
+from Research import Research
+from Report import Report
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +240,7 @@ class StockInputManager:
 
     def grab_recommendations(self):
         return self.analysis.return_recommendations()
-        
+
     def use_dow(self):
         dow30_stocks = [
     'AAPL', 'AMGN', 'AXP', 'BA', 'CAT', 'CRM', 'CSCO', 'CVX', 'DIS', 'DOW',

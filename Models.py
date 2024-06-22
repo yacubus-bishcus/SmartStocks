@@ -190,11 +190,9 @@ class RSI:
         return self.caption
 
     def execute_model(self):
-        print("Executing RSI Model.")
         models = Models(myStockList=self.stock_list)
         rsi_list = []
         if isinstance(self.stock_list, list):
-            print("isinstance?")
             if len(self.stock_list) > 1:
                 for stock in self.stock_list:
                     if self.futures_data is None:
@@ -213,9 +211,7 @@ class RSI:
                 return rsi_list
             else:
                 if self.futures_data is None:
-                    print("RSI Setting History")
                     history = models.set_history(self.stock_list[0], self.time_period)
-                    print(history)
                 else:
                     history = self.futures_data
 
@@ -225,9 +221,7 @@ class RSI:
                 smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
         else:
             if self.futures_data is None:
-                print("RSI Setting History")
                 history = models.set_history(self.stock_list, self.time_period)
-                print(history)
             else:
                 history = self.futures_data
 
@@ -284,9 +278,6 @@ class RSI:
         plt.ioff()
         fig = None
 
-        print(self.smoothed_rsi)
-        print(self.history)
-        print(self.rsi)
         if subplot:
             fig, ax1 = plt.subplots()
             ax1.plot(self.smoothed_rsi, color='red',label='Smoothed RSI')
@@ -701,10 +692,10 @@ class MACD:
         performance_score = 0.
         # Iterate over the MACD and signal line data to identify crossovers
         for i in range(1, len(self.macd_line)):
-            if self.macd_line[i] > self.signal_line[i] and self.macd_line[i-1] <= self.signal_line[i-1]:
+            if self.macd_line.iloc[i] > self.signal_line.iloc[i] and self.macd_line.iloc[i-1] <= self.signal_line.iloc[i-1]:
                 # Bullish crossover: MACD Line crosses above the signal line
                 performance_score += 1
-            elif self.macd_line[i] < self.signal_line[i] and self.macd_line[i-1] >= self.signal_line[i-1]:
+            elif self.macd_line.iloc[i] < self.signal_line.iloc[i] and self.macd_line.iloc[i-1] >= self.signal_line.iloc[i-1]:
                 # Bearish crossover: MACD line crosses below the signal line
                 performance_score -= 1
 

@@ -1,9 +1,11 @@
 from colorama import Fore, Style
 import inspect
-from .Models import *
 import logging
 from collections import namedtuple
-from .Futures import Futures
+
+# My Modules 
+from Futures import Futures
+from Models import *
 
 logger = logging.getLogger(__name__)
 

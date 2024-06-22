@@ -1,0 +1,31 @@
+<CustomBanner>:
+    MDToolbar:
+        id: toolbar
+        title: "Banner"
+        elevation: 10
+        left_action_items: [["dots-vertical", lambda x: None]]
+        pos_hint: {"top": 1}
+
+    Banner:
+        id: banner
+        over_widget: scroll
+
+    ScrollView:
+        id: scroll
+        height: Window.height - toolbar.height
+        GridLayout:
+            cols: 1
+            padding: "10dp"
+            spacing: "10dp"
+
+            OneLineListItem:
+                text: "Place Ticker data Here."
+                on_release:
+                    banner.type = "one-line"
+                    banner.text = \
+                    [\
+                    "the ticker data."
+                    ]
+                    banner.right_action = ["CANCEL", lambda x: None]
+                    banner.left_action = ['CLOSE', lambda x: banner.hide()]
+                    banner.show()

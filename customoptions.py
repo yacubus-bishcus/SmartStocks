@@ -16,6 +16,39 @@ from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.spinner import Spinner as LoadingSpinner
+from kivy.properties import ObjectProperty
+from kivy.uix.widget import Widget
+import matplotlib.pyplot as plt
+from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg as FigureCanvas
+
+class MyFigure(BoxLayout):
+    def __init__(self, **kwargs):
+        super(MyFigure, self).__init__(**kwargs)
+        self.orientation = 'vertical'
+        canvas = ObjectProperty = None
+        self.fig, self.ax = plt.subplots(figsize=(16,10))
+        canvas = FigureCanvas(self.fig)
+        self.add_widget(canvas)
+        self.box_layout = BoxLayout()
+        self.add_widget(self.box_layout)
+        self.text_input = TextInput()
+        self.add_widget(self.text_input)
+
+        self.button = Button(text="Save It!!")
+        self.button.bind(on_release=self.save_it)
+        self.add_widget(self.button)
+
+    def add_plot(self, fig):
+        self.clear_widgets()
+        self.fig = fig
+        canvas = FigureCanvas(self.fig)
+        self.add_widget(canvas)
+
+    def save_it(self):
+        pass
+
+class CustomBanner(FloatLayout):
+    pass
 
 class BackgroundColorBoxLayout(BoxLayout):
     def __init__(self, **kwargs):

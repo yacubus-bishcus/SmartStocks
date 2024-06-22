@@ -56,7 +56,51 @@
 #     # Print the elapsed time
 #     logger.info("Program completed successfully.")
 #     logger.info(f"Program took {elapsed_time:.2f} seconds to run.")
-from .SmartStocksApp import SmartStocksApp
+
+import os
+
+# def patch_materialyoucolor():
+#     filepath = os.path.join(
+#         os.path.dirname(__file__),
+#         'stockenv3.8/lib/python3.8/site-packages/materialyoucolor/utils/math_utils.py'
+#     )
+#
+#     try:
+#         with open(filepath, 'r') as file:
+#             code = file.read()
+#             code = code.replace('list[float]', 'List[float]').replace('list[list[float]]', 'List[List[float]]')
+#
+#         with open(filepath, 'w') as file:
+#             file.write(code)
+#
+#     except Exception as e:
+#         print(f"File not found. Exception: {e}")
+
+#Patch the FigureCanvasKivyAgg class
+def patch_figure_canvas():
+    import kivy.garden.matplotlib.backend_kivy
+    if not hasattr(kivy.garden.matplotlib.backend_kivy.FigureCanvasKivy, 'resize_event'):
+        def resize_event(self):
+            pass
+        kivy.garden.matplotlib.backend_kivy.FigureCanvasKivy.resize_event = resize_event
+
+patch_figure_canvas()
+
+# Patch function
+def patch_mathtext_parser():
+    from matplotlib import mathtext
+    original_init = mathtext.MathTextParser.__init__
+
+    def new_init(self, *args, **kwargs):
+        if args[0] == 'Bitmap':
+            args = ('path',)  # Change 'Bitmap' to 'path'
+        original_init(self, *args, **kwargs)
+
+    mathtext.MathTextParser.__init__ = new_init
+
+# Apply the patch
+patch_mathtext_parser()
 
 if __name__ =="__main__":
+    from SmartStocksApp import SmartStocksApp
     SmartStocksApp().run()

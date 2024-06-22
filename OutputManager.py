@@ -1,6 +1,8 @@
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH as WD_PARAGRAPH_ALIGNMENT
+import warnings
+warnings.filterwarnings('ignore', category=PendingDeprecationWarning)
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from datetime import datetime
 import smtplib
