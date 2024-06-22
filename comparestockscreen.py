@@ -76,7 +76,7 @@ class CompareStocksScreen(MDScreen):
         centered_layout_tooltip = FloatLayout(pos_hint={"center_x": 0.5, "top": 1}, size_hint=(None, None), size=(300, 100))
         self.tooltip_label = Label(text="", size_hint=(None, None), size=(300, 100), color=(0, 0, 0, 1))
         self.tooltip_label.opacity = 0  # Initially invisible
-        
+
         # Title
         title_label = Label(text="Compare Stocks", font_size='64sp', size_hint=(1, None), height=50, color=(0, 0, 0, 1))
         layout.add_widget(title_label)
@@ -352,7 +352,8 @@ class CompareStocksOutputScreen(MDScreen):
         layout = BackgroundColorBoxLayout(orientation='vertical', padding=30, spacing=30)
 
         # Insert a banner area at the top
-
+        self.stock_label = Label(text='Stock Information will be displayed here.', font_size='36sp', size_hint_y=0.05, color=(0,0,0,1))
+        layout.add_widget(self.stock_label)
         self.plot_area = BoxLayout(size_hint_y=0.75)
         layout.add_widget(self.plot_area)
 
@@ -384,19 +385,31 @@ class CompareStocksOutputScreen(MDScreen):
 
     def update_output(self, output_text, recommendation_info, plot_data, stocks, indexes, model, time_period='1mo'):
         try:
-            fig, ax = plt.subplots(figsize=(20,12))
-            df = pd.DataFrame(plot_data)
-            df = df.T
-            #df.index = df.index.date
-            df.columns = [stock.info.get('longName') for stock in stocks]
-            df2 = pd.DataFrame(indexes)
-            df2['Time'] = df2.index
-            df2['Time'] = pd.to_datetime(df2['Time'])
-            df2.set_index('Time', inplace=True)
-            #df2.index = df.index.date
-            df2.columns = ['Market Price']
+            my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
+            stock_info_string = f"{my_stocks[0].name} ({my_stocks[0].symbol})  ${my_stocks[0].price} ({round(my_stocks[0].daily_percent, 2)})"
+
+            # Determine color based on daily percent value
+            if my_stocks[0].daily_percent < 0:
+                text_color = (255,0,0,1)  # Red if negative
+            else:
+                text_color = (0,255,0,1)  # Green if positive
+
+            # Update label text and color
+            self.stock_label.text = stock_info_string
+            self.stock_label.color = text_color
 
             if model == "Index Comparison":
+                fig, ax = plt.subplots(figsize=(20,12))
+                df = pd.DataFrame(plot_data)
+                df = df.T
+                #df.index = df.index.date
+                df.columns = [stock.info.get('longName') for stock in stocks]
+                df2 = pd.DataFrame(indexes)
+                df2['Time'] = df2.index
+                df2['Time'] = pd.to_datetime(df2['Time'])
+                df2.set_index('Time', inplace=True)
+                #df2.index = df.index.date
+                df2.columns = ['Market Price']
                 ax.plot(df.index, df.values, label=df.columns)
                 ax.set_xlabel("Date/Time")
                 ax.set_ylabel("Price")
@@ -409,22 +422,18 @@ class CompareStocksOutputScreen(MDScreen):
                 plt.title(title_string)
                 fig.autofmt_xdate()
             elif model == "Fibonacci Retracement":
-                my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
                 fibo = FIBONACCI(myStock_list=my_stocks, time_period=time_period) # defaults to 1mo for now
                 fibo.execute_model()
                 fig = fibo.plot()
             elif model == "MACD":
-                my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
                 macd = MACD(myStock_list=my_stocks, time_period=time_period) # defaults to 1mo for now
                 macd.execute_model()
                 fig = macd.plot()
             elif model == "RSI":
-                my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
                 rsi = RSI(myStock_list=my_stocks, time_period=time_period)
                 rsi.execute_model()
                 fig = rsi.plot()
             elif model == "Stochastic":
-                my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
                 stoch = STOCHASTIC(myStock_list=my_stocks, time_period=time_period)
                 stoch.execute_model()
                 fig = stoch.plot()
