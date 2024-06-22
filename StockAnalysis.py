@@ -1,7 +1,3 @@
-from .Model_Handler import Model_Handler
-from .Stock import MyStock, Index_Stocks
-from .MonteCarlo import MonteCarlo
-from .Simulation_Analysis import Simulation_Analysis
 from datetime import datetime, timedelta
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from colorama import Fore, Style
@@ -18,6 +14,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from yfinance import Ticker
+
+# My Modules 
+from Model_Handler import Model_Handler
+from Stock import MyStock, Index_Stocks
+from MonteCarlo import MonteCarlo
+from Simulation_Analysis import Simulation_Analysis
 
 logger = logging.getLogger(__name__)
 

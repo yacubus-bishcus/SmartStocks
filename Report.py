@@ -2,10 +2,12 @@ import logging
 from tqdm import tqdm
 from colorama import Fore, Style
 from datetime import datetime, timedelta
-from .StockAnalysis import MyStock
 import pandas as pd
 import pkg_resources
-from .Model_Handler import Model_Handler
+
+# My Modules
+from Model_Handler import Model_Handler
+from StockAnalysis import MyStock
 
 logger = logging.getLogger(__name__)
 

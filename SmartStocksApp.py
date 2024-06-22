@@ -21,12 +21,12 @@ logging.basicConfig(level=logging.INFO)
 # Kivy Imported Modules
 import kivy
 from kivy.app import App
+from kivy.uix.screenmanager import ScreenManager, Screen
 
 # MyApp Classes
-from .loginscreen import LoginScreen
-from .menuscreen import MenuScreen
-from .comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
-from kivy.uix.screenmanager import ScreenManager, Screen
+from loginscreen import LoginScreen
+from menuscreen import MenuScreen
+from comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
 
 
 class SmartStocksApp(App):

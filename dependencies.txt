@@ -1,0 +1,15 @@
+kivy
+kivymd
+pandas
+matplotlib
+colorama
+yfinance
+scipy
+docx
+python-docx
+pandas_datareader
+openpyxl
+scikit-learn
+selenium
+tqdm
+tabulate

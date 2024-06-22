@@ -8,7 +8,7 @@ from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.behaviors import ButtonBehavior
 # App Imported Modules
-from .customoptions import BackgroundColorBoxLayout
+from customoptions import BackgroundColorBoxLayout
 
 import logging
 # Ensure logging.basicConfig is not called after setting the level for your logger

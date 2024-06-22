@@ -56,7 +56,7 @@
 #     # Print the elapsed time
 #     logger.info("Program completed successfully.")
 #     logger.info(f"Program took {elapsed_time:.2f} seconds to run.")
-from .SmartStocksApp import SmartStocksApp
 
 if __name__ =="__main__":
+    from SmartStocksApp import SmartStocksApp
     SmartStocksApp().run()
