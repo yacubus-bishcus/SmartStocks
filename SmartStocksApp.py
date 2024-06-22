@@ -31,7 +31,7 @@ from kivy.lang import Builder
 # MyApp Classes
 from loginscreen import LoginScreen, LoginPage
 from menuscreen import MenuScreen
-from comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
+# from comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
 
 
 class SmartStocksApp(MDApp):
@@ -48,6 +48,7 @@ class SmartStocksApp(MDApp):
         #sm.add_widget(LoginScreen(name='Smart Stocks'))
         sm.add_widget(MenuScreen(name='menu'))
         logger.info("MenuScreen Initialized.")
+        from comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
         sm.add_widget(CompareStocksScreen(name='compare_stocks'))
         logger.info("CompareStocksScreen Initialized.")
         sm.add_widget(CompareStocksOutputScreen(name='compare_stocks_output'))

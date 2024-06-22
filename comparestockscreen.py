@@ -9,6 +9,11 @@ import traceback
 
 # Kivy Imported Modules
 from kivy.uix.boxlayout import BoxLayout
+from kivymd.uix.tooltip import MDTooltip
+from kivymd.uix.behaviors import HoverBehavior
+from kivymd.uix.button import MDIconButton
+from kivy.properties import StringProperty, ObjectProperty
+from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.button import Button
 from kivy.uix.switch import Switch
 from kivy.uix.gridlayout import GridLayout
@@ -19,13 +24,14 @@ from kivymd.uix.screen import MDScreen
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.image import Image
 from kivy.uix.floatlayout import FloatLayout
-from kivy.graphics import Color, Line, Rectangle
+from kivy.graphics import Color, Line, Rectangle, InstructionGroup
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.widget import Widget
 from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.uix.spinner import Spinner
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.core.window import Window
+from kivy.lang import Builder
 # My Imported Modules
 from InputManager import StockInputManager
 from ArgsParser import ArgsParser
@@ -36,83 +42,47 @@ from Stock import MyStock
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-
+class TooltipMDIconButton(MDIconButton, HoverBehavior):
+    tooltip_text = StringProperty('')
 
 class CompareStocksScreen(MDScreen):
     def __init__(self, **kwargs):
         super(CompareStocksScreen, self).__init__(**kwargs)
+        logger.info("Creating CompareStocksScreen Layout...")
         layout = BackgroundColorBoxLayout(orientation='vertical', padding=30, spacing=30)
         self.screen_width = Window.width
         self.screen_height = Window.height
+        logger.info("CompareStocksScreen creating tooltip")
 
-        # Tooltip Section (Top Left)
-        tooltip_layout = AnchorLayout(anchor_x='left', anchor_y='top')
-        fibo_tip = """
-            Smart Stocks Tip:
-            - Fibonacci retracement. Levels—stemming from the Fibonacci
-            sequence—are horizontal lines that indicate where support and
-            resistance are likely to occur.
-            Each level is associated with a percentage.
-            The percentage is how much of a prior move the price has retraced.
-            The Fibonacci retracement levels are 23.6%, 8.2%, 61.8%, and 78.6%.
-            While not officially a Fibonacci ratio, 50% is also used.
-            The indicator is useful because it can be drawn between any two
-            significant price points, such as a high and a low.
-        """
-        index_tip = """
-            Smart Stocks Tip:
-            - Index Comparison. A simple comparison either daily, 3mo or 6 months
-            based on which respective calculation you choose.
-        """
-        macd_tip = """
-            Smart Stocks Tip:
-            - Moving Average Convergence-Divergence (MACD). When the MACD line
-            crosses above the signal line, it indicates a bullish signal,
-            suggesting it might be a good time to buy. Conversely, when
-            the MACD line crosses below the signal line, it indicates a bearish
-            signal, suggesting it might be a good time to sell.
-        """
-        rsi_tip = """
-            Smart Stocks Tip:
-            - Relative Strength Index (RSI). As a momentum indicator, the
-            relative strength index compares a security's strength on days
-            when prices go up to its strength on days when prices go down.
-            Relating the result of this comparison to price action can give
-            traders an idea of how a security may perform. Traditionally the
-            RSI is considered overbought when above 70 and oversold
-            when below 30.
-        """
-        stoch_tip = """
-            Smart Stocks Tip:
-            - Stochastic Oscillator. Measures the current price relative to the price range
-            over a number of periods. Plotted between zero and 100, the idea is that the
-            price should make new highs when the trend is up. In a downtrend, the price
-            tends to make new lows.
-        """
+        self.tip_list = [
+            "Fibonacci retracement. Levels—stemming from the Fibonacci sequence—are\n" \
+            "horizontal lines that indicate where support and resistance are likely to occur.\n" \
+            " Each level is associated with a percentage.\n" \
+            " The percentage is how much of a prior move the price has retraced.\n" \
+            " The Fibonacci retracement levels are 23.6%, 8.2%, 61.8%, and 78.6%.\n" \
+            " While not officially a Fibonacci ratio, 50% is also used.\n" \
+            " The indicator is useful because it can be drawn between any two\n" \
+            " significant price points, such as a high and a low.\n", \
+            "Index Comparison. A simple comparison either daily, 3mo or 6 months \n based on which respective calculation you choose.",
+            "Moving Average Convergence-Divergence (MACD). When the MACD line \n crosses above the signal line, it indicates a bullish signal, suggesting it might be a good time to buy. Conversely, when the MACD line crosses below the signal line, it indicates a bearish signal, suggesting it might be a good time to sell.",
+            "Relative Strength Index (RSI). As a momentum indicator, the relative \n strength index compares a security's strength on days when prices go up to its strength on days when prices go down. Relating the result of this comparison to price action can give traders an idea of how a security may perform. Traditionally the RSI is considered overbought when above 70 and oversold when below 30.",
+            "Stochastic Oscillator. Measures the current price relative to the price \n range over a number of periods. Plotted between zero and 100, the idea is that the price should make new highs when the trend is up. In a downtrend, the price tends to make new lows."
+        ]
 
-        tip_list = [fibo_tip, index_tip, macd_tip, rsi_tip, stoch_tip]
-        random_index = random.randint(0,4)
-        just_the_tip = tip_list[random_index]
-
+        self.tooltip_button = TooltipMDIconButton(icon='information', tooltip_text=random.choice(self.tip_list))
+        self.tooltip_button.bind(on_enter=self.on_tooltip_enter, on_leave=self.on_tooltip_leave)
+        layout.add_widget(self.tooltip_button)
+        # Creating the centered layout for tooltip label and highlighted box
+        centered_layout_tooltip = FloatLayout(pos_hint={"center_x": 0.5, "top": 1}, size_hint=(None, None), size=(300, 100))
+        self.tooltip_label = Label(text="", size_hint=(None, None), size=(300, 100), color=(0, 0, 0, 1))
+        self.tooltip_label.opacity = 0  # Initially invisible
+        
         # Title
         title_label = Label(text="Compare Stocks", font_size='64sp', size_hint=(1, None), height=50, color=(0, 0, 0, 1))
         layout.add_widget(title_label)
 
         # Spacer
         layout.add_widget(Widget(size_hint_y=None, height=5))
-
-        tooltip_layout = AnchorLayout(anchor_x='left', anchor_y='top')
-        self.tooltip_label = Label(
-            text=just_the_tip,
-            font_size='20sp',
-            size_hint=(None, None),
-            size=(self.screen_width / 3, 150),
-            pos_hint={'x': 0.05, 'top': 1},
-            color=(0, 0, 0, 1)
-        )
-        tooltip_layout.add_widget(self.tooltip_label)
-        layout.add_widget(tooltip_layout)
-
 
         # Centered Box Layout for Stock Ticker Input
         stock1_layout = BoxLayout(orientation='vertical', size_hint=(None, None), size=(300, 100), spacing=2)
@@ -218,8 +188,29 @@ class CompareStocksScreen(MDScreen):
         back_button_layout.add_widget(back_button)
         layout.add_widget(back_button_layout)
 
-
         self.add_widget(layout)
+        # has to be after add_widget(layout)
+        centered_layout_tooltip.add_widget(self.tooltip_label)
+        self.add_widget(centered_layout_tooltip)
+
+        self.tooltip_text = random.choice(self.tip_list)
+        Window.bind(mouse_pos=self.on_mouse_pos)
+
+    def on_mouse_pos(self, *args):
+        pos = args[1]
+        if self.tooltip_button.collide_point(*self.tooltip_button.to_widget(*pos)):
+            self.tooltip_label.text = self.tooltip_text
+            self.tooltip_label.opacity = 1
+            self.tooltip_label.center_x = self.tooltip_button.center_x
+            self.tooltip_label.top = self.tooltip_button.y
+        else:
+            self.tooltip_label.opacity = 0
+
+    def on_tooltip_enter(self, instance):
+        self.tooltip_text = random.choice(self.tip_list)
+
+    def on_tooltip_leave(self, instance):
+        pass
 
     def on_clear_plots_switch_active(self, instance, value):
         if value:
@@ -359,6 +350,8 @@ class CompareStocksOutputScreen(MDScreen):
 
     def create_layout(self):
         layout = BackgroundColorBoxLayout(orientation='vertical', padding=30, spacing=30)
+
+        # Insert a banner area at the top
 
         self.plot_area = BoxLayout(size_hint_y=0.75)
         layout.add_widget(self.plot_area)
