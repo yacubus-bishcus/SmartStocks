@@ -28,6 +28,7 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.transition import MDFadeSlideTransition
 from kivy.lang import Builder
+from kivy.graphics import Color
 from kivymd.uix.menu import MDDropdownMenu
 # MyApp Classes
 from loginscreen import LoginScreen, LoginPage
@@ -41,6 +42,18 @@ class SmartStocksApp(MDApp):
         self.theme_cls.theme_style_switch_animation = True
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Orange"
+        self.theme_cls.primary_hue = "500"
+
+        primary_color = self.theme_cls.primary_color
+        secondary_color = [0.68, 0.85, 0.90, 1]  # Light blue color
+        # Lighten the primary color
+        self.primary_color_light = [min(1, c + 0.2) for c in primary_color[:3]] + [primary_color[3]]
+        self.color_light_text = [0, 0, 0, 1]  # Dark text for light background
+        self.secondary_color_light = [min(1, c + 0.2) for c in secondary_color[:3]] + [secondary_color[3]]
+        # Darken the primary color
+        self.primary_color_dark = [max(0, c - 0.2) for c in primary_color[:3]] + [primary_color[3]]
+        self.color_dark_text = [1, 1, 1, 1]  # Light text for dark background
+        self.secondary_color_dark = [max(0, c - 0.2) for c in secondary_color[:3]] + [secondary_color[3]]
 
         Builder.load_file('loginkv.kv')  # Load the KV file
         logger.info("loginkv.kv loaded.")
@@ -55,8 +68,8 @@ class SmartStocksApp(MDApp):
         sm.add_widget(LoginPage(name='login_page'))
         logger.info("LoginPage Initialized.")
         sm.add_widget(MenuScreen(name='menu'))
-
         logger.info("MenuScreen Initialized.")
+        
         sm.add_widget(CreateReportScreen(name='create_report'))
         logger.info("CreateReportScreen Initialized.")
 
@@ -120,3 +133,19 @@ class SmartStocksApp(MDApp):
     def option_selected(self, option):
         # Handle what happens when an option in the dropdown menu is selected
         toast(f"Option selected: {option}")
+
+    def show_date_picker(self, focus):
+        if not focus:
+            return
+
+        date_dialog = MDDockedDatePicker()
+        # You have to control the position of the date picker dialog yourself.
+        date_dialog.pos = [
+            self.root.ids.field.center_x - date_dialog.width / 2,
+            self.root.ids.field.y - (date_dialog.height + dp(32)),
+        ]
+        date_dialog.open()
+
+    def back_to_menu(self, instance):
+        self.manager.current = 'menu'
+        logger.info("Going back to Menu screen.")
