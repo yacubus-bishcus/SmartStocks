@@ -16,6 +16,7 @@ from kivymd.uix.relativelayout import MDRelativeLayout
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.stacklayout import MDStackLayout
 from kivymd.uix.gridlayout import MDGridLayout
+from kivymd.uix.menu import MDDropdownMenu
 from kivy.properties import StringProperty
 from kivymd.app import MDApp
 # App Imported Modules
@@ -32,13 +33,11 @@ class MyCard(MDCard):
 class MenuScreen(MDScreen):
     def __init__(self, **kwargs):
         super(MenuScreen, self).__init__(**kwargs)
-        layout = MDGridLayout(cols=3, adaptive_size=True, spacing="12dp", pos_hint={'center_x':0.5, "center_y":0.5})
-        layout.md_bg_color = MDApp.get_running_app().theme_cls.primary_color  # Set the background color to t
-        for text in ("Create A Report", "Compare Stocks", "Futures", "Lucky Stock", "Schedule A Report (Beta Only)", "SmartTrader (Beta Only)"):
-            card = MyCard(style='elevated', text=text)
-            card.bind(on_release=self.on_card_click)
-            layout.add_widget(card)
-        self.add_widget(layout)
+        self.ids.box.clear_widgets()
+        for text in ("Create A Report", "Compare Stocks", "Futures", "Lucky Stock", "Schedule a Report (Beta Only)", "SmartTrader (Beta Only)"):
+            self.ids.box.add_widget(
+                MyCard(style='elevated', text=text)
+            )
 
     def on_card_click(self, instance):
         # Example of what you can do when a card is clicked

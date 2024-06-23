@@ -28,6 +28,7 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.transition import MDFadeSlideTransition
 from kivy.lang import Builder
+from kivymd.uix.menu import MDDropdownMenu
 # MyApp Classes
 from loginscreen import LoginScreen, LoginPage
 from menuscreen import MenuScreen
@@ -73,14 +74,38 @@ class SmartStocksApp(MDApp):
             "Theme style - {}".format(self.theme_cls.theme_style)
         )
 
-    # def on_label_initialized(self):
-    #     Logger.warning("MDLabel complete.")
-    #
-    # def on_floatlayout_initialized(self):
-    #     Logger.warning("MDFloatLayout complete.")
-    #
-    # def on_textbutton_initialized(self):
-    #     Logger.warning("MDTextButton complete.")
-    #
-    # def on_textbutton1_initialized(self):
-    #     Logger.warning("MDTextButton1 complete.")
+    def callback_left(self):
+        print("left Button clicked!")
+
+    def callback_right(self):
+        print("Right button clicked")
+
+    def open_menu(self, item):
+        menu_items = [
+            {
+                "text": "Today's Top Stocks",
+                "on_release": lambda x="Today's Top Stocks": self.menu_callback_top_stocks(),
+            },
+            {
+                "text": "Today's Worst Stocks",
+                "on_release": lambda x="Today's Worst Stocks": self.menu_callback_worse_stocks(),
+            },
+            {
+                "text": "Recent Finance News",
+                "on_release": lambda x="Recent Finance News": self.menu_callback_finance_news(),
+            },
+        ]
+        MDDropdownMenu(caller=item, items=menu_items).open()
+
+    def menu_callback_top_stocks(self):
+        print("Top Stocks Selected")
+
+    def menu_callback_worse_stocks(self):
+        print("Worse Stocks Selected.")
+
+    def menu_callback_finance_news(self):
+        print("Finance News Selected.")
+
+    def option_selected(self, option):
+        # Handle what happens when an option in the dropdown menu is selected
+        toast(f"Option selected: {option}")
