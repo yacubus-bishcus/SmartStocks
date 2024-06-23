@@ -41,6 +41,8 @@ class SmartStocksApp(MDApp):
         self.theme_cls.primary_palette = "Orange"
         Builder.load_file('loginkv.kv')  # Load the KV file
         logger.info("loginkv.kv loaded.")
+        Builder.load_file('menukv.kv')
+        logger.info("menukv.kv loaded.")
         sm = MDScreenManager(transition=MDFadeSlideTransition())
         logger.info("Screen Manager Initialized.")
         sm.add_widget(LoginPage(name='login_page'))
