@@ -1,0 +1,136 @@
+<CreateReportScreen>
+    MDScrollView:
+        do_scroll_x: False
+
+        BoxLayout:
+            orientation: 'vertical'
+
+            MDTopAppBar:
+                title: "Smart Stocks by Jacob E Bickus"
+                left_action_items: [["menu", lambda x: app.open_menu(x)]]
+                right_action_items: [["account-circle", lambda x: app.callback_right()]]
+                elevation: 10
+                height: dp(96)
+
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None  # To make sure the top bar doesn't get squished
+                height: dp(72)  # Standard height for toolbars
+
+            Widget:
+                size_hint_y: 0.1
+
+            MDLabel:
+                text: "Report Required Inputs"
+                adaptive_size: True
+                color: "grey"
+                pos_hint: {"center_x":0.5, "top":1}
+
+        # MDGridLayout:
+        #     id: box
+        #     cols: 2
+        #     adaptive_size: True
+        #     spacing: "12dp"
+        #     pos_hint: {'center_x':0.5}
+        #     md_bg_color: app.theme_cls.primary_color
+        #
+        #     MDTextFieldRound:
+        #         text: 'Choose your Tickers'
+        #         MDCheckbox: 'If checked bring up textfield for input filename'
+        #
+        #     MDSelect:
+        #         text:'Index Dropdown'
+        #
+        #     MDDropDown: 'with checkboxes for each model option'
+        #
+        #     MDSelect:
+        #         text: 'Model Time Dropdown'
+        #
+        #     MDRadioButtons:
+        #         text: 'Process factor Close-Open, High-Low'
+        #
+        #     MDTextFieldRound:
+        #         text: "Model Weighting 'Fifty Day':0.1, 'Two Hundred Day':0.1, 'CAPM':0.2,..."
+        #
+        # MDLabel:
+        #     text: "Simulations"
+        #     adaptive_size: True
+        #     color: "grey"
+        #     pos_hint: {"center_x":0.5, None}
+        #
+        # MDGridLayout:
+        #     id: box2
+        #     cols: 2
+        #     adaptive_size: True
+        #     spacing: "12dp"
+        #     pos_hint: {'center_x':0.5}
+        #     md_bg_color: app.theme_cls.primary_color
+        #
+        #     MDTextFieldRound:
+        #         text: 'Number of Top Stocks to Simulate'
+        #         MDCheckbox:
+        #             text: 'All'
+        #
+        #     MDSlider:
+        #
+        #     MDDatePicker:
+        #
+        #     MDTextFieldRound:
+        #         text: 'Choose your Simulation Seed'
+        #
+        #     MDRadioButtons:
+        #
+        #     MDSlider:
+        #
+        #     MDSlider:
+        #
+        # MDLabel:
+        #     text: 'Research'
+        #     adaptive_size: True
+        #     color: "grey"
+        #     pos_hint: {"center_x":0.5, None}
+        #
+        # MDGridLayout:
+        #     id: box3
+        #     cols: 2
+        #     adaptive_size: True
+        #     spacing: "12dp"
+        #     pos_hint: {'center_x':0.5}
+        #     md_bg_color: app.theme_cls.primary_color
+        #
+        #     MDCheckbox:
+        #
+        #     MDTextFieldRound:
+        #         text: 'Data'
+        #         MDCheckbox:
+        #             text: 'Default'
+        #     MDTextFieldRound:
+        #         text: 'Minimum Price'
+        #
+        #     MDTextFieldRound:
+        #         text: 'Maximum Price'
+        #
+        #     MDSlider:
+        #
+        # MDLabel:
+        #     text: 'Output'
+        #     adaptive_size: True
+        #     color: "grey"
+        #     pos_hint: {"center_x":0.5, None}
+        #
+        # MDGridLayout:
+        #     id: box4
+        #     cols: 2
+        #     adaptive_size: True
+        #     spacing: "12dp"
+        #     pos_hint: {'center_x':0.50}
+        #     md_bg_color: app.theme_cls.primary_color
+        #
+        #     MDTextFieldRound:
+        #         text: 'Output Filename (.docx)'
+        #
+        #     MDTextFieldRound:
+        #         text: 'Email'
+        #         MDCheckbox:
+        #             text: 'User Email'
+        #

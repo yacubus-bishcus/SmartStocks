@@ -32,6 +32,7 @@ from kivymd.uix.menu import MDDropdownMenu
 # MyApp Classes
 from loginscreen import LoginScreen, LoginPage
 from menuscreen import MenuScreen
+from createreportscreen import CreateReportScreen
 # from comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
 
 
@@ -40,22 +41,32 @@ class SmartStocksApp(MDApp):
         self.theme_cls.theme_style_switch_animation = True
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Orange"
+
         Builder.load_file('loginkv.kv')  # Load the KV file
         logger.info("loginkv.kv loaded.")
         Builder.load_file('menukv.kv')
         logger.info("menukv.kv loaded.")
+        Builder.load_file('createreportscreen.kv')
+        logger.info("createreportscreen.kv loaded.")
+
         sm = MDScreenManager(transition=MDFadeSlideTransition())
         logger.info("Screen Manager Initialized.")
+
         sm.add_widget(LoginPage(name='login_page'))
         logger.info("LoginPage Initialized.")
-        #sm.add_widget(LoginScreen(name='Smart Stocks'))
         sm.add_widget(MenuScreen(name='menu'))
+
         logger.info("MenuScreen Initialized.")
+        sm.add_widget(CreateReportScreen(name='create_report'))
+        logger.info("CreateReportScreen Initialized.")
+
         from comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
         sm.add_widget(CompareStocksScreen(name='compare_stocks'))
         logger.info("CompareStocksScreen Initialized.")
+
         sm.add_widget(CompareStocksOutputScreen(name='compare_stocks_output'))
         logger.info("CompareStocksOutputScreen Initialized.")
+
         return sm
 
     def on_start(self):

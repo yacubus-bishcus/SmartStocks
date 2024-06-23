@@ -30,6 +30,13 @@ logging.basicConfig(level=logging.INFO)
 class MyCard(MDCard):
     text = StringProperty()
 
+    def __init__(self, **kwargs):
+        super(MyCard, self).__init__(**kwargs)
+
+    def on_press(self):
+        # Assuming MenuScreen is the parent of MyCard
+        self.parent.parent.parent.on_card_click(self)
+
 class MenuScreen(MDScreen):
     def __init__(self, **kwargs):
         super(MenuScreen, self).__init__(**kwargs)
@@ -54,20 +61,21 @@ class MenuScreen(MDScreen):
         elif instance.text == "SmartTrader (Beta Only)":
             self.smart_trader()
 
-    def create_report(self, instance):
+    def create_report(self):
         logger.info("Create A Report option selected")
+        self.manager.current = 'create_report'
 
-    def compare_stocks(self, instance):
+    def compare_stocks(self):
         self.manager.current = 'compare_stocks'
 
-    def show_futures(self, instance):
+    def show_futures(self):
         logger.info("Show Futures selected.")
 
-    def lucky_stock(self, instance):
+    def lucky_stock(self):
         logger.info("Lucky Stock selected.")
 
-    def schedule_reports(self, instance):
+    def schedule_reports(self):
         logger.info("Schedule Reports option selected")
 
-    def smart_trader(self, instance):
+    def smart_trader(self):
         logger.info("Smart Trader option selected")
