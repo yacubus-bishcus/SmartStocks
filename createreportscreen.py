@@ -7,11 +7,12 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivy.properties import StringProperty, ObjectProperty, ListProperty
+from kivy.properties import StringProperty, ObjectProperty, ListProperty, BooleanProperty
 from kivymd.uix.button import MDRaisedButton
 from kivy.base import runTouchApp
 from kivy.app import App
 from kivy.clock import Clock
+from kivymd.uix.menu import MDDropdownMenu
 
 # My Imported Modules
 from InputManager import StockInputManager
@@ -23,22 +24,84 @@ logging.basicConfig(level=logging.INFO)
 class CheckItem(MDBoxLayout):
     text = StringProperty()
     group = StringProperty()
+    active = BooleanProperty(False)
+
+    def on_checkbox_active(self, instance, value):
+        self.active = value
+        print(f'{self.text} is {value}')
 
 class CreateReportScreen(MDScreen):
     ticker_input = ObjectProperty(None)  # Add a reference to the ticker input
+    dow_input = ObjectProperty(None)
+    include_list = ObjectProperty(None)
+    fifty_day_model = ObjectProperty(None)
+    twohundred_day_model = ObjectProperty(None)
+    capm_model = ObjectProperty(None)
+    macd_model = ObjectProperty(None)
+    rsi_model = ObjectProperty(None)
+    stoch_model = ObjectProperty(None)
+    weights_value = ObjectProperty(None)
+
     def __init__(self, **kwargs):
         super(CreateReportScreen, self).__init__(**kwargs)
         self.md_bg_color = self.theme_cls.bg_normal  # Correct assignment
         self.add_back_to_menu_button()
         self.add_calculate_button()
 
+    def init_dropdown_menu(self):
+        menu_items = [
+            {"viewclass": "OneLineListItem", "text": f"Item {i}", "height": dp(56),
+             "on_release": lambda x=f"Item {i}": self.menu_callback(x)}
+            for i in range(5)
+        ]
+
+        self.menu = MDDropdownMenu(
+            caller=self.ids.index_dropdown,
+            items=menu_items,
+            width_mult=4
+        )
+    def init_dropdown_menu_model_time(self):
+        menu_items = [
+            {"viewclass": "OneLineListItem", "text": f"Item {i}", "height": dp(56),
+             "on_release": lambda x=f"Item {i}": self.menu_callback_model_time(x)}
+            for i in range(7)
+        ]
+
+        self.menu = MDDropdownMenu(
+            caller=self.ids.model_time_dropdown,
+            items=menu_items,
+            width_mult=4
+        )
+    def menu_callback_model_time(self, text_item):
+        self.ids.model_time_dropdown.set_item(text_item)
+        self.menu.dismiss()
+
+    def open_menu_model_time(self, item):
+        menu_items = [
+            {"text": "1d", "on_release": lambda x="1d": self.get_model_time_value(x)},
+            {"text": "5d", "on_release": lambda x="5d": self.get_model_time_value(x)},
+            {"text": "1mo", "on_release": lambda x="1mo": self.get_model_time_value(x)},
+            {"text": "3mo", "on_release": lambda x="3mo": self.get_model_time_value(x)},
+            {"text": "6mo", "on_release": lambda x="6mo": self.get_model_time_value(x)},
+            {"text": "1y", "on_release": lambda x="1y": self.get_model_time_value(x)},
+            {"text": "ytd", "on_release": lambda x="ytd": self.get_model_time_value(x)},
+        ]
+        MDDropdownMenu(caller=item, items=menu_items).open()
+
+    def menu_callback(self, text_item):
+        self.ids.index_dropdown.set_item(text_item)
+        self.menu.dismiss()
+
+    def open_menu(self, item):
+        menu_items = [
+            {"text": "S&P500", "on_release": lambda x="S&P500": self.get_index_value(x)},
+            {"text": "NASDAQ", "on_release": lambda x="NASDAQ": self.get_index_value(x)},
+            {"text": "DOW JONES", "on_release": lambda x="DOW JONES": self.get_index_value(x)},
+        ]
+        MDDropdownMenu(caller=item, items=menu_items).open()
+
     def back_to_menu(self, instance):
         self.manager.current = "menu"
-
-    def get_ticker_value(self):
-        ticker_value = self.ticker_input.text
-        print(f"Ticker Value: {ticker_value}")  # Print the ticker value for debugging
-        return ticker_value
 
     def add_back_to_menu_button(self):
         back_to_menu_button = MDRaisedButton(
@@ -63,26 +126,106 @@ class CreateReportScreen(MDScreen):
         # Add the button to the main layout
         self.ids.main_layout.add_widget(calculate_button)
 
+    def get_ticker_value(self):
+        ticker_value = self.ticker_input.text
+        print(f"Ticker Value: {ticker_value}")  # Print the ticker value for debugging
+        return ticker_value
+
     def get_use_dow_value(self):
-        pass
+        logger.info(f"Dow Value {self.dow_input.active}")
+        if self.dow_input.active:
+            return "-u"
+        else:
+            return ""
 
     def get_include_list_value(self):
-        pass
+        logger.info(f"Include List Value {self.include_list.active}")
+        if self.include_list.active:
+            return "--input MyStock.txt"
+        else:
+            return ""
 
-    def get_index_value(self):
-        pass
+    def get_index_value(self, index=""):
+        logger.info(f"Index Value {index}")
+        if index == "S&P500":
+            self.index = "--index s&p"
+            return self.index
+        elif index == "NASDAQ":
+            self.index = "--index nas"
+            return self.index
+        elif index == "DOW JONES":
+            self.index = "--index dow"
+            return self.index
+        else:
+            return ""
 
     def get_models_values(self):
-        pass
+        #['Fifty Day','Two Hundred Day','CAPM', 'MACD', 'RSI', 'Stochastic']
+        model_list = []
+        if self.fifty_day_model.active:
+            model_list.append('Fifty Day')
+        if self.twohundred_day_model.active:
+            model_list.append("Two Hundred Day")
+        if self.capm_model.active:
+            model_list.append('CAPM')
+        if self.macd_model.active:
+            model_list.append('MACD')
+        if self.rsi_model.active:
+            model_list.append('RSI')
+        if self.stoch_model.active:
+            model_list.append('Stochastic')
+        if model_list == []:
+            return ""
+        else:
+            return f"--models [{model_list}]"
 
-    def get_model_time_value(self):
-        pass
+    def get_model_time_value(self, model_time):
+        logger.info(f"Model Time Value {model_time}")
+        if model_time == "1d":
+            self.model_time = "--model_time_delta 1d"
+            return self.model_time
+        elif model_time == "5d":
+            self.model_time = "--model_time_delta 5d"
+            return self.model_time
+        elif model_time == "1mo":
+            self.model_time = "--model_time_delta 1mo"
+            return self.model_time
+        elif model_time == "3mo":
+            self.model_time = "--model_time_delta 3mo"
+            return self.model_time
+        elif model_time == "6mo":
+            self.model_time = "--model_time_delta 6mo"
+            return self.model_time
+        elif model_time == "1y":
+            self.model_time = "--model_time_delta 1y"
+            return self.model_time
+        elif model_time == "ytd":
+            self.model_time = "--model_time_delta ytd"
+            return self.model_time
+        else:
+            return ""
 
     def get_process_factor_value(self):
-        pass
+        logger.info(f"Process Factor Value {self.process_factor.active}")
+        if self.process_factor.active:
+            return "--price_processing_model high_low"
+        else:
+            return ""
 
     def get_weights_value(self):
-        pass
+        weights = self.weights_value.text
+        print(f"Weights Value: {weights}")
+        if weights == "":
+            return ""
+        else:
+            if "{" or "}" not in weights:
+                weights = weights.replace("{","")
+                weights = weights.replace("}","")
+                weight_string = "--weights" + "{" + weights + "}"
+            else:
+                weight_string = weights
+
+            return weight_string
 
     def get_number_to_sim_value(self):
         pass
@@ -147,9 +290,7 @@ class CreateReportScreen(MDScreen):
         # Set the Report args
         use_dow = self.get_use_dow_value()
         include_list = self.get_include_list_value()
-        index = self.get_index_value()
         models = self.get_models_values()
-        model_time = self.get_model_time_value()
         process_factor = self.get_process_factor_value()
         weights = self.get_weights_value()
         # Set the Simulation Args
@@ -178,7 +319,7 @@ class CreateReportScreen(MDScreen):
         # Make the Argument
         if len(ticker_list) >= 1:
             argument = f"--ticker {','.join(ticker_list)} {use_dow} {include_list} \
-            {index} {models} {model_time} {process_factor} {weights} {number_to_sim} \
+            {self.index} {models} {self.model_time} {process_factor} {weights} {number_to_sim} \
             {number_trials} {sim_date} {seed} {sim_model} {j_param} {processes} {include_research} \
             {data_source} {default_data} {min_price} {max_price} {num_research} \
             {output} {email} "
