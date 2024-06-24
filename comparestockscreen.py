@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import random
 from tabulate import tabulate
 import traceback
+import threading
 
 # Kivy Imported Modules
 from kivy.uix.boxlayout import BoxLayout
@@ -15,6 +16,7 @@ from kivymd.uix.button import MDIconButton
 from kivy.properties import StringProperty, ObjectProperty
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.button import Button
+from kivy.clock import Clock
 from kivy.uix.switch import Switch
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -383,6 +385,15 @@ class CompareStocksOutputScreen(MDScreen):
     def pad_dataframe(self, df, pad=50):
         return df.applymap(lambda x: f' {str(x)} '.center(len(str(x)) + pad))
 
+    def start_calculation_thread(self, instance):
+        # Start a new thread for the calculation
+        calculation_thread = threading.Thread(target=self.update_output)
+        calculation_thread.start()
+
+    def calculation_complete(self):
+        logger.info(f"Compare Stocks Calculations are complete!")
+        # Update the UI to reflect that the calculations are complete
+
     def update_output(self, output_text, recommendation_info, plot_data, stocks, indexes, model, time_period='1mo'):
         try:
             my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
@@ -458,3 +469,6 @@ class CompareStocksOutputScreen(MDScreen):
             print(f"Exception in update_output: {e}")
             traceback.print_exc()
             self.output_label.text = f"An error occurred: {e}"
+
+        # Update the UI from the main thread
+        Clock.schedule_once(lambda dt: self.calculation_complete())

@@ -1,6 +1,7 @@
 # Imported Modules
 import threading
 import logging
+from datetime import datetime, timedelta
 
 # Kivy Imported Modules
 from kivymd.uix.screen import MDScreen
@@ -11,8 +12,10 @@ from kivy.properties import StringProperty, ObjectProperty, ListProperty, Boolea
 from kivymd.uix.button import MDRaisedButton
 from kivy.base import runTouchApp
 from kivy.app import App
+from kivy.metrics import dp
 from kivy.clock import Clock
 from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.pickers.datepicker import MDDatePicker
 
 # My Imported Modules
 from InputManager import StockInputManager
@@ -41,12 +44,62 @@ class CreateReportScreen(MDScreen):
     rsi_model = ObjectProperty(None)
     stoch_model = ObjectProperty(None)
     weights_value = ObjectProperty(None)
+    number_to_sim = ObjectProperty(None)
+    num_trials = ObjectProperty(None)
+    sim_date = ObjectProperty(None)
+    seed = ObjectProperty(None)
+    jump_param = ObjectProperty(None)
+    processes = ObjectProperty(None)
+    include_research = ObjectProperty(None)
+    data_source = ObjectProperty(None)
+    default_data = ObjectProperty(None)
+    min_price = ObjectProperty(None)
+    max_price = ObjectProperty(None)
+    num_research = ObjectProperty(None)
+    output = ObjectProperty(None)
+    email = ObjectProperty(None)
+    same_as_user = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super(CreateReportScreen, self).__init__(**kwargs)
         self.md_bg_color = self.theme_cls.bg_normal  # Correct assignment
         self.add_back_to_menu_button()
         self.add_calculate_button()
+        self.index = ""
+        self.the_sim_date = datetime.today().date()
+        self.model_time = ""
+        
+    def show_date_picker(self, focus):
+        if not focus:
+            return
+
+        date_dialog = MDDatePicker()
+        date_dialog.pos = [
+            self.sim_date.center_x - date_dialog.width / 2,
+            self.sim_date.y - (date_dialog.height + dp(32)),
+        ]
+        date_dialog.bind(on_save=self.on_save_date)
+        date_dialog.open()
+
+    def on_save_date(self, instance, value, date_range):
+        # Handle the selected date
+        self.the_sim_date = value
+        print(f"Selected date: {self.the_sim_date}")
+        # Optionally, update the text field with the selected date
+        self.sim_date.text = value.strftime('%m/%d/%Y')
+
+    def init_dropdown_menu_sim_model(self):
+        menu_items = [
+            {"viewclass": "OneLineListItem", "text": f"Item {i}", "height": dp(56),
+             "on_release": lambda x=f"Item {i}": self.menu_callback_sim_model(x)}
+            for i in range(5)
+        ]
+
+        self.menu_sim_model = MDDropdownMenu(
+            caller=self.ids.sim_model_dropdown,
+            items=menu_items,
+            width_mult=4
+        )
 
     def init_dropdown_menu(self):
         menu_items = [
@@ -60,6 +113,7 @@ class CreateReportScreen(MDScreen):
             items=menu_items,
             width_mult=4
         )
+
     def init_dropdown_menu_model_time(self):
         menu_items = [
             {"viewclass": "OneLineListItem", "text": f"Item {i}", "height": dp(56),
@@ -67,14 +121,25 @@ class CreateReportScreen(MDScreen):
             for i in range(7)
         ]
 
-        self.menu = MDDropdownMenu(
+        self.menu_model_time = MDDropdownMenu(
             caller=self.ids.model_time_dropdown,
             items=menu_items,
             width_mult=4
         )
+
+    def menu_callback_sim_model(self, text_item):
+        self.ids.sim_model_dropdown.set_item(text_item)
+        self.menu_sim_model.dismiss()
+
     def menu_callback_model_time(self, text_item):
         self.ids.model_time_dropdown.set_item(text_item)
-        self.menu.dismiss()
+        self.menu_model_time.dismiss()
+
+    def open_menu_sim_model(self, item):
+        menu_items = [
+            {"text": "Gaussian", "on_release": lambda x="Gaussian": self.get_sim_model_value(x)},
+        ]
+        MDDropdownMenu(caller=item, items=menu_items).open()
 
     def open_menu_model_time(self, item):
         menu_items = [
@@ -214,66 +279,129 @@ class CreateReportScreen(MDScreen):
 
     def get_weights_value(self):
         weights = self.weights_value.text
-        print(f"Weights Value: {weights}")
+        logger.info(f"Weights Value: {weights}")
         if weights == "":
             return ""
         else:
             if "{" or "}" not in weights:
                 weights = weights.replace("{","")
                 weights = weights.replace("}","")
-                weight_string = "--weights" + "{" + weights + "}"
+                weight_string = "--weights " + "{" + weights + "}"
             else:
-                weight_string = weights
+                weight_string = "--weights " + weights
 
             return weight_string
 
     def get_number_to_sim_value(self):
-        pass
+        logger.info(f"Number of Stocks to Simulate: {self.number_to_sim.text}")
+        if self.number_to_sim.text == "":
+            return ""
+
+        else:
+            return f"--number_to_highlight {self.number_to_sim.text}"
 
     def get_number_trials_value(self):
-        pass
+        if self.num_trials.value == 0:
+            return ""
+        else:
+            return f"--simulations {int(self.num_trials.value)}"
 
     def get_sim_date_value(self):
-        pass
+        today = datetime.today().date()
+        days = (self.the_sim_date - today).days
+        logger.info(f"Sim Date Value: {days}")
+        if days <= 0:
+            return ""
+        else:
+            return f"--sim_time {days}"
 
     def get_seed_value(self):
-        pass
+        logger.info(f"Seed: {self.seed.text}")
+        if self.seed.text == "":
+            return ""
+        else:
+            return f"--seed {self.seed.text}"
 
     def get_sim_model_value(self):
-        pass
+        return "" # Will include other mathematical models in the future
 
     def get_jump_param_value(self):
-        pass
+        if self.jump_param.value == 0:
+            return ""
+        else:
+            return f"--jump_parameter {self.jump_param.value}"
 
     def get_processes_value(self):
-        pass
+        if self.processes.value == 0:
+            return ""
+        else:
+            return f"--processes {self.processes.value}"
 
     def get_include_research_value(self):
-        pass
+        logger.info(f"Include Research Value {self.include_research.active}")
+        if self.include_research.active:
+            return "--research"
+        else:
+            return ""
 
     def get_data_source_value(self):
-        pass
+        data_source = self.data_source.text
+        logger.info(f"Data Source: {data_source}")
+        if self.data_source.text == "":
+            return ""
+        else:
+            if "[" or "]" not in data_source:
+                data_source = data_source.replace("[","")
+                data_source = data_source.replace("]","")
+                data_source_string = "--data " +"[" + data_source + "]"
+            else:
+                data_source_string = "--data " + data_source
+
+            return data_source_string
 
     def get_default_data_value(self):
-        pass
+        logger.info(f"Use Default Data: {self.default_data.active}")
+        #if self.default_data.active:
+        return ""
+        # else:
+        ## going have to think about this one and how to handle user not wanting default data
 
     def get_min_price_value(self):
-        pass
+        logger.info(f"Min Price: {self.min_price.text}")
+        if self.min_price.text == "":
+            return ""
+        else:
+            return f"--min_price {self.min_price.text}"
 
     def get_max_price_value(self):
-        pass
+        logger.info(f"Max Price: {self.max_price}")
+        if self.max_price.text == "":
+            return ""
+        else:
+            return f"--max_price {self.max_price.text}"
 
     def get_num_research_value(self):
-        pass
+        if self.num_research.value == 0:
+            return ""
+        else:
+            return f"--number_to_research {self.num_research.value}"
 
     def get_output_value(self):
-        pass
+        logger.info(f"Output: {self.output.text}")
+        if self.output.text == "":
+            return ""
+        else:
+            return f"--output {self.output.text}"
 
     def get_email_value(self):
-        pass
+        logger.info(f"Email: {self.email.text}")
+        #if self.email.text == "":
+        return ""
+        # else:
+        ## function currently not enabled
 
     def get_same_as_user_value(self):
-        pass
+        pass # function currently not enabled
 
     def start_calculation_thread(self, instance):
         # Start a new thread for the calculation
@@ -325,7 +453,7 @@ class CreateReportScreen(MDScreen):
             {output} {email} "
         else:
             argument = f" {use_dow} {include_list} \
-            {index} {models} {model_time} {process_factor} {weights} {number_to_sim} \
+            {self.index} {models} {self.model_time} {process_factor} {weights} {number_to_sim} \
             {number_trials} {sim_date} {seed} {sim_model} {j_param} {processes} {include_research} \
             {data_source} {default_data} {min_price} {max_price} {num_research} \
             {output} {email} "

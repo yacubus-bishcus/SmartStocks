@@ -30,6 +30,24 @@
     process_factor: process_factor_id
     weights_value: weights_id
 
+    number_to_sim: number_to_sim_id
+    num_trials: slider
+    sim_date: sim_date_id
+    seed: seed_id
+    jump_param: slider2
+    processes: slider3
+
+    include_research: include_research_id
+    data_source: data_source_id
+    default_data: default_data_id
+    min_price: min_price_id
+    max_price: max_price_id
+    num_research: slider4
+
+    output: output_id
+    email: email_id
+    same_as_user: same_as_user_id
+
     BoxLayout:
         orientation: 'vertical'
 
@@ -317,6 +335,7 @@
                         spacing: "8dp"
 
                         MDTextField:
+                            id: number_to_sim_id
                             mode: "rectangle"
                             hint_text: "Number"
                             helper_text: 'Number of Top Stocks to Simulate'
@@ -362,14 +381,14 @@
                             text: str(slider.value)
 
                     MDTextField:
-                        id: field
+                        id: sim_date_id
                         mode: "rectangle"
                         hint_text: "Sim Date"
                         helper_text: "Pick the Date for Simulations"
                         pos_hint: {'center_x': .5, 'center_y': .5}
                         size_hint_x: .35
                         icon_right: "calendar"
-                        on_focus: app.show_date_picker(self.focus)
+                        on_focus: root.show_date_picker(self.focus)
                         theme_text_color: "Custom"
                         text_color_normal: "black"
                         text_color_focus: "black"
@@ -379,6 +398,7 @@
                         fill_color_focus: "white"
 
                     MDTextField:
+                        id: seed_id
                         mode: "rectangle"
                         hint_text: "Seed"
                         helper_text: 'Choose your Simulation Seed'
@@ -487,6 +507,7 @@
                         pos_hint: {"center_x": 0.5, "center_y": 0.5}
 
                     MDSwitch:
+                        id: include_research_id
                         active: False
                         icon_active: "check"
                         icon_inactive: "close"
@@ -501,6 +522,7 @@
                     spacing: dp(16)
 
                     MDTextField:
+                        id: data_source_id
                         mode: "rectangle"
                         hint_text: 'Data'
                         helper_text: "Custom Data List of Stocks"
@@ -533,6 +555,7 @@
                         pos_hint: {"center_x": 0.5, "center_y": 0.5}
 
                     MDSwitch:
+                        id: default_data_id
                         active: False
                         icon_active: "check"
                         icon_inactive: "close"
@@ -541,6 +564,7 @@
                         pos_hint: {"center_y": 0.5}
 
                 MDTextField:
+                    id: min_price_id
                     mode: "rectangle"
                     hint_text: 'Minimum Price'
                     helper_text: "Minimum Price of Research Stocks"
@@ -555,6 +579,7 @@
                     fill_color_focus: "white"
 
                 MDTextField:
+                    id: max_price_id
                     mode: "rectangle"
                     hint_text: 'Maximum Price'
                     helper_text: "Maximum Price of Research Stocks"
@@ -619,6 +644,7 @@
                     pos_hint: {"center_x": 0.5}
 
                     MDTextField:
+                        id: output_id
                         mode: "rectangle"
                         hint_text: "Output"
                         helper_text: 'Output Filename (.docx)'
@@ -633,6 +659,7 @@
                         fill_color_focus: "white"
 
                     MDTextField:
+                        id: email_id
                         mode: "rectangle"
                         hint_text: 'Email'
                         helper_text: "Email to Send Report"
@@ -653,6 +680,7 @@
                         pos_hint: {"center_x": 0.5, "top": 1}
 
                         CheckItem:
+                            id: same_as_user_id
                             group: "root"
                             pos_hint: {"center_y": 0.5}
 

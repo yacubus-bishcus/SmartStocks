@@ -30,6 +30,7 @@ from kivymd.uix.transition import MDFadeSlideTransition
 from kivy.lang import Builder
 from kivy.graphics import Color
 from kivymd.uix.menu import MDDropdownMenu
+
 # MyApp Classes
 from loginscreen import LoginScreen, LoginPage
 from menuscreen import MenuScreen
@@ -69,7 +70,7 @@ class SmartStocksApp(MDApp):
         logger.info("LoginPage Initialized.")
         sm.add_widget(MenuScreen(name='menu'))
         logger.info("MenuScreen Initialized.")
-        
+
         sm.add_widget(CreateReportScreen(name='create_report'))
         logger.info("CreateReportScreen Initialized.")
 
@@ -133,18 +134,6 @@ class SmartStocksApp(MDApp):
     def option_selected(self, option):
         # Handle what happens when an option in the dropdown menu is selected
         toast(f"Option selected: {option}")
-
-    def show_date_picker(self, focus):
-        if not focus:
-            return
-
-        date_dialog = MDDockedDatePicker()
-        # You have to control the position of the date picker dialog yourself.
-        date_dialog.pos = [
-            self.root.ids.field.center_x - date_dialog.width / 2,
-            self.root.ids.field.y - (date_dialog.height + dp(32)),
-        ]
-        date_dialog.open()
 
     def back_to_menu(self, instance):
         self.manager.current = 'menu'
