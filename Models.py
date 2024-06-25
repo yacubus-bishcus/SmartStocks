@@ -4,6 +4,7 @@ import matplotlib.dates as mdates
 import matplotlib.ticker as ticker
 import logging
 import sys
+from colorama import Fore, Style 
 from datetime import datetime, timedelta
 import numpy as np
 
@@ -28,34 +29,6 @@ class Models:
     def get_caption(self):
         return #self.caption
 
-    def set_history(self, myStock, time_period):
-        if time_period == "1y": #Create DataFrame from MyStock's history
-            df = pd.DataFrame(myStock.the_year_history)
-        elif time_period == "ytd":
-            df = pd.DataFrame(myStock.the_ytd_history)
-        elif time_period == "6mo":
-            df = pd.DataFrame(myStock.the_6mo_history)
-        elif time_period == "3mo":
-            df = pd.DataFrame(myStock.the_3mo_history)
-        elif time_period == "1mo":
-            df = pd.DataFrame(myStock.the_month_history)
-        elif time_period == "5d":
-            df = pd.DataFrame(myStock.the_5d_history)
-        elif time_period == "1d":
-            df = pd.DataFrame(myStock.the_day_history)
-        else:
-            logger.error(f"Time Period must be one of the following options: 1yr, ytd, 6mo, 3mo, 1mo, 5d, 1d. Your time period: {time_period}")
-            sys.exit(1)
-
-        try:
-            series = df['Close']
-        except:
-            logger.warning(f"{myStock.name} failed to grab {time_period} history.")
-            logger.exception(df)
-            sys.exit(1)
-
-        return df['Close']
-
     def execute_model(self):
         pass
 
@@ -77,7 +50,7 @@ class Fifty_Day_Model:
         Uses the open price if current price not available.
         Outputs an array of performances for each stock in stock_list.
         """
-        logger.debug("Models::Fifty_Day_Model --> 50 Day Model Imported.")
+        #logger.debug("Fifty_Day_Model --> 50 Day Model Imported.")
 
     def get_name(self):
         return "50 Day"
@@ -100,7 +73,7 @@ class Fifty_Day_Model:
                 if open_price is not None:
                     performance_measure = open_price - fifty_day_average
                 else:
-                    logger.error(Fore.YELLOW + f"Models::Fifty_Day_Model::execute_model DATA ERROR: Current and Open Prices for {stock.info.get('name')} not available." + Style.RESET_ALL)
+                    logger.error(Fore.YELLOW + f"Fifty_Day_Model::execute_model DATA ERROR: Current and Open Prices for {stock.info.get('name')} not available." + Style.RESET_ALL)
                     return None
             performance.append(performance_measure)
 
@@ -124,7 +97,7 @@ class TwoHundred_Day_Model:
         Uses the open price if current price not available.
         Outputs an array of performances for each stock in stock_list.
         """
-        logger.debug("Models::TwoHundred_Day_Model --> 200 Day Average Model Imported.")
+        #logger.debug("TwoHundred_Day_Model --> 200 Day Average Model Imported.")
 
     def get_name(self):
         return "200 Day"
@@ -139,7 +112,7 @@ class TwoHundred_Day_Model:
             average = stock.twohundred_percent
 
             if average is None:
-                logger.error(Fore.YELLOW + "Models::TwoHundred_Day_Model::execute_model DATA ERROR: 200 Day Average for " + stock.info.get('name') + " not available." + Style.RESET_ALL)
+                logger.error(Fore.YELLOW + "TwoHundred_Day_Model::execute_model DATA ERROR: 200 Day Average for " + stock.info.get('name') + " not available." + Style.RESET_ALL)
                 return None
             if current_price is not None:
                 performance_measure = current_price - average
@@ -148,7 +121,7 @@ class TwoHundred_Day_Model:
                 if open_price is not None:
                     performance_measure = open_price - average
                 else:
-                    logger.error(Fore.YELLOW + "Models::TwoHundred_Day_Model::execute_model DATA ERROR: Current and Open Prices for " + stock.info.get('name') + " not available." + Style.RESET_ALL)
+                    logger.error(Fore.YELLOW + "TwoHundred_Day_Model::execute_model DATA ERROR: Current and Open Prices for " + stock.info.get('name') + " not available." + Style.RESET_ALL)
                     return None
             performance.append(performance_measure)
 
@@ -162,10 +135,10 @@ class TwoHundred_Day_Model:
 ## ---------------------------------------------------------------------------##
 
 class RSI:
-    def __init__(self, myStock_list=None, futures_data=None, time_period="1mo"):
-        self.stock_list = myStock_list
+    def __init__(self, Stock_list=None, futures_data=None, period="1mo"):
+        self.stock_list = Stock_list
         self.futures_data = futures_data
-        self.time_period = time_period
+        self.period = period
         # Initalize variables for plotting
         self.rsi = None
         self.smoothed_rsi = None
@@ -178,7 +151,7 @@ class RSI:
         when below 30.
         """
 
-        logger.debug("Models::RSI:: Relative Strength Index Model Imported.")
+        #logger.debug("RSI:: Relative Strength Index Model Imported.")
 
     def __del__(self):
         pass
@@ -190,44 +163,47 @@ class RSI:
         return self.caption
 
     def execute_model(self):
-        print("Executing RSI Model.")
-        models = Models(myStockList=self.stock_list)
+        logger.info("Executing RSI Model.")
         rsi_list = []
         if isinstance(self.stock_list, list):
-            print("isinstance?")
-            if len(self.stock_list) > 1:
+            if len(self.stock_list) >= 1:
                 for stock in self.stock_list:
                     if self.futures_data is None:
-                        history = models.set_history(stock, self.time_period)
+                        history = stock.history['Close']
                     else:
                         history = self.futures_data
 
-                    #self.first_period, self.smooth_period = self.calculate_periods(len(history))
                     self.rsi = self.calculate_model(history)
+                    #logger.debug("RSI VALUES: ")
+                    #logger.debug(self.rsi)
                     # provides a smoothed RSI for a year of data good for plotting
                     self.smoothed_rsi = self.smooth_rsi(self.rsi)
+                    #logger.debug("SMOOTHED RSI VALUES: ")
+                    #logger.debug(self.smooth_rsi)
                     # Here i need a single value not the full year's data
-                    smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
+                    if not self.smoothed_rsi.empty:
+                        smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
+                    else:
+                        logger.warning(f"{stock.name} Smoothed RSI Empty.")
+                        logger.info(f"{self.rsi}")
+                        logger.info(f"{self.smoothed_rsi}")
+                        smoothed_rsi_last_value = 0
+                    #logger.debug(f"Smoothed RSI Value: {smoothed_rsi_last_value}")
                     rsi_list.append(smoothed_rsi_last_value)
 
                 return rsi_list
             else:
                 if self.futures_data is None:
-                    print("RSI Setting History")
-                    history = models.set_history(self.stock_list[0], self.time_period)
-                    print(history)
+                    history = self.stock_list[0].history['Close']
                 else:
                     history = self.futures_data
 
-                #self.first_period, self.smooth_period = self.calculate_periods(len(history))
                 self.rsi = self.calculate_model(history)
                 self.smoothed_rsi = self.smooth_rsi(self.rsi)
                 smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
         else:
             if self.futures_data is None:
-                print("RSI Setting History")
-                history = models.set_history(self.stock_list, self.time_period)
-                print(history)
+                history = self.stock_list.history['Close']
             else:
                 history = self.futures_data
 
@@ -236,15 +212,6 @@ class RSI:
             self.smoothed_rsi = self.smooth_rsi(self.rsi)
             smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
             return smoothed_rsi_last_value
-
-    # RSI model doesn't actually use market_data, risk_free_rate or time_delta
-    # self.stock_list input is set by Model_Handler. self.stock_list is a list
-    # of MyStock objects
-    def set_my_parameters(self, stock_list=None, market_data=None, risk_free_rate=None, time_delta=None):
-        self.stock_list = [stock_list] # must convert to a list of objects first
-        self.market_data = market_data
-        self.risk_free_rate = risk_free_rate
-        self.time_delta = time_delta
 
 
     def calculate_model(self, history):
@@ -263,13 +230,6 @@ class RSI:
         filtered_df = rsi.iloc[2:]
         return filtered_df
 
-    # def calculate_periods(self, total_period):
-    #     first_period = 14
-    #     smooth_period = 3
-
-
-        return first_period, smooth_period
-
     def smooth_rsi(self, rsi):
         # Apply exponential moving average to smooth RSI
         smoothed_rsi = rsi.ewm(span=3).mean()
@@ -284,9 +244,6 @@ class RSI:
         plt.ioff()
         fig = None
 
-        print(self.smoothed_rsi)
-        print(self.history)
-        print(self.rsi)
         if subplot:
             fig, ax1 = plt.subplots()
             ax1.plot(self.smoothed_rsi, color='red',label='Smoothed RSI')
@@ -321,8 +278,8 @@ class RSI:
 ## ---------------------------------------------------------------------------##
 
 class CAPM:
-    def __init__(self, myStock_list=None, md=None, rfr=None, td="1mo", futures_data=None):
-        self.stock_list = myStock_list
+    def __init__(self, Stock_list=None, md=None, rfr=None, td="1mo", futures_data=None):
+        self.stock_list = Stock_list
         self.market_data = md
         self.futures_data = futures_data
         self.risk_free_rate = rfr
@@ -343,6 +300,8 @@ class CAPM:
         self.betas = []
         self.beta = []
 
+        #logger.debug("CAPM Model Imported.")
+
     def __del__(self):
         pass
 
@@ -353,43 +312,51 @@ class CAPM:
         return self.caption
 
     def execute_model(self):
+        #logger.debug("Executing CAPM Model")
         if isinstance(self.stock_list, list):
-            if len(self.stock_list) > 1:
+            if len(self.stock_list) >= 1:
                 # Calculate beta (market volatility) and market risk premium for all stocks
                 beta_and_market_risk = [self.calculate_beta_and_market_risk_premium(stock) for stock in self.stock_list]
                 self.betas, market_risk_premiums = zip(*beta_and_market_risk)
+                #logger.debug(f"Beta: {self.betas} mrp: {market_risk_premiums}")
                 # Calculate expected return for all stocks
                 self.expected_returns = [self.calculate_expected_return(beta, mrp) for beta, mrp in zip(self.betas, market_risk_premiums)]
+                #logger.debug(f"Expected Returns: {self.expected_returns}")
         else:
             self.beta, mrp = self.calculate_beta_and_market_risk_premium(self.stock_list)
             self.expected_returns = self.calculate_expected_return(self.beta, mrp)
-
         return self.expected_returns
 
     def calculate_beta_and_market_risk_premium(self, stock):
         # Determines market volatility
-        stock_data = stock.history(period=self.time_delta)
+        stock_data = stock.history
         # Calculate daily returns
         stock_data['daily_return'] = stock_data['Close'].pct_change().dropna()
+        #logger.debug(stock_data['daily_return'])
+        self.market_data['daily_return'] = self.market_data['Close'].pct_change().dropna()
+        #logger.debug(self.market_data['daily_return'])
+        # Align data by date 
+        aligned_data = pd.concat([stock_data['daily_return'], self.market_data['daily_return']], axis=1).dropna()
+        aligned_data.columns = ['stock_return', 'market_return']
         # get the latest available daily return for the S&P 500 index
-        market_return = self.market_data['daily_return'].iloc[-1]
+        try:
+            market_return = aligned_data['market_return'].iloc[-1]
+        except Exception as e:
+            logger.warning(f"{stock.name} returned {e}")
+            logger.info(f"{aligned_data}")
+            market_return = 0
         # Calculate CAPM metrics
         market_risk_premium = market_return - self.risk_free_rate
-        covariance = stock_data['daily_return'].cov(self.market_data['daily_return'])
-        market_variance = self.market_data['daily_return'].var()
+        covariance = aligned_data['stock_return'].cov(aligned_data['market_return'])
+        market_variance = aligned_data['market_return'].var()
         beta = covariance / market_variance
         return beta, market_risk_premium
-
-    def calculate_history(self):
-        models = Models(myStockList=self.stock_list)
-        return models.set_history(self.stock_list, self.time_delta)
 
     def calculate_expected_return(self, beta, mrp):
         return self.risk_free_rate + beta * mrp
 
     def plot(self, stock_name, ax=None):
         plt.ioff()
-        #history = self.calculate_history()
         fig, ax1 = plt.subplots(figsize=(10, 6))
         ax1.plot(self.beta, self.expected_returns, color='red',label=' Beta vs Expected Returns')
         ax1.set_xlabel('Volatility Beta')
@@ -410,16 +377,16 @@ class CAPM:
 ## ---------------------------------------------------------------------------##
 
 class FIBONACCI:
-    def __init__(self, myStock_list=None, futures_data=None, time_period="1mo"):
-        self.stock_list = myStock_list
-        if time_period == "1y":
+    def __init__(self, Stock_list=None, futures_data=None, period="1mo"):
+        self.stock_list = Stock_list
+        if period == "1y":
             self.time_delta = 14
-        elif time_period == "1mo":
+        elif period == "1mo":
             self.time_delta = 7
         else:
             self.time_delta = 1
 
-        self.time_period = time_period
+        self.period = period
         self.futures_data = futures_data
         self.history = None
         self.fib_levels = [0.236, 0.382, 0.5, 0.618, 1.0]
@@ -434,7 +401,7 @@ class FIBONACCI:
         create the levels between those two points.
         "Capital Asset Pricing Model (CAPM)." Investopedia, Investopedia, 2021, www.investopedia.com/terms/c/capm.asp.
         """
-        logger.debug("FIBONACCI model imported.")
+        #logger.debug("FIBONACCI model imported.")
 
     def __del__(self):
         pass
@@ -447,19 +414,18 @@ class FIBONACCI:
 
     def execute_model(self):
         fibo_list = []
-        models = Models(myStockList=self.stock_list)
         if isinstance(self.stock_list, list):
             if len(self.stock_list) > 1:
                 for stock in self.stock_list:
-                    history = models.set_history(stock, self.time_period)
+                    history = stock.history['Close']
                     self.fibo = self.calculate_model(history)
                     fibo_list.append(self.fibo)
                 return fibo_list
             else:
-                history = models.set_history(self.stock_list[0], self.time_period)
+                history = self.stock_list[0].history['Close']
                 self.fibo = self.calculate_model(history)
         else:
-            history = models.set_history(self.stock_list, self.time_period)
+            history = self.stock_list.history['Close']
             self.fibo = self.calculate_model(history)
             return self.fibo
 
@@ -504,8 +470,8 @@ class FIBONACCI:
 ## ---------------------------------------------------------------------------##
 
 class STOCHASTIC:
-    def __init__(self, myStock_list=None, time_period="1mo", futures_data=None):
-        self.stock_list = myStock_list
+    def __init__(self, Stock_list=None, period="1mo", futures_data=None):
+        self.stock_list = Stock_list
         self.futures_data = futures_data
         self.caption = """
         The stochastic oscillator measures the current price relative to the price range
@@ -513,8 +479,8 @@ class STOCHASTIC:
         price should make new highs when the trend is up. In a downtrend, the price
         tends to make new lows. The stochastic tracks whether this is happening.
         """
-        self.time_period = time_period
-        logger.debug("STOCHASTIC model imported.")
+        self.period = period
+        #logger.debug("STOCHASTIC model imported.")
 
     def __del__(self):
         pass
@@ -525,31 +491,25 @@ class STOCHASTIC:
     def get_caption(self):
         return self.caption
 
-    def calculate_periods(self, total_period):
-        window_period = 14
-        smooth_period = 3
-
-        return window_period, smooth_period
-
     def execute_model(self):
         output_list = []
-        models = Models(myStockList=self.stock_list)
         if isinstance(self.stock_list, list):
-            if len(self.stock_list) > 1:
+            if len(self.stock_list) >= 1:
                 for stock in self.stock_list:
                     if self.futures_data is None:
-                        history = models.set_history(stock, self.time_period)
+                        history = stock.history['Close']
                     else:
                         history = self.futures_data
                     self.k, self.d = self.calculate_model(stock, history)
                     # the %k and %d are pretty similar so just taking the average of the
                     # two to output as our performance measure.
                     output = self.calculate_performance_score().mean()
-                    output_list.append(output)
+                    #logger.debug(output[0])
+                    output_list.append(output[0])
                 return output_list
             else:
                 if self.futures_data is None:
-                    history = models.set_history(self.stock_list[0], self.time_period)
+                    history = self.stock_list[0].history['Close']
                 else:
                     history = self.futures_data
 
@@ -557,25 +517,24 @@ class STOCHASTIC:
                 output = self.calculate_performance_score().mean()
         else:
             if self.futures_data is None:
-                history = models.set_history(self.stock_list, self.time_period)
+                history = self.stock_list.history['Close']
             else:
                 history = self.futures_data
 
             self.k, self.d = self.calculate_model(self.stock_list, history)
             output = self.calculate_performance_score().mean()
-            return output
+            return output[0]
 
 
-    def calculate_model(self, myStock, history):
+    def calculate_model(self, stock, history):
         self.history = history
         # Calculate highest high and lowest low
-        window, smoothing = self.calculate_periods(len(self.history))
-        high = myStock.the_year_history['High'].rolling(window=window).max()
-        low = myStock.the_year_history['Low'].rolling(window=window).min()
+        high = stock.history['High'].rolling(window=14).max()
+        low = stock.history['Low'].rolling(window=14).min()
         # Calculate %k value
         k_percent = ((self.history - low) / (high - low)) * 100.
-        k_percent_smooth = k_percent.rolling(window=smoothing).mean()
-        d_percent = k_percent_smooth.rolling(window=smoothing).mean()
+        k_percent_smooth = k_percent.rolling(window=3).mean()
+        d_percent = k_percent_smooth.rolling(window=3).mean()
         return k_percent_smooth, d_percent
 
     def calculate_performance_score(self):
@@ -608,9 +567,9 @@ class STOCHASTIC:
 ## ---------------------------------------------------------------------------##
 
 class MACD:
-    def __init__(self, myStock_list=None, futures_data=None, time_period="1mo", debug=False):
-        self.stock_list = myStock_list
-        self.time_period = time_period
+    def __init__(self, Stock_list=None, futures_data=None, period="1mo", debug=False):
+        self.stock_list = Stock_list
+        self.period = period
         self.futures_data = futures_data
         self.debug = debug
         self.macd_line = None
@@ -623,7 +582,7 @@ class MACD:
         good time to buy. Conversely, when the MACD line crosses below the signal
         line, it indicates a bearish signal, suggesting it might be a good time to sell.
         """
-        logger.debug("Models::MACD --> Model Imported.")
+        #logger.debug("MACD --> Model Imported.")
 
     def __del__(self):
         pass
@@ -651,12 +610,11 @@ class MACD:
     def execute_model(self):
         output_list = []
         output = None
-        model = Models(myStockList=self.stock_list)
         if isinstance(self.stock_list, list):
             if len(self.stock_list) > 1:
                 for stock in self.stock_list:
                     if self.futures_data is None:
-                        history = model.set_history(stock, self.time_period)
+                        history = stock.history['Close']
                     else:
                         history = self.futures_data
 
@@ -667,7 +625,7 @@ class MACD:
                 return output_list
             else:
                 if self.futures_data is None:
-                    history = model.set_history(self.stock_list[0], self.time_period)
+                    history = self.stock_list[0].history['Close']
                 else:
                     history = self.futures_data
 
@@ -676,7 +634,7 @@ class MACD:
 
         else:
             if self.futures_data is None:
-                history = model.set_history(self.stock_list, self.time_period)
+                history = self.stock_list.history['Close']
             else:
                 history = self.futures_data
 
@@ -691,7 +649,6 @@ class MACD:
         long_ema = self.history.ewm(span=26, min_periods=1, adjust=False).mean()
         # Calculate MACD Line
         self.macd_line = short_ema - long_ema
-        logger.info(self.macd_line)
         # Calculate signal line
         self.signal_line = self.macd_line.ewm(span=9, min_periods=1, adjust=False).mean()
         self.macd_histogram = self.macd_line - self.signal_line

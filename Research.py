@@ -8,6 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 import ftplib
 import os
+import pandas as pd 
 import random
 from selenium import webdriver
 import pkg_resources
@@ -18,18 +19,20 @@ from StockAnalysis import Analysis
 logger = logging.getLogger(__name__)
 
 class Research:
-    def __init__(self, args=None):
-        self.args = args
+    def __init__(self, filenames, number_to_research):
         logger.debug("--> Grabbing All Tickers...")
-        self.filenames = self.args.data
+        self.filenames = filenames
         self._get_ticker_symbols()
         for filename in self.filenames:
             self.clean_data(filename, filename)
             logger.info(f"{filename} data cleaned.")
 
         all_tickers = self.list_ticker_symbols()
-        self.chosen_tickers = self.choose_tickers(all_tickers, int(self.args.number_to_research))
+        self._tickers = self.choose_tickers(all_tickers, number_to_research)
 
+    @property 
+    def tickers(self):
+        return self._tickers 
 
     def fetch_csv_data(self, url):
         response = requests.get(url)
@@ -42,7 +45,7 @@ class Research:
 
         # Check if we already have the files in the data folder
         for filename in self.filenames:
-            filepath = pkg_resources.resource_filename('StockApp.data', filename)
+            filepath = pkg_resources.resource_filename('data', filename)
             if os.path.exists(filepath):
                 logger.debug(Fore.GREEN + f"get_ticker_symbols File '{filename}' found in data folder." + Style.RESET_ALL)
                 count += 1
@@ -57,7 +60,7 @@ class Research:
             ftp_server.cwd('Symboldirectory')
 
             for filename in self.filenames:
-                local_filepath = pkg_resources.resource_filename('StockApp.data', filename)
+                local_filepath = pkg_resources.resource_filename('data', filename)
                 if not os.path.exists(local_filepath):
                     with open(local_filepath, "wb") as file:
                         ftp_server.retrbinary(f"RETR {filename}", file.write)
@@ -67,13 +70,10 @@ class Research:
 
             ftp_server.quit()
 
-    def grab_research_tickers(self):
-        return self.chosen_tickers
-
     def list_ticker_symbols(self):
-        filepath = pkg_resources.resource_filename('StockApp.data', "nasdaqlisted.txt")
+        filepath = pkg_resources.resource_filename('data', "nasdaqlisted.txt")
         df = pd.read_csv(filepath, sep="|")
-        filepath = pkg_resources.resource_filename('StockApp.data', "otherlisted.txt")
+        filepath = pkg_resources.resource_filename('data', "otherlisted.txt")
         df2 = pd.read_csv(filepath, sep="|")
         # filter out ETFs
         filtered_df1 = df[df['ETF'] != "Y"]
@@ -164,7 +164,7 @@ class Research:
     #found_elements = find_elements_by_keyword(soup, 'Symbol')
 
     def read_data(self, input_filename):
-        input_filename = pkg_resources.resource_filename('StockApp.data', input_filename)
+        input_filename = pkg_resources.resource_filename('data', input_filename)
         try:
             df = pd.read_csv(input_filename, delimiter='|')
         except FileNotFoundError:
@@ -189,11 +189,15 @@ class Research:
         elif input_filename == "otherlisted.txt":
             filtered_df = df[(df['ETF'] != 'Y') & (df['Test Issue'] != 'Y')]
 
+        # Remove rows with "Warrant" in the 'Security Name' column
+        filtered_df = filtered_df[~filtered_df['Security Name'].str.contains("Warrant", case=False, na=False)]
+        # remove rows with "rights" in the security name column 
+        filtered_df = filtered_df[~filtered_df['Security Name'].str.contains("Rights", case=False, na=False)]
         df_cleaned = filtered_df.dropna(subset=['ETF'])
         after = len(df_cleaned)
         # Write filtered data to a new file
         try:
-            output_filename = pkg_resources.resource_filename('StockApp.data', output_filename)
+            output_filename = pkg_resources.resource_filename('data', output_filename)
             df_cleaned.to_csv(output_filename, sep='|', index=False)  # Writing as tab-delimited data
             logger.info(f"clean_data --> Filtered data has been written to '{output_filename}'.")
             logger.info(f"clean_data Total filtered Rows --> {before-after}")
@@ -225,7 +229,7 @@ class Research:
             after = len(filtered_df)
             output_filename = filename
             try:
-                output_filename = pkg_resources.resource_filename('StockApp.data', output_filename)
+                output_filename = pkg_resources.resource_filename('data', output_filename)
                 filtered_df.to_csv(output_filename, sep='|', index=False)  # Writing as tab-delimited data
                 logger.info(f"clean_data --> Filtered data has been written to '{output_filename}'.")
                 logger.info(f"clean_data Total filtered Rows --> {before-after}")

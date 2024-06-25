@@ -12,18 +12,18 @@ logger = logging.getLogger(__name__)
 
 """
 Model Handler Class allows each model whether internal to the program or imported
-from the users model class access to the list of MyStock objects, market data df,
+from the users model class access to the list of Stock objects, market data df,
 risk free rate, time period to look at the models and debugging capabilities.
 """
 class Model_Handler:
-    def __init__(self, myStock_list=None, market_data=None, risk_free_rate=None, args=None):
+    def __init__(self, Stock_list=None, market_data=None, risk_free_rate=None, args=None):
         # Initialize attributes
-        self.stock_list = myStock_list
+        self.stock_list = Stock_list
         self.market_data = market_data
         self.risk_free_rate = risk_free_rate
         self.args = args
         if args is not None:
-            self.time_delta = self.args.model_time_delta
+            self.time_delta = self.args.model_period
         else:
             self.time_delta = "1y"
 
@@ -64,8 +64,11 @@ class Model_Handler:
     # only plot future prices, macd with future prices and rsi
     # to add more requires additional debugging with datetime objects causing
     # issues
-    def add_all_plotting_models(self):
-        self.set_models([self.get_futures_instance, self.get_macd_instance, self.get_rsi_instance])
+    def add_all_plotting_models(self, futures):
+        if futures:
+            self.set_models([self.get_futures_instance, self.get_macd_instance, self.get_rsi_instance])
+        else:
+            self.set_models([self.get_macd_instance, self.get_rsi_instance])
 
     """
     Function 'catches' all model instances and plots each of the calcuations.
@@ -103,27 +106,27 @@ class Model_Handler:
     def pass_futures_market_data(self, market_data):
         self.sim_market_data = market_data
 
-    def pass_market_stock(self, myStock):
-        self.sim_market_stock = myStock
+    def pass_market_stock(self, stock):
+        self.sim_market_stock = stock
 
     def get_capm_model(self):
-        model = CAPM(myStock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate, td=self.time_delta)
+        model = CAPM(Stock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate, td=self.time_delta)
         return model.execute_model()
 
     def get_rsi_model(self):
-        model = RSI(myStock_list=self.stock_list, time_period=self.time_delta)
+        model = RSI(Stock_list=self.stock_list, period=self.time_delta)
         return model.execute_model()
 
     def get_fibonnaci_model(self):
-        model = FIBONACCI(myStock_list=self.stock_list, time_period=self.time_delta)
+        model = FIBONACCI(Stock_list=self.stock_list, period=self.time_delta)
         return model.execute_model()
 
     def get_stochastic_oscillator_model(self):
-        model = STOCHASTIC(myStock_list=self.stock_list, time_period=self.time_delta)
+        model = STOCHASTIC(Stock_list=self.stock_list, period=self.time_delta)
         return model.execute_model()
 
     def get_macd_model(self):
-        model = MACD(myStock_list=self.stock_list, time_period=self.time_delta)
+        model = MACD(Stock_list=self.stock_list, period=self.time_delta)
         return model.execute_model()
 
     def get_futures_instance(self):
@@ -132,27 +135,36 @@ class Model_Handler:
         return model
 
     def get_capm_instance(self):
-        model = CAPM(myStock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate, td=self.time_delta, futures_data=self.futures_data.iloc[:,0])
+        if self.futures_data is not None:
+            model = CAPM(Stock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate, td=self.time_delta, futures_data=self.futures_data.iloc[:,0])
+        else:
+            model = CAPM(Stock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate, td=self.time_delta)
         model.execute_model()
         return model
 
     def get_rsi_instance(self):
-        model = RSI(myStock_list=self.stock_list, futures_data=self.futures_data.iloc[:,0], time_period=self.time_delta)
+        if self.futures_data is not None:
+            model = RSI(Stock_list=self.stock_list, futures_data=self.futures_data.iloc[:,0], period=self.time_delta)
+        else:
+            model = RSI(Stock_list=self.stock_list, period=self.time_delta)
         model.execute_model()
         return model
 
     def get_fibonnaci_instance(self):
-        model = FIBONACCI(myStock_list=self.stock_list, time_period=self.time_delta, futures_data=self.futures_data)
+        model = FIBONACCI(Stock_list=self.stock_list, period=self.time_delta, futures_data=self.futures_data)
         model.execute_model()
         return model
 
     def get_stochastic_oscillator_instance(self):
-        model = STOCHASTIC(myStock_list=self.stock_list, time_period=self.time_delta, futures_data=self.futures_data)
+        model = STOCHASTIC(Stock_list=self.stock_list, period=self.time_delta, futures_data=self.futures_data)
         model.execute_model()
         return model
 
     def get_macd_instance(self):
-        model = MACD(myStock_list=self.stock_list, futures_data=self.futures_data.iloc[:,0], time_period = self.time_delta)
+        if self.futures_data is not None:
+            model = MACD(Stock_list=self.stock_list, futures_data=self.futures_data.iloc[:,0], period = self.time_delta)
+        else:
+            model = MACD(Stock_list=self.stock_list, period=self.time_delta)
         model.execute_model()
         return model
     """

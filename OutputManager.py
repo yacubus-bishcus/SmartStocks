@@ -38,7 +38,7 @@ class WordPrinter:
                 else:
                     cls._instance.filename = filename
 
-                cls._instance.filepath = pkg_resources.resource_filename('StockApp.output', cls._instance.filename)
+                cls._instance.filepath = pkg_resources.resource_filename('output', cls._instance.filename)
             cls._instance.doc = Document()
 
         return cls._instance
@@ -243,17 +243,18 @@ class WordPrinter:
     # takes input stock name (str) and a list of figures (figure objs)
     def add_plots_to_word(self, stock_name, figures):
         logger.info(f"Creating {stock_name} Plots")
-        for figure in tqdm(figures, desc="Figures"):
-            if figure is not None:
+        if figure is not None:
+            for figure in tqdm(figures, desc="Figures"):
                 self.doc.add_heading(stock_name, level=1)
-                temp_file = pkg_resources.resource_filename('StockApp.output', "figure.png")
+                temp_file = pkg_resources.resource_filename('output', "figure.png")
                 figure.savefig(temp_file, bbox_inches='tight')
                 self.doc.add_picture(temp_file, width=Inches(6))
                 plt.close(figure)
                 os.remove(temp_file)
                 self.doc.add_page_break()
-            else:
-                logger.warning("Tried to Add NoneType Figure to Word doc. Skipping model figure.")
+        else:
+            logger.warning("Tried to Add NoneType Figure to Word doc. Skipping model figure.")
+        
         logger.info(f"{stock_name} Plots Created.")
 
 
@@ -263,7 +264,7 @@ class OutputHandler:
             self.filename = filename + ".docx"
         else:
             self.filename = filename
-        self.filepath = pkg_resources.resource_filename('StockApp.output', self.filename)
+        self.filepath = pkg_resources.resource_filename('output', self.filename)
 
     def __del__(self):
         pass

@@ -138,3 +138,8 @@ class SmartStocksApp(MDApp):
     def back_to_menu(self, instance):
         self.manager.current = 'menu'
         logger.info("Going back to Menu screen.")
+
+if __name__ =="__main__":
+    print("Starting SmartStocksApp.run()")
+    SmartStocksApp().run()
+    print("Run Complete.")

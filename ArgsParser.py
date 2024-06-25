@@ -1,5 +1,10 @@
 import argparse
+import sys 
+import logging 
+from colorama import Fore, Style 
+import multiprocessing as mp 
 
+logger = logging.getLogger(__name__)
 
 class ArgsNamespace:
     def __init__(self, **kwargs):
@@ -13,58 +18,55 @@ class ArgsNamespace:
 
 class ArgsParser:
     def __init__(self):
-        self.parser = argparse.ArgumentParser(description='Argument Parser for Stock Analysis')
-        self.args = None
+        self.parser = argparse.ArgumentParser(description='Argument Parser for Smart Stocks')
+        self._args = None
         self.defaults = {}
         self._setup_parser()
 
+    @property 
+    def args(self):
+        return self._args
+    
     def _setup_parser(self):
         # Add arguments
-        self.parser.add_argument('-a',                   action='store_true', help='Run Code as an application rather than from terminal.', required=False, default=False)
-        self.parser.add_argument('-c',                   action='store_true', help='Display individual ticker current day change', required=False, default=False)
-        self.parser.add_argument('--c_50',               action='store_true', help='Display individual ticker 50 day change', required=False, default=False)
-        self.parser.add_argument('--c_200',              action='store_true', help='Display individual ticker 200 day change', required=False, default=False)
-        self.parser.add_argument('--c_Dow',              action='store_true', help='Display daily comparison to Dow Jones Index', required=False, default=False)
-        self.parser.add_argument('--c_Nas',              action='store_true', help='Display daily comparison to Nasdaq Index', required=False, default=False)
-        self.parser.add_argument('--c_Sap',              action='store_true', help='Display daily comparison to S&P500 Index', required=False, default=False)
-        self.parser.add_argument('--c_50_Dow',           action='store_true', help='Display 50 day average comparison to Dow Jones Index', required=False, default=False)
-        self.parser.add_argument('--c_50_Nas',           action='store_true', help='Display 50 day average comparison to Nasdaq Index', required=False, default=False)
-        self.parser.add_argument('--c_50_Sap',           action='store_true', help='Display 50 day average comparison to S&P 500 Index', required=False, default=False)
-        self.parser.add_argument('--c_200_Dow',          action='store_true', help='Display 200 day average comparison to Dow Jones Index', required=False, default=False)
-        self.parser.add_argument('--c_200_Nas',          action='store_true', help='Display 200 day average comparison to Nasdaq Index', required=False, default=False)
-        self.parser.add_argument('--c_200_Sap',          action='store_true', help='Display 200 day average comparison to S&P 500 Index', required=False, default=False)
-        self.parser.add_argument('--co_50',              action='store_true', help='Display 50 day average comparison to Dow, Nasdaq, and S&P500', required=False, default=False)
-        self.parser.add_argument('--co_200',             action='store_true', help='Display 200 day average comparison to Dow, Nasdaq, and S&P500', required=False, default=False)
-        self.parser.add_argument('--c_Daily',            action='store_true', help='Display daily comparison to Dow, Nasdaq, and S&P500', required=False, default=False)
-        self.parser.add_argument('--data',               nargs='+', help='Import Research Ticker Data from list of files. Default is nasdaqlisted.txt and otherlisted.txt', required=False, default=['nasdaqlisted.txt', 'otherlisted.txt'])
-        self.parser.add_argument('-d',                   action='store_true', help='Debugging mode for developing', required=False, default=False)
-        self.parser.add_argument('-e',                   action='store_true', help='Email Outfile to provided email.', required=False)
-        self.parser.add_argument('--import_model_class', nargs='+', help='Input the class name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
-        self.parser.add_argument('--import_model_module',nargs='+', help='Input the module name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
-        self.parser.add_argument('--input',              type=str, help='Input File Path to Read Stock Tickers', required=False)
-        self.parser.add_argument('--index',              type=str, help='Index to Compare Models. Options- s&p,dow,nas. Default=s&p', required=False, default='s&p')
-        self.parser.add_argument('--jump_parameter',     type=float, help='Number of standard deviations away from the mean that qualifies as a jump in the stock price. Range 0.001 - 5. Default=1.', required=False, default=1.)
-        self.parser.add_argument('--max_price',          type=str, help='Filter Price', required=False, default="10000.00")
-        self.parser.add_argument('--models',             nargs='+', help= 'List of Models to use in the calculation. Default is Fifty Day, Two Hundred Day, CAPM, FIBO, MACD, RSI, Stochastic', required=False, default=['Fifty Day','Two Hundred Day','CAPM', 'MACD', 'RSI', 'Stochastic'])
-        self.parser.add_argument('--model_time_delta',   type=str, help='Time Delta for model plots. This is the amount of time prior to today the models will compare to future prices. Default is 1mo. Options are 1d, 5d, 1mo, 3mo, 6mo, 1y, ytd', required=False, default="1mo")
-        self.parser.add_argument('--min_price',          type=str, help='Filter Price', required=False, default="1.00")
-        self.parser.add_argument('--number_to_highlight',type=str, help='Number of Stocks to Highlight in report. Default is 3.', required=False, default='3')
-        self.parser.add_argument('--number_to_research', type=str, help='Number of Stocks to Research. Default is 5.', required=False, default="10")
-        self.parser.add_argument('--output',             type=str, help='Writes data to an output file .txt and as a word document report. Do not include file extension. Apply --as_pdf to output a PDF instead.', required=False, default=None)
-        self.parser.add_argument('-p',                   action='store_true', help='Display individual ticker price', required=False, default=False)
-        self.parser.add_argument('--price_processing_model', type=str, help='Choose between high_low and close_open price processing models for the simulations. Default is close_open', required=False, default='close_open')
-        self.parser.add_argument('--processes',          type=int, help='Number of CPUs to use on simulations.', required=False, default = 1)
-        self.parser.add_argument('-r',                   action='store_true', help='Display Recommendations for a given stock', required=False, default=False)
-        self.parser.add_argument('--report',             action='store_true', help='Create Montly Report', required=False, default=False)
-        self.parser.add_argument('--research',           action='store_true', help='Use in conjunction with --report if you want randomly selected stocks to be included in the report. Otherwise --research will execute any of the other provided functions E.g. --compare.', required=False, default=None)
-        self.parser.add_argument('--seed',               type=int, help='The Seed used for the simulation for recreation purposes...stock prices do change though.', required=False, default=42)
-        self.parser.add_argument('--sim_time',           type=int, help='The number of days to calculate future prices. The default is 30.', required=False, default=30)
-        self.parser.add_argument('--simulations',        type=int, help='Number of Simulations to run on each stock to predict future price. Default is 1000000 (1e6)', required=False, default=0)
-        self.parser.add_argument('--simulation_model',   type=str, help='Type of distribution used for simulation can either be Gaussian (normal) or Poisson-Gamma (non-normal)', required=False, default='gaussian')
-        self.parser.add_argument('--summary',            action='store_true', help='Display individual ticker business summary', required=False, default=False)
-        self.parser.add_argument('--ticker',             type=str, help='Comma-Separated List of tickers for analysis.', required=False, default=None)
-        self.parser.add_argument('-u',                   action='store_true', help='Use the Dow Jones stocks in addition to any inputs.', required=False, default=False)
-        self.parser.add_argument('--weights',            type=dict, help='Apply weights to models as a dictionary where the key matches the model name and the value is the weight you want to apply to that model. Weights must sum to 1.', required=False, default={'Fifty Day':0.1, 'Two Hundred Day':0.1, 'CAPM':0.2, 'MACD':0.05, 'RSI':0.3, 'Stochastic':0.25})
+        self.parser.add_argument('-c',                    action='store_true', help='Display individual ticker current day change', required=False, default=False)
+        self.parser.add_argument('--c_50',                action='store_true', help='Display individual ticker 50 day change', required=False, default=False)
+        self.parser.add_argument('--c_200',               action='store_true', help='Display individual ticker 200 day change', required=False, default=False)
+        self.parser.add_argument('--compare_index',       action='store_true', help='Display Daily Change Comparison to Index of Chosing.', required=False, default=False)
+        self.parser.add_argument('--compare_index_50',    action='store_true', help='Display 50 Day Change Comparison to Index of Choosing.', required=False, default=False)
+        self.parser.add_argument('--compare_index_200',   action='store_true', help='Display 200 Day Change Comparison to Index of Choosing.', required=False, default=False)
+        self.parser.add_argument('--compare_50',          action='store_true', help='Display 50 day average comparison to Dow, Nasdaq, and S&P500', required=False, default=False)
+        self.parser.add_argument('--compare_200',         action='store_true', help='Display 200 day average comparison to Dow, Nasdaq, and S&P500', required=False, default=False)
+        self.parser.add_argument('--compare_Daily',       action='store_true', help='Display daily comparison to Dow, Nasdaq, and S&P500', required=False, default=False)
+        self.parser.add_argument('--data',                nargs='+', help='Import Research Ticker Data from list of files. Default is nasdaqlisted.txt and otherlisted.txt', required=False, default=['nasdaqlisted.txt', 'otherlisted.txt'])
+        self.parser.add_argument('-d',                    action='store_true', help='Debugging mode for developing', required=False, default=False)
+        self.parser.add_argument('-e',                    action='store_true', help='Email Outfile to provided email.', required=False)
+        self.parser.add_argument('--import_model_class',  nargs='+', help='Input the class name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
+        self.parser.add_argument('--import_model_module', nargs='+', help='Input the module name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
+        self.parser.add_argument('--input',               type=str, help='Input File Path to Read Stock Tickers', required=False)
+        self.parser.add_argument('--index',               type=str, choices=['^GSPC','^DJI','^IXIC'], help='Index to Compare Models. ^GSPC=S&P500, ^DJI=DOWJONES, ^IXIC=NASDAQ Default=^GSPC', required=False, default='^GSPC')
+        self.parser.add_argument('--jump_parameter',      type=self.float_range(0.001,4), help='Number of standard deviations away from the mean that qualifies as a jump in the stock price. Range 0.001 - 5. Default=1.', required=False, default=1.)
+        self.parser.add_argument('--max_price',           type=self.float_range(1.0,100000.), help='Filter Price', required=False, default="10000.00")
+        self.parser.add_argument('--models',              nargs='+', help= 'List of Models to use in the calculation. Default is Fifty Day, Two Hundred Day, CAPM, FIBO, MACD, RSI, Stochastic', required=False, default=['Fifty Day','Two Hundred Day','CAPM', 'MACD', 'RSI', 'Stochastic'])
+        self.parser.add_argument('--model_interval',      type=str, choices=['1m','2m','5m','15m','30m','60m','90m','1h','1d','5d','1wk','1mo','3mo'], help='Intervals for model calculations and plots. Intraday data cannot extend past 60 days. Default is 1d.', required=False, default='1d')
+        self.parser.add_argument('--model_period',        type=str, choices=['1d','5d','1mo','3mo','6mo','1y','2y','5y','10y','ytd','max'], help='Time Period for model calculation and plots. This is the amount of time prior to today the models will compare to future prices. Default is 1mo.', required=False, default="1mo")
+        self.parser.add_argument('--min_price',           type=self.float_range(0.50, 100000.), help='Filter Price', required=False, default="1.00")
+        self.parser.add_argument('--number_to_highlight', type=int, choices=range(0,50), help='Number of Stocks to Highlight in report. Default is 3.', required=False, default='3')
+        self.parser.add_argument('--number_to_research',  type=int, choices=range(0,500), help='Number of Stocks to Research. Default is 10.', required=False, default="10")
+        self.parser.add_argument('--output',              type=str, help='Writes data to an output file .txt and as a word document report. Do not include file extension. Apply --as_pdf to output a PDF instead.', required=False, default=None)
+        self.parser.add_argument('-p',                    action='store_true', help='Display individual ticker price', required=False, default=False)
+        self.parser.add_argument('--price_model',         type=self.to_lowercase, choices=['high_low','close_open'], help='Choose between high_low and close_open price processing models for the simulations. Default is close_open', required=False, default='close_open')
+        self.parser.add_argument('--processes',           type=int, choices=range(1,12), help='Number of CPUs to use on simulations.', required=False, default = 1)
+        self.parser.add_argument('-r',                    action='store_true', help='Display Recommendations for a given stock', required=False, default=False)
+        self.parser.add_argument('--report',              action='store_true', help='Create Montly Report', required=False, default=False)
+        self.parser.add_argument('--research',            action='store_true', help='Use in conjunction with --report if you want randomly selected stocks to be included in the report. Otherwise --research will execute any of the other provided functions E.g. --compare.', required=False, default=None)
+        self.parser.add_argument('--seed',                type=int, help='The Seed used for the simulation for recreation purposes...stock prices do change though.', required=False, default=42)
+        self.parser.add_argument('--sim_time',            type=int, choices=range(0,365), help='The number of days to calculate future prices. The default is 30.', required=False, default=30)
+        self.parser.add_argument('--simulations',         type=int, choices=range(0,int(1e7)), help='Number of Simulations to run on each stock to predict future price. Default is 0.', required=False, default=0)
+        self.parser.add_argument('--simulation_model',    type=self.to_lowercase, choices=['gaussian','poisson-gamma'], help='Type of distribution used for simulation can either be Gaussian (normal) or Poisson-Gamma (non-normal). Default is Gaussian', required=False, default='gaussian')
+        self.parser.add_argument('--ticker',              type=str, help='Comma-Separated List of tickers for analysis.', required=False, default=None)
+        self.parser.add_argument('-u',                    action='store_true', help='Use the Dow Jones stocks in addition to any inputs.', required=False, default=False)
+        self.parser.add_argument('--weights',             type=str, help='Apply weights to models as a dictionary where the key matches the model name and the value is the weight you want to apply to that model. Weights must sum to 1.', required=False, default='{"Fifty Day":0.1, "Two Hundred Day":0.1, "CAPM":0.2, "MACD":0.05, "RSI":0.3, "Stochastic":0.25}')
 
         self.defaults = {
         'c': False, 'c_50':False, 'c_200':False, 'c_Dow':False, 'c_Nas':False,
@@ -73,16 +75,88 @@ class ArgsParser:
 
         }
 
-    def parse_args(self, arg_string):
+    def parse_args(self, arg_string): # this method is used in the Smart Stocks APP
         args_list = arg_string.split()  # Split the string into list of arguments
         args_dict = vars(self.parser.parse_args(args_list))
-        self.args = ArgsNamespace(**args_dict)  # Assuming ArgsNamespace accepts kwargs
-        return self.args
-
-    def get_args(self):
-        return self.args
-
+        self._args = ArgsNamespace(**args_dict)  # Assuming ArgsNamespace accepts kwargs
+        
+    def to_lowercase(self, value):
+        return value.lower()
+    
     def reset_args(self):
         # Reset args to default values
-        self.args = ArgsNamespace(**self.defaults)
+        self._args = ArgsNamespace(**self.defaults)
         return self.args
+
+    def terminal_parse_args(self): # this method is called when using terminal 
+        self._args = self.parser.parse_args()
+        if(self.validate_models_and_weights()):
+            return self._args 
+        else:
+            return None 
+    
+    def conduct_stockapp_input_checks(self):
+        # Conduct some user input checking
+        if len(sys.argv) < 1:
+            self.parser.print_help()
+            sys.exit(0)
+
+        # If importing own finance model you MUST input a Module name and class name
+        if self.args.import_model_class is not None != self.args.import_model_module is None:
+            logger.error(Fore.YELLOW + "USER INPUT ERROR: If importing own finance model must input both a module name and a class name." + Style.RESET_ALL)
+            return False
+
+        # Number to Research must be at least 1 greater than number to highlight
+        if self.args.number_to_research < (self.args.number_to_highlight + 1):
+            logger.error(Fore.YELLOW + "USER INPUT ERROR: Number to Research must be at least 1 greater than number to highlight." + Style.RESET_ALL)
+            return False
+
+        if self.args.min_price > self.args.max_price:
+            logger.error(Fore.YELLOW + f"USER ERROR: Minimum Price {self.args.min_price} Set Higher than Maximum Price {self.args.max_price}." + Style.RESET_ALL)
+            return False 
+        
+        if self.args.processes > mp.cpu_count():
+            logger.warning("Requested more processors than you have, defaulting to all processors.")
+            self.args.processes = mp.cpu_count()
+
+        return True
+    
+    # Define the custom type function
+    def float_range(self, min_value, max_value):
+        def checker(value):
+            try:
+                f_value = float(value)
+            except ValueError:
+                raise argparse.ArgumentTypeError(f"{value} is not a valid float")
+            
+            if f_value < min_value or f_value > max_value:
+                raise argparse.ArgumentTypeError(f"{value} is out of range ({min_value} - {max_value})")
+            return f_value
+        return checker
+    
+    def validate_models_and_weights(self):
+        import json 
+        models = self.args.models
+        weights_str = str(self.args.weights)
+        logger.debug(f"Weights String: {weights_str}")
+        try:
+            weights_dict = json.loads(weights_str)
+            logger.debug(f"Weights Dictionary: {weights_dict}")
+        except json.JSONDecodeError:
+            logger.error("FATAL ERROR With json.loads(weights)")
+            logger.warning("Weights must be input in a specific manner see README.")
+            return False 
+        # Check if all models have corresponding weights
+        for model in models:
+            if model not in weights_dict:
+                logger.error(f"Model {model} does not have a corresponding weight in the weights dictionary.")
+                return False 
+        # Check if the sum of weights is 1
+        weights = [weights_dict[model] for model in models]
+        if not abs(sum(weights) - 1.0) < 1e-6:
+            logger.error("Weights must sum to 1.0")
+            return False 
+        
+        self.args.weights = weights_dict 
+        
+        return True 

@@ -7,7 +7,7 @@ import pkg_resources
 
 # My Modules
 from Model_Handler import Model_Handler
-from StockAnalysis import MyStock
+from Stock import Stock, IndexStock
 
 logger = logging.getLogger(__name__)
 
@@ -42,21 +42,14 @@ class Report:
     def conduct_report(self, stock_list, analysis):
         #get WAM
         logger.info("Grabbing Market Data...")
-        # Ensure you can grab market data and establish risk free rate or MODELS
-        # Five year market data
-        market_data = analysis.get_market_data(self.args.index)
-        logger.info("Grabbing Simulated Market Data...")
-        # user selected sim_market period time
-        sim_market_data = analysis.get_market_data(self.args.index, self.args.model_time_delta)
+        market_index = IndexStock(period=self.args.model_period, interval=self.args.model_interval)
+        market_index.index = self.args.index # for history its just market_index.index.history 
+        market_data = market_index.index.history 
         analysis.determine_risk_free_rate()
         logger.info("Market Data Acquired.")
 
         if market_data is None:
             logger.error(Fore.RED + "conduct_report --> market_data is empty. Check Internet Connection." + Style.RESET_ALL)
-            return
-
-        if sim_market_data is None:
-            logger.error(Fore.RED + "conduct_report --> market_data for simulations is empty. Check Internet Connection." + Style.RESET_ALL)
             return
 
         if analysis.risk_free_rate is None:
@@ -70,7 +63,7 @@ class Report:
             filtered_tickers = []
             logger.info("Processing Stocks...")
             for stock in tqdm(stock_list, desc="Stocks"):
-                my_stock = MyStock(stock, self.args)
+                my_stock = Stock(stock, self.args.model_period, self.args.model_interval)
                 if not analysis.apply_cuts(my_stock):
                     filtered_stocks.append(my_stock)
                     filtered_tickers.append(my_stock.symbol)
@@ -78,6 +71,7 @@ class Report:
             logger.info("Data Processing Complete.")
             logger.info(f"Total Number of Stocks Cut --> {analysis.total_cuts}")
             logger.info("Determining Top Performers...")
+
             performers_df = analysis.determine_top_performers(filtered_stocks, market_data, self.args.models, self.output)
             # Write to excel file for historic comparison
             sheet_name =  self.args.output.split('.')[0] + datetime.today().strftime('%m_%d')
@@ -98,42 +92,23 @@ class Report:
             return
 
         # Conduct Simulations on the number to highlight top performers
+        Stock_best = None
+        combined_df = None 
+        combined_market_df = None 
+        for stock in filtered_stocks: # figure out the best stock to make plots with
+            if stock.symbol == number_one_ticker:
+                logger.info(f"Top Ticker Found: {number_one_ticker}")
+                Stock_best = stock
+                
         if self.args.simulations > 0:
-            histories = []
             model_histories = []
             for stock in filtered_stocks:
                 if stock.symbol in top_tickers:
-                    histories.append(stock.the_5y_history)
-                    if self.args.model_time_delta == "5y":
-                        model_histories.append(stock.the_5y_history)
-                    elif self.args.model_time_delta == "1y":
-                        model_histories.append(stock.the_year_history)
-                    elif self.args.model_time_delta == "ytd":
-                        model_histories.append(stock.the_ytd_history)
-                    elif self.args.model_time_delta == "6mo":
-                        model_histories.append(stock.the_6mo_history)
-                    elif self.args.model_time_delta == "3mo":
-                        model_histories.append(stock.the_3mo_history)
-                    elif self.args.model_time_delta == "1mo":
-                        model_histories.append(stock.the_month_history)
-                    elif self.args.model_time_delta == "5d":
-                        model_histories.append(stock.the_5d_history)
-                    elif self.args.model_time_delta == "1d":
-                        model_histories.append(stock.the_day_history)
-                    else:
-                        time_delta_options = ['1d','5d','1mo','3mo','6mo','ytd','1y','5y']
-                        logger.error(f"Time period must be one of the following options: {time_delta_options}.")
-                        sys.exit(1)
-
-            MyStock_best = None
-            for stock in filtered_stocks: # figure out the best stock to make plots with
-                if stock.symbol == number_one_ticker:
-                    logger.info(f"Top Ticker Found: {number_one_ticker}")
-                    MyStock_best = stock
+                    model_histories.append(stock.history)
 
             logger.info(f"Conducting Simulations on the following tickers: {top_tickers}")
             future_prices = pd.DataFrame() # will be a dataframe of price per day per stock
-            for history in tqdm(histories, desc='Stocks Simulation'):
+            for history in tqdm(model_histories, desc='Stocks Simulation'):
                 future_price = analysis.conduct_simulations(history) # one price per day
                 stock_series = pd.Series(future_price)
                 future_prices = future_prices.append(stock_series, ignore_index=True)
@@ -154,13 +129,13 @@ class Report:
 
             analysis.write_to_excel(combined_df, sheet_name)
 
-            df = analysis.conduct_simulations(sim_market_data)
+            df = analysis.conduct_simulations(market_data)
             market_series = pd.Series(df)
             market_df = pd.DataFrame()
             market_df = market_df.append(market_series, ignore_index=True)
             market_df = self.format_future_prices(market_df, True)
             market_df.columns = ['Price']
-            market_history = pd.Series(sim_market_data['Close'])
+            market_history = pd.Series(market_data['Close'])
             market_history_df = pd.DataFrame()
             market_history_df = market_history_df.append(market_history, ignore_index=False)
             market_history_df = self.format_future_prices(market_history_df, False)
@@ -174,26 +149,30 @@ class Report:
         # Create Plots
         self.output.add_to_report_card('top_performers', top_tickers)
         self.output.add_to_report_card('best', number_one_ticker)
-        figures = self.create_plots(MyStock_best, market_data, combined_df, combined_market_df, analysis)
+        figures = self.create_plots(Stock_best, market_index, market_data, combined_df, combined_market_df, analysis)
         self.output.add_to_report_card('figures', figures)
 
-    def create_plots(self, MyStock_best, market_data, combined_stock_df, combined_market_df, analysis):
+    def create_plots(self, Stock_best, market_index, market_data, combined_stock_df, combined_market_df, analysis):
         filename = ""
         figures = []
-        if MyStock_best is None:
+        if Stock_best is None:
             logger.warning("No best stock was found. Skipping plotting.")
             return
 
         if self.args.output.endswith(".docx"):
             filename = self.args.output.replace(".docx", ".png")
-        filepath = pkg_resources.resource_filename('StockApp.output', filename)
+        filepath = pkg_resources.resource_filename('output', filename)
 
         # here the model handler will be based off the user's input for time_delta
-        number_one_model = Model_Handler(myStock_list=MyStock_best, market_data=market_data, risk_free_rate=analysis.risk_free_rate, args=self.args)
+        number_one_model = Model_Handler(Stock_list=Stock_best, market_data=market_data, risk_free_rate=analysis.risk_free_rate, args=self.args)
         number_one_model.pass_futures_data(combined_stock_df)
         number_one_model.pass_futures_market_data(combined_market_df)
-        number_one_model.pass_market_stock(analysis.myIndexStock)
-        number_one_model.add_all_plotting_models()
+        number_one_model.pass_market_stock(market_index.index)
+        if self.args.simulations > 0:
+            number_one_model.add_all_plotting_models(True)
+        else:
+            number_one_model.add_all_plotting_models(False)
+
         figures = number_one_model.plot_catcher(filepath)
 
         return figures
