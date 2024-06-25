@@ -13,3 +13,7 @@ scikit-learn
 selenium
 tqdm
 tabulate
+fpdf 
+requests_cache
+pyrate_limiter
+requests_ratelimiter
