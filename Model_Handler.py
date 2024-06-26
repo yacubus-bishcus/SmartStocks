@@ -1,8 +1,6 @@
 from colorama import Fore, Style
 import inspect
-from Models import *
 import logging
-from collections import namedtuple
 
 # My Modules 
 from Futures import Futures
@@ -70,7 +68,7 @@ class Model_Handler:
     Function 'catches' all model instances and plots each of the calcuations.
     Those plots are tossed to a list and return alongside their plot captions
     """
-    def plot_catcher(self, output_filename):
+    def plot_catcher(self, output_filename=None):
         # Plot = namedtuple('Plot',['title', 'image_path'])
         plt.ioff()
         #fig, axes = plt.subplots(len(self.model_instances), figsize=(10,6* len(self.model_instances)))
@@ -79,10 +77,13 @@ class Model_Handler:
             #ax = axes[i] if len(self.model_instances) > 1 else axes
             plot_obj = model_instance()  # Assuming model_instance is callable and returns a plot object
             figure = plot_obj.plot(stock_name=self.stock_list.symbol)
-            caption = plot_obj.get_caption()
-            figure.text(0.5,-0.2, caption, ha='center', fontsize=8)
-            figure.tight_layout(pad=2.0)
-            figures.append(figure)
+            caption = plot_obj.caption
+            if figure is not None:
+                figure.text(0.5,-0.2, caption, ha='center', fontsize=8)
+                figure.tight_layout(pad=2.0)
+                figures.append(figure)
+            else:
+                logger.error(Fore.YELLOW + "Plot Catcher caught noneType figure." + Style.RESET_ALL)
 
         return figures
 
@@ -102,8 +103,8 @@ class Model_Handler:
     def pass_futures_market_data(self, market_data):
         self.sim_market_data = market_data
 
-    def pass_market_stock(self, stock):
-        self.sim_market_stock = stock
+    # def pass_market_stock(self, stock):
+    #     self.sim_market_stock = stock
 
     def get_capm_model(self):
         model = CAPM(Stock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate)

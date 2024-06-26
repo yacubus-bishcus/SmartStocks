@@ -4,15 +4,14 @@ import yfinance as yf
 import logging
 
 # My Modules
-from StockAnalysis import Analysis
-from Report import Report
-from OutputManager import OutputHandler
-from Stock import IndexStock
+from SmartStocksAnalysis import Analysis
+from SmartStocksReport import Report
+from SmartStocksStock import IndexStock
 
 logger = logging.getLogger(__name__)
 
 
-class StockInputManager:
+class SmartStocksInputManager:
     def __init__(self):
         self._tickers = []
         self._stocks = []
@@ -69,7 +68,7 @@ class StockInputManager:
             return 
         
         if output is not None:
-            output.add_to_report_card('total_stocks', len(self.stocks))
+            output.total_stocks = len(self.stocks)
 
         self.analysis = Analysis(self.stocks, args)
 
@@ -79,18 +78,21 @@ class StockInputManager:
             report.conduct_report(self.stocks, self.analysis)
             report.write_report(self.analysis)
 
-            if args.e:
+        elif args.simulations > 0 and not args.report:
+            # user is requesting a simulation only 
+            figure = self.analysis.calculate_futures(self.stocks, output)
+            return figure 
+            if args.e and output is not None:
                 # email the output file to given email
-                handler = OutputHandler(args.output)
                 email_to = input("Email Recipient: ")
                 username = input("Username: ")
                 password = input("Password: ")
                 logger.info(f"Sending Email to {email_to}")
-                handler.email_file(email_to=email_to, smtp_username=username, smtp_password=password)
+                output.email(email_to=email_to, smtp_username=username, smtp_password=password, email_subject="Smart Stocks Report", email_body="See attached.", filename=args.output)
                 logger.info("Email sent.")
 
         else:
-            return self.analysis.execute_stock_program(args=args)
+            return self.analysis.execute_stock_program()
 
     def grab_market_data(self, index, period, interval):
         index_stock = IndexStock(period, interval)

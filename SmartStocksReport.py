@@ -1,13 +1,12 @@
 import logging
 from tqdm import tqdm
 from colorama import Fore, Style
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
-import pkg_resources
 
 # My Modules
-from Model_Handler import Model_Handler
-from Stock import Stock, IndexStock
+from SmartStocksStock import Stock, IndexStock
+from DateGenerator import DateGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -19,26 +18,25 @@ class Report:
     def __del__(self):
         # Save file
         if self.output is not None:
-            self.output.create_explanation_statement()
+            self.output.smartstock_explanation_statement()
             self.output.write(f"Ran {self.args.simulations} trials simulating {self.args.sim_time} days of future prices for each stock using seed {self.args.seed} with {self.args.processes} processors.")
             self.output.write("Weights Used for Weighted Aggregate Merit: " + str(self.args.weights))
             self.output.save()
 
 
     def write_report(self, analysis):
-        total_stocks = str(self.output.grab_report_card_value('total_stocks'))
-        self.output.write(f"The total number of stocks evaluated for this report was {total_stocks}")
-        top_ticker_string = "The top " + str(self.args.number_to_highlight) + " stocks were " .join(self.output.grab_report_card_value('top_performers')) + "."
+        self.output.write(f"The total number of stocks evaluated for this report was {self.output.total_stocks}")
+        top_ticker_string = "The top " + str(self.args.number_to_highlight) + " stocks were " .join(self.output.top_performers) + "."
         self.output.write(top_ticker_string)
-        self.output.write(f"The BEST stock was {self.output.grab_report_card_value('best')}.")
-        self.output.write("Supervised Aggregate Merit Mean Square Error: " + str(self.output.grab_report_card_value('mse')))
-        self.output.write("Supervised Aggregate Merit R-Squared: " + str(self.output.grab_report_card_value('r_squared')))
+        self.output.write(f"The BEST stock was {self.output.best}.")
+        self.output.write("Supervised Aggregate Merit Mean Square Error: " + str(self.output.mse))
+        self.output.write("Supervised Aggregate Merit R-Squared: " + str(self.output.r_squared))
         self.output.write("See below for the WAM/SAM Table and the top performers charts.")
         # now we include the table
-        table_data = analysis.read_table(self.output.grab_report_card_value('table_sheet_name'))
+        table_data = analysis.read_table(self.output.table_sheet_name)
         self.output.write_table(table_data, "User Input Stocks Performance Metric")
         # now we include the plots
-        self.output.add_plots_to_word(self.output.grab_report_card_value('best'), self.output.grab_report_card_value('figures'))
+        self.output.create_plots(self.output.best, self.output.figures)
         logger.info("Report Complete.")
 
     def conduct_report(self, stock_list, analysis):
@@ -77,8 +75,9 @@ class Report:
             performers_df = analysis.determine_top_performers(filtered_stocks, market_data, self.args.models, self.output)
             # Write to excel file for historic comparison
             sheet_name =  self.args.output.split('.')[0] + datetime.today().strftime('%m_%d')
-            self.output.add_to_report_card('table_sheet_name',sheet_name)
-            analysis.write_to_excel(performers_df, sheet_name)
+            self.output.table_sheet_name = sheet_name
+            logger.info(f"--> Writing Performance Data to {sheet_name}")
+            self.output.write_to_excel(df=performers_df, sheet_name=sheet_name)
             logger.info(f"--> Performance Data written to {sheet_name}")
 
         # Figure out top performances
@@ -120,47 +119,56 @@ class Report:
             future_prices.index = top_tickers
             future_prices = self.format_future_prices(future_prices)
 
-            close_histories_list = []
-            for i in range(int(self.args.number_to_highlight)):
-                close_histories_list.append(model_histories[i]['Close'])
+            if self.args.include_history:
+                close_histories_list = []
+                for i in range(int(self.args.number_to_highlight)):
+                    close_histories_list.append(model_histories[i]['Close'])
 
-            close_histories = pd.DataFrame(close_histories_list)
-            close_histories.index = top_tickers
-            close_histories = close_histories.T
+                close_histories = pd.DataFrame(close_histories_list)
+                close_histories.index = top_tickers
+                close_histories = close_histories.T
 
-            combined_df = pd.concat([close_histories, future_prices], axis=0, ignore_index=False)
-            combined_df.index = combined_df.index.rename('Date')
+                combined_df = pd.concat([close_histories, future_prices], axis=0, ignore_index=False)
+                combined_df.index = combined_df.index.rename('Date')
 
             sheet_name = "Future_Prices" + datetime.today().strftime('%b_%d')
-            analysis.write_to_excel(df=combined_df, sheet_name=sheet_name, string_index=True)
-
-            df = analysis.conduct_simulations(market_data)
-            market_df = pd.DataFrame(df)
-            dates = self.generate_dates_with_intervals()
-            market_df['Date'] = dates
-            market_df.set_index('Date', inplace=True)
-            market_df.columns = ['Index Price']
-            market_history_df = pd.DataFrame(market_data['Close'])
-            market_history_df.columns = ['Index Price']
-            # combine the market history with market futures
-            combined_market_df = pd.concat([market_history_df, market_df], axis=0, ignore_index=False)
-            combined_market_df.index = combined_market_df.index.rename('Date')
+            self.output.write_to_excel(df=future_prices, sheet_name=sheet_name, data_w_dates=True)
+            if self.args.sim_market:
+                df = analysis.conduct_simulations(market_data)
+                market_df = pd.DataFrame(df)
+                date_gen = DateGenerator(self.args)
+                dates = date_gen.generate_dates_with_intervals()
+                market_df['Date'] = dates
+                market_df.set_index('Date', inplace=True)
+                market_df.columns = ['Index Price']
+                market_history_df = pd.DataFrame(market_data['Close'])
+                market_history_df.columns = ['Index Price']
+                # combine the market history with market futures
+                combined_market_df = pd.concat([market_history_df, market_df], axis=0, ignore_index=False)
+                combined_market_df.index = combined_market_df.index.rename('Date')
 
         # Create Plots
-        self.output.add_to_report_card('top_performers', top_tickers)
-        self.output.add_to_report_card('best', number_one_ticker)
-        output_handler
+        self.output.top_performers = top_tickers
+        self.output.best = number_one_ticker
+        
         if self.args.include_history:
-            figures = self.create_plots(Stock_best, market_index, market_data, combined_df, combined_market_df, analysis)
+            if self.args.sim_market:
+                figures = self.output.smartstock_plots(Stock_best, stock_df=combined_df, market_df=combined_market_df, analysis=analysis)
+            else:
+                figures = self.output.smartstock_plots(Stock_best, stock_df=combined_df, analysis=analysis)
         else:
-            figures = self.create_plots(Stock_best, market_index, future_prices, market_df, analysis)
+            if self.args.sim_market:
+                figures = self.output.smartstock_plots(Stock_best, stock_df=future_prices, market_df=market_df, analysis=analysis)
+            else:
+                figures = self.output.smartstock_plots(Stock_best, stock_df=future_prices, analysis=analysis)
 
-        self.output.add_to_report_card('figures', figures)
+        self.output.figures = figures
 
 
     def format_future_prices(self, df):
         df = df.T
-        dates = self.generate_dates_with_intervals()
+        date_gen = DateGenerator(self.args)
+        dates = date_gen.generate_dates_with_intervals()
         df['Date'] = dates
         df.set_index('Date', inplace=True)
         return df

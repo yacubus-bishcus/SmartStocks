@@ -1,7 +1,7 @@
 # Imported Modules
 import threading
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Kivy Imported Modules
 from kivymd.uix.screen import MDScreen
@@ -18,7 +18,7 @@ from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.pickers.datepicker import MDDatePicker
 
 # My Imported Modules
-from InputManager import StockInputManager
+from SmartStocksInputManager import StockInputManager
 from ArgsParser import ArgsParser
 
 logger = logging.getLogger(__name__)

@@ -30,11 +30,12 @@ from kivymd.uix.transition import MDFadeSlideTransition
 from kivy.lang import Builder
 from kivy.graphics import Color
 from kivymd.uix.menu import MDDropdownMenu
+from kivymd.toast import toast
 
 # MyApp Classes
-from loginscreen import LoginScreen, LoginPage
-from menuscreen import MenuScreen
-from createreportscreen import CreateReportScreen
+from app_design.loginscreen import LoginScreen, LoginPage
+from app_design.menuscreen import MenuScreen
+from app_design.createreportscreen import CreateReportScreen
 # from comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
 
 
@@ -74,7 +75,7 @@ class SmartStocksApp(MDApp):
         sm.add_widget(CreateReportScreen(name='create_report'))
         logger.info("CreateReportScreen Initialized.")
 
-        from comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
+        from app_design.comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
         sm.add_widget(CompareStocksScreen(name='compare_stocks'))
         logger.info("CompareStocksScreen Initialized.")
 

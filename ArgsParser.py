@@ -37,10 +37,11 @@ class ArgsParser:
         self.parser.add_argument('--data',                nargs='+', help='Import Research Ticker Data from list of files. Default is nasdaqlisted.txt and otherlisted.txt', required=False, default=['nasdaqlisted.txt', 'otherlisted.txt'])
         self.parser.add_argument('-d',                    action='store_true', help='Debugging mode for developing', required=False, default=False)
         self.parser.add_argument('-e',                    action='store_true', help='Email Outfile to provided email.', required=False)
+        self.parser.add_argument('--h_s_window',          type=int, help='Head and Shoulders Reduction method window size measured in intervals of X. Default=20', required=False, default=20)
         self.parser.add_argument('--import_model_class',  nargs='+', help='Input the class name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
         self.parser.add_argument('--import_model_module', nargs='+', help='Input the module name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
         self.parser.add_argument('--input',               type=str, help='Input File Path to Read Stock Tickers', required=False)
-        self.parser.add_arugment('--include_history',     action='store_true', help='Include History in Future Plots.', required=False, default=False)
+        self.parser.add_argument('--include_history',     action='store_true', help='Include History in Future Plots.', required=False, default=False)
         self.parser.add_argument('--index',               type=str, choices=['^GSPC','^DJI','^IXIC'], help='Index to Compare Models. ^GSPC=S&P500, ^DJI=DOWJONES, ^IXIC=NASDAQ Default=^GSPC', required=False, default='^GSPC')
         self.parser.add_argument('--jump_parameter',      type=float, help='Number of standard deviations away from the mean that qualifies as a jump in the stock price. Range 0.001 - 5. Default=1.', required=False, default=1.)
         self.parser.add_argument('--max_price',           type=float, help='Filter Price', required=False, default="10000.00")
@@ -58,11 +59,13 @@ class ArgsParser:
         self.parser.add_argument('--report',              action='store_true', help='Create Montly Report', required=False, default=False)
         self.parser.add_argument('--research',            action='store_true', help='Use in conjunction with --report if you want randomly selected stocks to be included in the report. Otherwise --research will execute any of the other provided functions E.g. --compare.', required=False, default=None)
         self.parser.add_argument('--seed',                type=int, help='The Seed used for the simulation for recreation purposes...stock prices do change though.', required=False, default=42)
+        self.parser.add_argument('--sim_market',          action='store_true', help='Choose to include market simulations for market comparison. Results may vary. Default is false.', required=False, default=False)
         self.parser.add_argument('--sim_time',            type=int, help='The number of days to calculate future prices. The default is 30.', required=False, default=30)
         self.parser.add_argument('--simulations',         type=int, help='Number of Simulations to run on each stock to predict future price. Default is 0.', required=False, default=0)
         self.parser.add_argument('--simulation_model',    type=str, choices=['gaussian','poisson-gamma'], help='Type of distribution used for simulation can either be Gaussian (normal) or Poisson-Gamma (non-normal). Default is Gaussian', required=False, default='gaussian')
         self.parser.add_argument('--ticker',              type=str, help='Comma-Separated List of tickers for analysis.', required=False, default=None)
         self.parser.add_argument('-u',                    action='store_true', help='Use the Dow Jones stocks in addition to any inputs.', required=False, default=False)
+        self.parser.add_argument('--use_log_returns',     action='store_true', help='Use log returns instead of absolute price differences when modeling monte carlo. Default is False.', required=False, default=False)
         self.parser.add_argument('--weights',             type=str, help='Apply weights to models as a dictionary where the key matches the model name and the value is the weight you want to apply to that model. Weights must sum to 1.', required=False, default='{"Fifty Day":0.1, "Two Hundred Day":0.1, "CAPM":0.2, "MACD":0.05, "RSI":0.3, "Stochastic":0.25}')
 
         self.defaults = {
@@ -92,7 +95,7 @@ class ArgsParser:
         else:
             return None 
     
-    def conduct_stockapp_input_checks(self):
+    def conduct_smartstock_input_checks(self):
         # Conduct some user input checking
         if len(sys.argv) < 1:
             self.parser.print_help()

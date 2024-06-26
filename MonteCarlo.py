@@ -5,11 +5,13 @@ from scipy.special import gammaln
 import multiprocessing as mp
 import logging
 
+from Simulation_Analysis import Simulation_Analysis
 
 logger = logging.getLogger(__name__)
 
-class MonteCarlo:
+class MonteCarlo(Simulation_Analysis):
     def __init__(self, data, num_simulations, sim_time, history_time, processes=1, jump_param=1., apply_function=None):
+        super().__init__()
         self.data = data
         self.num_simulations = num_simulations
         self.sim_time = sim_time
@@ -25,9 +27,12 @@ class MonteCarlo:
     def __del__(self):
         pass
 
-    # Calculating the intial condition allows for two parameters to be set to
-    # 'fix' the data according to your simulation the function to set your
-    # paramaters is a method in your own code
+    """ Calculating the intial condition allows for two parameters to be set to
+    'fix' the data according to your simulation the function to set your
+    paramaters is a method in your own code.
+    jump_threshold_parameter := The standard deviations that the user qualifies as a "Jump". 
+    jumps is 
+    """
 
     def calculate_initial_condition(self, data_keys):
         processed_data = self.apply_function(self.data)
@@ -35,7 +40,7 @@ class MonteCarlo:
         self.initial_condition = param1[-1]
         self.jump_threshold = self.jump_threshold_parameter * np.std(param1)
         self.jumps = np.abs(param1[param2 > self.jump_threshold])
-        num_jumps = self.jumps.sum()
+        num_jumps = len(self.jumps)
         self.jump_intensity = num_jumps/self.num_days # lambda 
 
 
@@ -53,18 +58,22 @@ class MonteCarlo:
         sim_time = self.sim_time
         num_simulations = self.num_simulations
         processes = self.processes
-        # Define the number of intervals per day
+        jumps = self.jumps 
+        jump_intensity = self.jump_intensity
+         # Define the number of intervals per day
         intervals_per_day = int(24 * 60 / interval_minutes)
         total_intervals = sim_time * intervals_per_day
-
-        jump_mean = np.mean(self.jumps) if len(self.jumps) > 0 else 0.
-        jump_std = np.std(self.jumps) if len(self.jumps) > 0 else 0.
-
+        # assign the small time difference 
+        dt = 1 / intervals_per_day
+        # Calculate jump mean and std
+        jump_mean = np.mean(jumps) if len(jumps) > 0 else 0.
+        jump_std = np.std(jumps) if len(jumps) > 0 else 0.
+        
+        # Initialize the simulations array
         simulations = np.zeros((self.num_simulations, total_intervals))
-
         pool = mp.Pool(processes=processes)
         chunk_size = num_simulations // processes
-        chunks = [(simulations[i:i + chunk_size], intervals_per_day, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std)
+        chunks = [(simulations[i:i + chunk_size], num_simulations, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std)
                   for i in range(0, num_simulations, chunk_size)]
 
         results = pool.starmap(self.normal_simulation_worker, chunks)
@@ -79,22 +88,28 @@ class MonteCarlo:
 
 
     @staticmethod
-    def normal_simulation_worker(simulations_chunk, intervals_per_day, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std):
-        min_shock = -1 + 1e-10  # Minimum value to prevent underflow
-        max_shock = 1e10  # Maximum value to prevent overflow
-        for sim in range(simulations_chunk.shape[0]):
+    def normal_simulation_worker(simulations_chunk, num_simulations, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std):
+
+        for sim in range(num_simulations):
             data = [initial_condition]
             for _ in range(total_intervals):
-                result = np.random.normal(drift / intervals_per_day, volatility / np.sqrt(intervals_per_day))
-                jump = np.random.normal(jump_mean / intervals_per_day, jump_std / np.sqrt(intervals_per_day))
-                shock = result + jump
-                next_result = data[-1] * (1 + shock)
+                # Standard GBM component
+                normal_shock = np.random.normal(drift * dt, volatility * np.sqrt(dt))
+                
+                # Jump component
+                num_jumps = np.random.poisson(jump_intensity * dt)
+                jump_shock = np.sum(np.random.normal(jump_mean, jump_std, num_jumps))
+                
+                # Combine both components
+                shock = normal_shock + jump_shock
+                next_result = data[-1] * np.exp(shock)
                 data.append(next_result)
+
             simulations_chunk[sim, :] = data[1:]
 
         return simulations_chunk
 
-    def execute_normal_simulation(self, drift, volatility, interval_minutes):
+    def execute_normal_simulation(self, drift, volatility, interval_minutes, average_reduction):
         # Define the number of intervals per day
         intervals_per_day = int(24 * 60 / interval_minutes)
         total_intervals = self.sim_time * intervals_per_day
@@ -106,8 +121,7 @@ class MonteCarlo:
         
         # Initialize the simulations array
         simulations = np.zeros((self.num_simulations, total_intervals))
-        min_shock = -1 + 1e-10  # Minimum value to prevent underflow
-        max_shock = 1e10  # Maximum value to prevent overflow
+
         for sim in range(self.num_simulations):
             data = [self.initial_condition]
             for _ in range(total_intervals):
@@ -122,6 +136,14 @@ class MonteCarlo:
                 shock = normal_shock + jump_shock
                 next_result = data[-1] * np.exp(shock)
                 data.append(next_result)
+            # Detect Head and Shoulders pattern in the simulated data
+            patterns, _ = self.detect_head_and_shoulders(data)
+                    # Adjust prices based on detected patterns
+
+            for i in range(1, len(data)):
+                if patterns[i] == 1:
+                    data[i] *= (1 - average_reduction) # Adjust based on average reduction
+
             
             simulations[sim, :] = data[1:]
         

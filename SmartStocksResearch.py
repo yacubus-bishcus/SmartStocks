@@ -3,7 +3,6 @@
 ## -----------------------------------------------------------------------------------------##
 import logging
 from colorama import Fore, Style
-import yfinance as yf
 import requests
 from bs4 import BeautifulSoup
 import ftplib
@@ -12,9 +11,6 @@ import pandas as pd
 import random
 from selenium import webdriver
 import pkg_resources
-
-# My Modules
-from StockAnalysis import Analysis
 
 logger = logging.getLogger(__name__)
 

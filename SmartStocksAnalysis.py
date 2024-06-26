@@ -1,11 +1,9 @@
 from datetime import datetime, timedelta
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from colorama import Fore, Style
 import pandas_datareader.data as web
 import numpy as np
 from tqdm import tqdm
 import pandas as pd
-from openpyxl import load_workbook
 from sklearn.preprocessing import RobustScaler, StandardScaler, PowerTransformer
 import os
 import sys
@@ -19,7 +17,7 @@ from yfinance import Ticker
 
 # My Modules 
 from Model_Handler import Model_Handler
-from Stock import Stock, IndexStock
+from SmartStocksStock import Stock, IndexStock
 from MonteCarlo import MonteCarlo
 from Simulation_Analysis import Simulation_Analysis
 from DateGenerator import DateGenerator
@@ -189,8 +187,8 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             y_pred_test = regression_model.predict(X_test)
             mse = mean_squared_error(y_test, y_pred_test)
             r_squared = regression_model.score(X_test, y_test)
-            output.add_to_report_card('mse',mse)
-            output.add_to_report_card('r_squared',r_squared)
+            output.mse = mse
+            output.r_squared = r_squared
             logger.info(f"Mean Squared Error: {mse}")
             logger.info(f"R-squared: {r_squared}")
 
@@ -214,7 +212,7 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
 
         return norm_df.round(3)
 
-    def calculate_futures(self, stock_list):
+    def calculate_futures(self, stock_list, output=None):
         logger.info("Grabbing Market Data...")
         market_index = IndexStock(period=self.args.model_period, interval=self.args.model_interval)
         market_index.index = self.args.index # for history its just market_index.index.history 
@@ -254,9 +252,59 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             future_prices['Date'] = dates 
             future_prices.set_index('Date', inplace=True)
 
+            if self.args.include_history:
+                close_histories_list = []
+                for i in range(int(self.args.number_to_highlight)):
+                    close_histories_list.append(model_histories[i]['Close'])
+
+                close_histories = pd.DataFrame(close_histories_list)
+                close_histories.index = filtered_tickers
+                close_histories = close_histories.T
+
+                combined_df = pd.concat([close_histories, future_prices], axis=0, ignore_index=False)
+                combined_df.index = combined_df.index.rename('Date')
+            if output is not None:
+                sheet_name = "Future_Prices" + datetime.today().strftime('%b_%d')
+                output.write_to_excel(df=future_prices, sheet_name=sheet_name, data_w_dates=True)
+            if self.args.sim_market:
+                df = self.conduct_simulations(market_data)
+                market_df = pd.DataFrame(df)
+                date_gen = DateGenerator(self.args)
+                dates = date_gen.generate_dates_with_intervals()
+                market_df['Date'] = dates
+                market_df.set_index('Date', inplace=True)
+                market_df.columns = ['Index Price']
+                if self.args.include_history:
+                    market_history_df = pd.DataFrame(market_data['Close'])
+                    market_history_df.columns = ['Index Price']
+                    # combine the market history with market futures
+                    combined_market_df = pd.concat([market_history_df, market_df], axis=0, ignore_index=False)
+                    combined_market_df.index = combined_market_df.index.rename('Date')
+            
+            model_handler = Model_Handler(Stock_list=filtered_stocks, market_data=market_data, args=self.args)
+            
+            if self.args.sim_market:
+                if self.args.include_history:
+                    model_handler.pass_futures_market_data(combined_market_df)
+                    model_handler.pass_futures_data(combined_df)
+                else:
+                    model_handler.pass_futures_market_data(market_df)
+                    model_handler.pass_futures_data(future_prices)
+            else:
+                model_handler.pass_futures_data(future_prices)
+
+            model = model_handler.get_futures_instance()
+            figure = model.plot(stock_name="Stocks")
+            caption = model.caption 
+            if figure is not None:
+                figure.text(0.5,-0.2, caption, ha='center', fontsize=8)
+                figure.tight_layout(pad=2.0)
+
+                return figure
+    
     def conduct_simulations(self, history):
-        sim_analysis = Simulation_Analysis(self.args)
-        drift, volatility = sim_analysis.calculate_drift_and_volatility(history['Close']) # takes series of the closed prices
+        sim_analysis = Simulation_Analysis()
+        drift, volatility = sim_analysis.calculate_drift_and_volatility(history['Close'], self.args.use_log_returns) # takes series of the closed prices
         if self.args.model_period == "1d":
             model_period = 1
         elif self.args.model_period == "5d":
@@ -287,7 +335,7 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_close_open)
 
         monte.calculate_initial_condition(['avg_prices', 'historical_returns'])
-
+        average_reduction = sim_analysis.calculate_average_reduction(prices=history['Close'], window_size=self.args.h_s_window)
         if self.args.model_interval == "1m":
             interval_minutes = 1
         elif self.args.model_interval == "2m":
@@ -325,7 +373,7 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                 simulated_price = monte.execute_poisson_gamma_simulation_with_mp()
         else:
             if self.args.simulation_model == "gaussian":
-                simulated_price = monte.execute_normal_simulation(drift=drift, volatility=volatility, interval_minutes=interval_minutes) # all simulated prices for individual stock
+                simulated_price = monte.execute_normal_simulation(drift=drift, volatility=volatility, interval_minutes=interval_minutes, average_reduction=average_reduction) # all simulated prices for individual stock
             elif self.args.simulation_model == "poisson-gamma":
                 beta_guess = np.var(history['Close']) / np.mean(history['Close'])
                 alpha_guess = (np.mean(history['Close']) / np.var(history['Close'])) **2.
@@ -484,21 +532,21 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
     averages and the like. No reporting methods, modeling methods
     or simulation methods below. execute_stock_program takes 
     """
-    def execute_stock_program(self, args):
+    def execute_stock_program(self):
         result = None 
         if not isinstance(self.stock_list, Ticker):
             for stock in self.stock_list:
-                result = self.define_stock_program(stock, args)
+                result = self.define_stock_program(stock)
         else:
-            result = self.define_stock_program(self.stock_list, args)
+            result = self.define_stock_program(self.stock_list)
 
         return result
 
-    def define_stock_program(self, stock, args):
+    def define_stock_program(self, stock):
         stock_compare = None
         stock_compare2 = None
         stock_compare3 = None
-
+        args = self.args 
        
         if self.index_stock is None:
             logger.info(f"Initializing IndexStock with ticker: {args.index}")

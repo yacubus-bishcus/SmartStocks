@@ -1,48 +1,72 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import matplotlib.ticker as ticker
 import logging
-import sys
 from colorama import Fore, Style 
-from datetime import datetime, timedelta
 import numpy as np
+from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
 
 
 """
-ALL Models must have the following methods at minimum
-get_name(name), get_caption(), execute_model(), plot(ax)
+ALL Models must have the following properties/methods at minimum
+name, caption, execute_model(), plot(ax)
 """
-class Models:
-    def __init__(self, myStockList=None):
-        self.stock_list = myStockList
-        #self.caption =  Enter Caption here
+class Models(ABC):
 
-    def __del__(self):
-        pass
+    @property 
+    @abstractmethod
+    def name(self):
+        pass 
+    
+    @property 
+    @abstractmethod
+    def caption(self):
+        pass 
 
-    def get_name(self, name):
-        return name
-
-    def get_caption(self):
-        return #self.caption
-
+    @abstractmethod
     def execute_model(self):
         pass
-
+    
+    @abstractmethod
     def plot(self, ax):
         return
 
+class BaseModel(Models):
+    @property
+    def name(self):
+        pass 
+
+    @property 
+    def caption(self):
+        pass 
+
+    def execute_model(self):
+        pass 
+
+    def plot(self):
+        pass 
+
+    def check_index_type(self, df):
+        if pd.api.types.is_datetime64_any_dtype(df.index):
+            logger.info(f"{self.name} is of datetime type.")
+        elif pd.api.types.is_string_dtype(df.index):
+            logger.info(f"{self.name} is of string type.")
+            df.index = pd.to_datetime(df.index)
+            logger.info("Index Converted to datetime objects.")
+        else:
+            logger.warning(Fore.YELLOW + f"{self.name} is of another type." + Style.RESET_ALL)
+
+        return df 
 ## ---------------------------------------------------------------------------##
 ## ------------------------ Fifty_Day_Model CLASS ----------- ----------------##
 ## ---------------------------------------------------------------------------##
 
-class Fifty_Day_Model:
+class Fifty_Day_Model(BaseModel):
     def __init__(self, stock_list=None):
         self.stock_list = stock_list
-        self.caption = """
+        self._caption = """
         Fifty Day Model Calculation (simple) calculates how the current price
         compares to the average 50 day price. Measures how the stock is doing today.
         Measure performance based on how its doing the last 50 days.
@@ -50,13 +74,18 @@ class Fifty_Day_Model:
         Uses the open price if current price not available.
         Outputs an array of performances for each stock in stock_list.
         """
-        #logger.debug("Fifty_Day_Model --> 50 Day Model Imported.")
+        self._name = "50 Day"
 
-    def get_name(self):
-        return "50 Day"
+    def __del__(self):
+        pass 
 
-    def get_caption(self):
-        return self.caption
+    @property
+    def name(self):
+        return self._name 
+
+    @property
+    def caption(self):
+        return self._caption
 
     def execute_model(self):
         performance = []
@@ -80,16 +109,16 @@ class Fifty_Day_Model:
         return performance
 
     def plot(self, ax):
-        return
+        pass 
 
 ## ---------------------------------------------------------------------------##
 ## ----------------- TwoHundred_Day_Model CLASS ----------- ------------------##
 ## ---------------------------------------------------------------------------##
 
-class TwoHundred_Day_Model:
+class TwoHundred_Day_Model(BaseModel):
     def __init__(self, stock_list=None):
         self.stock_list = stock_list
-        self.caption = """
+        self._caption = """
         Two Hundred Day Model Calculation (simple) calculates how the current price
         compares to the average 200 day price. Measures how the stock is doing today.
         Measure performance based on how its doing the last 200 days.
@@ -97,13 +126,18 @@ class TwoHundred_Day_Model:
         Uses the open price if current price not available.
         Outputs an array of performances for each stock in stock_list.
         """
-        #logger.debug("TwoHundred_Day_Model --> 200 Day Average Model Imported.")
+        self._name = "200 Day"
 
-    def get_name(self):
-        return "200 Day"
+    def __del__(self):
+        pass 
 
-    def get_caption(self):
-        return self.caption
+    @property 
+    def name(self):
+        return self._name 
+
+    @property
+    def caption(self):
+        return self._caption
 
     def execute_model(self):
         performance = []
@@ -128,13 +162,13 @@ class TwoHundred_Day_Model:
         return performance
 
     def plot(self, ax):
-        return
+        pass 
 
 ## ---------------------------------------------------------------------------##
 ## ----------------------------- RSI CLASS ----------- ----------------------##
 ## ---------------------------------------------------------------------------##
 
-class RSI:
+class RSI(BaseModel):
     def __init__(self, Stock_list=None, futures_data=None):
         self.stock_list = Stock_list
         self.futures_data = futures_data
@@ -142,7 +176,7 @@ class RSI:
         self.rsi = None
         self.smoothed_rsi = None
         self.history = None
-        self.caption = """As a momentum indicator, the relative strength index
+        self._caption = """As a momentum indicator, the relative strength index
         compares a security's strength on days when prices go up to its strength
         on days when prices go down. Relating the result of this comparison to
         price action can give traders an idea of how a security may perform.
@@ -150,16 +184,18 @@ class RSI:
         when below 30.
         """
 
-        #logger.debug("RSI:: Relative Strength Index Model Imported.")
+        self._name = "RSI"
 
     def __del__(self):
         pass
 
-    def get_name(self):
-        return "RSI"
+    @property 
+    def name(self):
+        return self._name 
 
-    def get_caption(self):
-        return self.caption
+    @property
+    def caption(self):
+        return self._caption
 
     def execute_model(self):
         rsi_list = []
@@ -270,25 +306,18 @@ class RSI:
             plt.plot()
 
         return fig
-    
-    def check_index_type(self, df):
-        if pd.api.types.is_datetime64_any_dtype(df.index):
-            print("RSI Index is of datetime type.")
-        elif pd.api.types.is_string_dtype(df.index):
-            print("RSI Index is of string type.")
-        else:
-            print("RSI Index is of another type.")
+
 ## ---------------------------------------------------------------------------##
 ## ----------------------------- CAPM CLASS ----------- ----------------------##
 ## ---------------------------------------------------------------------------##
 
-class CAPM:
+class CAPM(BaseModel):
     def __init__(self, Stock_list=None, md=None, rfr=None, futures_data=None):
         self.stock_list = Stock_list
         self.market_data = md
         self.futures_data = futures_data
         self.risk_free_rate = rfr
-        self.caption = """
+        self._caption = """
         The capital asset pricing model (CAPM) describes the relationship between
         systematic risk, or the general perils of investing, and expected return for
         assets, particularly stocks. It is a finance model that establishes a linear
@@ -300,6 +329,7 @@ class CAPM:
         pricing risky securities and generating expected returns for assets,
         given the risk of those assets and cost of capital.
         """
+        self._name = "CAPM"
         self.expected_returns = []
         self.betas = []
         self.beta = []
@@ -308,12 +338,14 @@ class CAPM:
 
     def __del__(self):
         pass
+    
+    @property
+    def name(self):
+        return self._name 
 
-    def get_name(self):
-        return "CAPM"
-
-    def get_caption(self):
-        return self.caption
+    @property 
+    def caption(self):
+        return self._caption
 
     def execute_model(self):
         #logger.debug("Executing CAPM Model")
@@ -380,14 +412,14 @@ class CAPM:
 ## -------------------------- FIBONACCI CLASS --------------------------------##
 ## ---------------------------------------------------------------------------##
 
-class FIBONACCI:
+class FIBONACCI(BaseModel):
     def __init__(self, Stock_list=None, futures_data=None):
         self.stock_list = Stock_list
         self.time_delta = 14
         self.futures_data = futures_data
         self.history = None
         self.fib_levels = [0.236, 0.382, 0.5, 0.618, 1.0]
-        self.caption = """
+        self._caption = """
         Fibonacci retracement levels—stemming from the Fibonacci sequence—are
         horizontal lines that indicate where support and resistance are likely to occur.
         Each level is associated with a percentage. The percentage is how much of a
@@ -398,16 +430,18 @@ class FIBONACCI:
         create the levels between those two points.
         "Capital Asset Pricing Model (CAPM)." Investopedia, Investopedia, 2021, www.investopedia.com/terms/c/capm.asp.
         """
-        #logger.debug("FIBONACCI model imported.")
+        self._name = "FIBO"
 
     def __del__(self):
         pass
+    
+    @property
+    def name(self):
+        return self._name 
 
-    def get_name(self):
-        return "FIBO"
-
-    def get_caption(self):
-        return self.caption
+    @property 
+    def caption(self):
+        return self._caption
 
     def execute_model(self):
         fibo_list = []
@@ -466,26 +500,28 @@ class FIBONACCI:
 ## -------------------- STOCHASTIC_OCSILLATOR CLASS --------------------------##
 ## ---------------------------------------------------------------------------##
 
-class STOCHASTIC:
+class STOCHASTIC(BaseModel):
     def __init__(self, Stock_list=None, futures_data=None):
         self.stock_list = Stock_list
         self.futures_data = futures_data
-        self.caption = """
+        self._caption = """
         The stochastic oscillator measures the current price relative to the price range
         over a number of periods. Plotted between zero and 100, the idea is that the
         price should make new highs when the trend is up. In a downtrend, the price
         tends to make new lows. The stochastic tracks whether this is happening.
         """
-        #logger.debug("STOCHASTIC model imported.")
+        self._name = "STOCHASTIC"
 
     def __del__(self):
         pass
+    
+    @property
+    def name(self):
+        return self._name 
 
-    def get_name(self):
-        return "STOCHASTIC"
-
-    def get_caption(self):
-        return self.caption
+    @property
+    def caption(self):
+        return self._caption
 
     def execute_model(self):
         output_list = []
@@ -562,7 +598,7 @@ class STOCHASTIC:
 ## ------------------------------- MACD CLASS --------------------------------##
 ## ---------------------------------------------------------------------------##
 
-class MACD:
+class MACD(BaseModel):
     def __init__(self, Stock_list=None, futures_data=None, debug=False):
         self.stock_list = Stock_list
         self.futures_data = futures_data
@@ -570,23 +606,25 @@ class MACD:
         self.macd_line = None
         self.signal_line = None
         self.macd_histogram = None
-        self.caption = """
+        self._caption = """
         A common way to summarize the performance of a stock based on its MACD data is
         to use the MACD crossover strategy. When the MACD line crosses above
         the signal line, it indicates a bullish signal, suggesting it might be a
         good time to buy. Conversely, when the MACD line crosses below the signal
         line, it indicates a bearish signal, suggesting it might be a good time to sell.
         """
-        #logger.debug("MACD --> Model Imported.")
+        self._name = "MACD"
 
     def __del__(self):
         pass
+    
+    @property
+    def name(self):
+        return self._name 
 
-    def get_name(self):
-        return "MACD"
-
-    def get_caption(self):
-        return self.caption
+    @property
+    def caption(self):
+        return self._caption
 
     def execute_model(self):
         output_list = []
@@ -650,11 +688,14 @@ class MACD:
 
 
     def auto_bin_macd_histogram(self):
-        hist_values = self.macd_histogram.values
-        iqr = np.subtract(*np.percentile(hist_values, [75, 25]))
-        bin_width = 2 * iqr * len(hist_values) ** (-1 / 3)
-        num_bins = int(np.ceil((hist_values.max() - hist_values.min()) / bin_width))
-        return num_bins
+        if self.macd_histogram is not None:
+            hist_values = self.macd_histogram.values
+            iqr = np.subtract(*np.percentile(hist_values, [75, 25]))
+            bin_width = 2 * iqr * len(hist_values) ** (-1 / 3)
+            num_bins = int(np.ceil((hist_values.max() - hist_values.min()) / bin_width))
+            return num_bins
+        else:
+            return 1
 
     def plot(self, stock_name=None, show=False, ax=None, bin_size=None, show_histogram=False):
         if stock_name is not None:
@@ -714,11 +755,3 @@ class MACD:
             plt.show()
 
         return fig
-    
-    def check_index_type(self, df):
-        if pd.api.types.is_datetime64_any_dtype(df.index):
-            print("MACD Index is of datetime type.")
-        elif pd.api.types.is_string_dtype(df.index):
-            print("MACD Index is of string type.")
-        else:
-            print("MACD Index is of another type.")

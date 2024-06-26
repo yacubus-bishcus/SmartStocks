@@ -35,11 +35,11 @@ from kivy.uix.relativelayout import RelativeLayout
 from kivy.core.window import Window
 from kivy.lang import Builder
 # My Imported Modules
-from InputManager import StockInputManager
+from SmartStocksInputManager import StockInputManager
 from ArgsParser import ArgsParser
 from customoptions import CustomCheckBox, BackgroundColorBoxLayout
 from Models import RSI, FIBONACCI, STOCHASTIC, MACD
-from Stock import MyStock
+from SmartStocksStock import MyStock
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
