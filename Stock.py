@@ -111,7 +111,9 @@ class Stock: # takes a Ticker Object and makes it into a Stock Object
                     logger.warning(f"Two Hundred Day Average {self.twohundredavg}. Cannot determine TwoHundred Day Average Difference.")
 
 
-            self._history = stock.history(period=self._period, interval=self._interval)[['Open','High','Low','Close']]
+            df = stock.history(period=self._period, interval=self._interval)[['Open','High','Low','Close']]
+            df.index = df.index.tz_localize(None)
+            self._history = df 
         
 
     @property

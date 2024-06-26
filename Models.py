@@ -135,10 +135,9 @@ class TwoHundred_Day_Model:
 ## ---------------------------------------------------------------------------##
 
 class RSI:
-    def __init__(self, Stock_list=None, futures_data=None, period="1mo"):
+    def __init__(self, Stock_list=None, futures_data=None):
         self.stock_list = Stock_list
         self.futures_data = futures_data
-        self.period = period
         # Initalize variables for plotting
         self.rsi = None
         self.smoothed_rsi = None
@@ -163,7 +162,6 @@ class RSI:
         return self.caption
 
     def execute_model(self):
-        logger.info("Executing RSI Model.")
         rsi_list = []
         if isinstance(self.stock_list, list):
             if len(self.stock_list) >= 1:
@@ -182,7 +180,7 @@ class RSI:
                     #logger.debug(self.smooth_rsi)
                     # Here i need a single value not the full year's data
                     if not self.smoothed_rsi.empty:
-                        smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
+                        smoothed_rsi_last_value = round(self.smoothed_rsi.iloc[-1],3)
                     else:
                         logger.warning(f"{stock.name} Smoothed RSI Empty.")
                         logger.info(f"{self.rsi}")
@@ -200,7 +198,7 @@ class RSI:
 
                 self.rsi = self.calculate_model(history)
                 self.smoothed_rsi = self.smooth_rsi(self.rsi)
-                smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
+                smoothed_rsi_last_value = round(self.smoothed_rsi.iloc[-1],3)
         else:
             if self.futures_data is None:
                 history = self.stock_list.history['Close']
@@ -210,7 +208,7 @@ class RSI:
             #self.first_period, self.smooth_period = self.calculate_periods(len(history))
             self.rsi = self.calculate_model(history)
             self.smoothed_rsi = self.smooth_rsi(self.rsi)
-            smoothed_rsi_last_value = self.smoothed_rsi.iloc[-1]
+            smoothed_rsi_last_value = round(self.smoothed_rsi.iloc[-1])
             return smoothed_rsi_last_value
 
 
@@ -272,18 +270,24 @@ class RSI:
             plt.plot()
 
         return fig
-
+    
+    def check_index_type(self, df):
+        if pd.api.types.is_datetime64_any_dtype(df.index):
+            print("RSI Index is of datetime type.")
+        elif pd.api.types.is_string_dtype(df.index):
+            print("RSI Index is of string type.")
+        else:
+            print("RSI Index is of another type.")
 ## ---------------------------------------------------------------------------##
 ## ----------------------------- CAPM CLASS ----------- ----------------------##
 ## ---------------------------------------------------------------------------##
 
 class CAPM:
-    def __init__(self, Stock_list=None, md=None, rfr=None, td="1mo", futures_data=None):
+    def __init__(self, Stock_list=None, md=None, rfr=None, futures_data=None):
         self.stock_list = Stock_list
         self.market_data = md
         self.futures_data = futures_data
         self.risk_free_rate = rfr
-        self.time_delta = td
         self.caption = """
         The capital asset pricing model (CAPM) describes the relationship between
         systematic risk, or the general perils of investing, and expected return for
@@ -377,16 +381,9 @@ class CAPM:
 ## ---------------------------------------------------------------------------##
 
 class FIBONACCI:
-    def __init__(self, Stock_list=None, futures_data=None, period="1mo"):
+    def __init__(self, Stock_list=None, futures_data=None):
         self.stock_list = Stock_list
-        if period == "1y":
-            self.time_delta = 14
-        elif period == "1mo":
-            self.time_delta = 7
-        else:
-            self.time_delta = 1
-
-        self.period = period
+        self.time_delta = 14
         self.futures_data = futures_data
         self.history = None
         self.fib_levels = [0.236, 0.382, 0.5, 0.618, 1.0]
@@ -470,7 +467,7 @@ class FIBONACCI:
 ## ---------------------------------------------------------------------------##
 
 class STOCHASTIC:
-    def __init__(self, Stock_list=None, period="1mo", futures_data=None):
+    def __init__(self, Stock_list=None, futures_data=None):
         self.stock_list = Stock_list
         self.futures_data = futures_data
         self.caption = """
@@ -479,7 +476,6 @@ class STOCHASTIC:
         price should make new highs when the trend is up. In a downtrend, the price
         tends to make new lows. The stochastic tracks whether this is happening.
         """
-        self.period = period
         #logger.debug("STOCHASTIC model imported.")
 
     def __del__(self):
@@ -567,9 +563,8 @@ class STOCHASTIC:
 ## ---------------------------------------------------------------------------##
 
 class MACD:
-    def __init__(self, Stock_list=None, futures_data=None, period="1mo", debug=False):
+    def __init__(self, Stock_list=None, futures_data=None, debug=False):
         self.stock_list = Stock_list
-        self.period = period
         self.futures_data = futures_data
         self.debug = debug
         self.macd_line = None
@@ -592,20 +587,6 @@ class MACD:
 
     def get_caption(self):
         return self.caption
-
-    # def calculate_periods(self, total_period):
-    #     #short_period = int(round(12*365/total_period,1))
-    #     short_period = 12
-    #     if short_period < 1:
-    #         short_period = 1
-    #     #long_period = int(round(26*365/total_period,1))
-    #     long_period = 26
-    #     if long_period < 1:
-    #         long_period = short_period + 2
-    #     #signal_period = int(round(9*365/total_period,1))
-    #     signal_period = 9
-    #
-    #     return short_period, long_period, signal_period
 
     def execute_model(self):
         output_list = []
@@ -667,7 +648,15 @@ class MACD:
 
         return performance_score
 
-    def plot(self, stock_name=None, show=False, ax=None):
+
+    def auto_bin_macd_histogram(self):
+        hist_values = self.macd_histogram.values
+        iqr = np.subtract(*np.percentile(hist_values, [75, 25]))
+        bin_width = 2 * iqr * len(hist_values) ** (-1 / 3)
+        num_bins = int(np.ceil((hist_values.max() - hist_values.min()) / bin_width))
+        return num_bins
+
+    def plot(self, stock_name=None, show=False, ax=None, bin_size=None, show_histogram=False):
         if stock_name is not None:
             string_title = stock_name + " MACD"
         else:
@@ -676,10 +665,24 @@ class MACD:
         fig, ax1 = plt.subplots(figsize=(10, 6))
         ax1.plot(self.macd_line, label='MACD Line', color='blue')
         ax1.plot(self.signal_line, label='Signal Line', color='magenta')
-        ax1.bar(self.macd_histogram.index, self.macd_histogram, label='MACD Histogram', color='black')
+
+        # Auto-bin if bin_size is not provided
+        if bin_size is None:
+            bin_size = self.auto_bin_macd_histogram()
+        
+        # Bin the MACD histogram
+        if bin_size > 1:
+            binned_histogram = self.macd_histogram.groupby(np.arange(len(self.macd_histogram)) // bin_size).sum()
+            binned_index = self.macd_histogram.index[::bin_size]
+        else:
+            binned_histogram = self.macd_histogram
+            binned_index = self.macd_histogram.index
+
+        if show_histogram:
+            ax1.bar(binned_index, binned_histogram, label='MACD Histogram', color='black')
 
         # Identify where the histogram goes from positive to negative
-        hist_values = self.macd_histogram.values
+        hist_values = binned_histogram.values
         pos_to_neg = np.where((hist_values[:-1] > 0) & (hist_values[1:] <= 0))[0]
         neg_to_pos = np.where((hist_values[:-1] < 0) & (hist_values[1:] >= 0))[0]
 
@@ -687,14 +690,14 @@ class MACD:
 
         # Plot arrows for positive to negative change
         for idx in pos_to_neg:
-            ax1.annotate('', xy=(self.macd_histogram.index[idx + 1], hist_values[idx + 1]),
-                         xytext=(self.macd_histogram.index[idx + 1], ymin),
+            ax1.annotate('', xy=(binned_index[idx + 1], hist_values[idx + 1]),
+                         xytext=(binned_index[idx + 1], ymin),
                          arrowprops=dict(color='red', arrowstyle='->'))
 
         # Plot arrows for negative to positive change
         for idx in neg_to_pos:
-            ax1.annotate('', xy=(self.macd_histogram.index[idx + 1], hist_values[idx + 1]),
-                         xytext=(self.macd_histogram.index[idx + 1], ymin),
+            ax1.annotate('', xy=(binned_index[idx + 1], hist_values[idx + 1]),
+                         xytext=(binned_index[idx + 1], ymin),
                          arrowprops=dict(color='green', arrowstyle='->'))
 
         plt.title(string_title)
@@ -711,3 +714,11 @@ class MACD:
             plt.show()
 
         return fig
+    
+    def check_index_type(self, df):
+        if pd.api.types.is_datetime64_any_dtype(df.index):
+            print("MACD Index is of datetime type.")
+        elif pd.api.types.is_string_dtype(df.index):
+            print("MACD Index is of string type.")
+        else:
+            print("MACD Index is of another type.")

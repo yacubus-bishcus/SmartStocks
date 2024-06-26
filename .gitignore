@@ -1,0 +1,7 @@
+stockenv3.8/
+run_stockapp.sh 
+launch.json 
+yfinance.cache 
+__pycache__
+output/
+user_input/

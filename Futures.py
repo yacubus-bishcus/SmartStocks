@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib.ticker as ticker
 import logging
+import pandas as pd 
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +32,7 @@ class Futures:
         plt.ioff()
         string_title = stock_name + " Future Prices"
         fig, ax1 = plt.subplots(figsize=(10,6))
+        self.stock_futures = self.check_index_type(self.stock_futures)
         ax1.plot(self.stock_futures.index, self.stock_futures.values, label=self.stock_futures.columns)
         xlabel_string = "Date"
         ax1.set_xlabel(xlabel_string)
@@ -40,9 +40,23 @@ class Futures:
         ax1.legend(loc='upper left')
 
         ax2 = ax1.twinx()
+        self.market_futures = self.check_index_type(self.market_futures)
         ax2.plot(self.market_futures.index, self.market_futures.values, label='Market Predicted Price', color='black', linestyle='--')
         ax2.set_ylabel("Market Predicted Price")
         ax2.legend(loc='upper right')
         plt.title(string_title)
         fig.autofmt_xdate()
         return fig
+    
+    def check_index_type(self, df):
+        if pd.api.types.is_datetime64_any_dtype(df.index):
+            logger.info("Index is of datetime type.")
+        elif pd.api.types.is_string_dtype(df.index):
+            logger.warning("Index is of string type.")
+            df.index = pd.to_datetime(df.index)
+            logger.info("Index Converted to datetime objects.")
+        else:
+            logger.error("Index is of another type.")
+
+        return df 
+        

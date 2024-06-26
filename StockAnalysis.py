@@ -3,6 +3,7 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from colorama import Fore, Style
 import pandas_datareader.data as web
 import numpy as np
+from tqdm import tqdm
 import pandas as pd
 from openpyxl import load_workbook
 from sklearn.preprocessing import RobustScaler, StandardScaler, PowerTransformer
@@ -21,6 +22,7 @@ from Model_Handler import Model_Handler
 from Stock import Stock, IndexStock
 from MonteCarlo import MonteCarlo
 from Simulation_Analysis import Simulation_Analysis
+from DateGenerator import DateGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +144,6 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             model = chosen_models[0]
             index = 0
             model_result = models.add_model(model)
-            logger.info(model_result)
             performance[:, index] = model_result
 
         # Assign column names based on the models used names
@@ -211,27 +212,120 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             norm_df = perf_df 
             norm_df['SAM'] = norm_df['WAM']
 
-        return norm_df
+        return norm_df.round(3)
+
+    def calculate_futures(self, stock_list):
+        logger.info("Grabbing Market Data...")
+        market_index = IndexStock(period=self.args.model_period, interval=self.args.model_interval)
+        market_index.index = self.args.index # for history its just market_index.index.history 
+        market_data = market_index.index.history 
+
+        if market_data is None:
+            logger.error(Fore.RED + "conduct_report --> market_data is empty. Check Internet Connection." + Style.RESET_ALL)
+            return
+        
+        if len(stock_list) > 0:
+            filtered_stocks = []
+            filtered_tickers = []
+            logger.info("Processing Stocks...")
+            for stock in tqdm(stock_list, desc="Stocks"):
+                my_stock = Stock(stock, self.args.model_period, self.args.model_interval)
+                if not self.apply_cuts(my_stock):
+                    filtered_stocks.append(my_stock)
+                    filtered_tickers.append(my_stock.symbol)
+
+            logger.info("Data Processing Complete.")
+            logger.info(f"Total Number of Stocks Cut --> {self.total_cuts}")
+        if self.args.simulations > 0:
+            model_histories = []
+            for stock in filtered_stocks:
+                model_histories.append(stock.history) 
+            
+            future_prices_list = []
+            for history in tqdm(model_histories, desc='Stocks Simulation'):
+                future_price = self.conduct_simulations(history)
+                stock_series = pd.Series(future_price) 
+                future_prices_list.append(stock_series) 
+
+            future_prices = pd.DataFrame(future_prices_list)
+            future_prices = future_prices.T 
+            date_gen = DateGenerator(self.args)
+            dates = date_gen.generate_dates_with_intervals()
+            future_prices['Date'] = dates 
+            future_prices.set_index('Date', inplace=True)
 
     def conduct_simulations(self, history):
         sim_analysis = Simulation_Analysis(self.args)
         drift, volatility = sim_analysis.calculate_drift_and_volatility(history['Close']) # takes series of the closed prices
+        if self.args.model_period == "1d":
+            model_period = 1
+        elif self.args.model_period == "5d":
+            model_period = 5
+        elif self.args.model_period == "1mo":
+            model_period = 30 
+        elif self.args.model_period == "3mo":
+            model_period = 90 
+        elif self.args.model_period == "6mo":
+            model_period = 182 
+        elif self.args.model_period == "1y":
+            model_period = 365
+        elif self.args.model_period == "2y":
+            model_period = 2*365
+        elif self.args.model_period == "5y":
+            model_period = 5*365
+        elif self.args.model_period == "10y":
+            model_period = 10*365 
+        elif self.args.model_period == "ytd":
+            model_period = 365 
+        else:
+            logger.error("Model Period Could not be found. Default using 1mo (30).")
+            model_period = 30 
 
         if self.args.price_model == "high_low":
-            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_high_low)
+            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_high_low)
         elif self.args.price_model == "close_open":
-            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_close_open)
+            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_close_open)
 
         monte.calculate_initial_condition(['avg_prices', 'historical_returns'])
 
+        if self.args.model_interval == "1m":
+            interval_minutes = 1
+        elif self.args.model_interval == "2m":
+            interval_minutes = 2
+        elif self.args.model_interval == "5m":
+            interval_minutes = 5
+        elif self.args.model_interval == "15m":
+            interval_minutes = 15
+        elif self.args.model_interval == "30m":
+            interval_minutes = 30
+        elif self.args.model_interval == "60m":
+            interval_minutes = 60 
+        elif self.args.model_interval == "90m":
+            interval_minutes = 90
+        elif self.args.model_interval == "1h":
+            interval_minutes = 60 
+        elif self.args.model_interval == "1d":
+            interval_minutes = 24*60 
+        elif self.args.model_interval == "5d":
+            interval_minutes = 24*60*5 
+        elif self.args.model_interval == "1w":
+            interval_minutes = 24*60*7
+        elif self.args.model_interval == "1mo":
+            interval_minutes = 24*60*30 # assumes 30 days in a month may cause issues 
+        elif self.args.model_interval == "3mo":
+            interval_minutes = 24*60*30*3 # assumes 30 days in a month and that 3 months is 90 days 
+        else:
+            logger.error(f"Interval Minutes could not be set by Model Interval {self.args.model_interval}. Applying interval of 1m.")
+            interval_minutes = 1
+
         if self.args.processes > 1:
             if self.args.simulation_model == "gaussian":
-                simulated_price = monte.execute_normal_simulation_with_mp(drift=drift, volatility=volatility)
+                simulated_price = monte.execute_normal_simulation_with_mp(drift=drift, volatility=volatility, interval_minutes=interval_minutes)
             elif self.args.simulation_model == "poisson-gamma":
                 simulated_price = monte.execute_poisson_gamma_simulation_with_mp()
         else:
             if self.args.simulation_model == "gaussian":
-                simulated_price = monte.execute_normal_simulation(drift=drift, volatility=volatility) # all simulated prices for individual stock
+                simulated_price = monte.execute_normal_simulation(drift=drift, volatility=volatility, interval_minutes=interval_minutes) # all simulated prices for individual stock
             elif self.args.simulation_model == "poisson-gamma":
                 beta_guess = np.var(history['Close']) / np.mean(history['Close'])
                 alpha_guess = (np.mean(history['Close']) / np.var(history['Close'])) **2.
@@ -243,39 +337,19 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
 
         return sim_df.mean(axis=0) # returns just one price per day
 
-    def write_to_excel(self, df, sheet_name):
-        # Define the file path
-        filepath = pkg_resources.resource_filename('output', 'Historicals.xlsx')
-
-        # Check if the file already exists
-        if os.path.exists(filepath):
-            # Load the existing workbook
-            book = load_workbook(filepath)
-            with pd.ExcelWriter(filepath, engine='openpyxl', mode='a') as writer:
-                # Assign the workbook and existing sheets to the writer
-                writer.book = book
-                writer.sheets = {ws.title: ws for ws in book.worksheets}
-                
-                # Write the DataFrame to the specified sheet
-                df.to_excel(writer, index=True, sheet_name=sheet_name)
-                
-        else:
-            # Create a new workbook and write the DataFrame to it
-            with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
-                df.to_excel(writer, index=True, sheet_name=sheet_name)
-
     def pull_top_performers(self, df, tickers, filter=3):
         top_history_df = pd.DataFrame()
-        if len(tickers) > filter:
+        if len(tickers) >= filter:
             try:
                 top_performers = df.nlargest(filter, 'WAM') # finds the stock with the largest WAM
+                logger.debug("Top Performers Pulled.")
             except Exception as e:
                 logger.info(df)
                 logger.exception(Fore.RED + f"FATAL ERROR {e}" + Style.RESET_ALL)
                 sys.exit(1)
 
             top_df = pd.DataFrame(top_performers)
-            top_df_tickers = top_df.iloc[:,0].tolist()
+            top_df_tickers = top_df.index.tolist()
         else:
             logger.error(Fore.YELLOW + "USER ERROR:" \
              "Requesting more Performers than Researched. This could result " \
@@ -390,7 +464,12 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
 
    
     def read_table(self, sheet_name):
-        filepath = pkg_resources.resource_filename('output', "Historicals.xlsx")
+        if self.args.output.endswith(".docx"):
+            filename = self.args.output.replace(".docx", ".xlsx")
+        else:
+            filename = self.args.output + ".xlsx"
+
+        filepath = pkg_resources.resource_filename('output', filename)
         df = pd.DataFrame()
         try:
             df = pd.read_excel(filepath, sheet_name=sheet_name)
@@ -406,6 +485,7 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
     or simulation methods below. execute_stock_program takes 
     """
     def execute_stock_program(self, args):
+        result = None 
         if not isinstance(self.stock_list, Ticker):
             for stock in self.stock_list:
                 result = self.define_stock_program(stock, args)
@@ -501,7 +581,10 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         elif any([args.c, args.c_50, args.c_200]):
             return None 
         else:
-            return stock_compare.return_string_difference()
+            if stock_compare is not None:
+                return stock_compare.return_string_difference()
+            else:
+                return None 
 
 
 ## -----------------------------------------------------------------------------------------##

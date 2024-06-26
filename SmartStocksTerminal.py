@@ -58,8 +58,10 @@ def SmartStocksTerminal():
 
     input_manager.tickers = (args.ticker, args.input, args.u, research)
     input_manager.stocks = (input_manager.tickers)
-    input_manager.apply_input_conditions(output=output, args=args)
-
+    if len(input_manager.tickers) > 0: 
+        input_manager.apply_input_conditions(output=output, args=args)
+    else:
+        logger.error("No Tickers Found. Program Exiting.")
 
 if __name__ == "__main__":
     start_time = time.time()

@@ -15,10 +15,18 @@ class Simulation_Analysis:
         historical_returns = data['High'] - data['Low']
         return {'avg_prices':avg_prices, 'historical_returns':historical_returns}
         
-    def calculate_drift_and_volatility(self, stock_prices):
+    def calculate_drift_and_volatility_using_log_returns(self, stock_prices):
         returns = stock_prices.pct_change().dropna()
         mean_return = returns.mean()
         variance = returns.var()
         drift = mean_return - (0.5 * variance)
         volatility = returns.std()
         return drift, volatility
+
+    def calculate_drift_and_volatility(self, stock_prices):
+        returns = stock_prices.diff().dropna()
+        mean_return = returns.mean()
+        variance = returns.var()
+        drift = mean_return - (0.5 * variance)
+        volatility = returns.std()
+        return drift, volatility      

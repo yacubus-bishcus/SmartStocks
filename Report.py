@@ -12,15 +12,17 @@ from Stock import Stock, IndexStock
 logger = logging.getLogger(__name__)
 
 class Report:
-    def __init__(self, output, args):
+    def __init__(self, output=None, args=None):
         self.output = output
         self.args = args
+
     def __del__(self):
         # Save file
-        self.output.create_explanation_statement()
-        self.output.write(f"Ran {self.args.simulations} trials simulating {self.args.sim_time} days of future prices for each stock using seed {self.args.seed} with {self.args.processes} processors.")
-        self.output.write("Weights Used for Weighted Aggregate Merit: " + str(self.args.weights))
-        self.output.save()
+        if self.output is not None:
+            self.output.create_explanation_statement()
+            self.output.write(f"Ran {self.args.simulations} trials simulating {self.args.sim_time} days of future prices for each stock using seed {self.args.seed} with {self.args.processes} processors.")
+            self.output.write("Weights Used for Weighted Aggregate Merit: " + str(self.args.weights))
+            self.output.save()
 
 
     def write_report(self, analysis):
@@ -107,81 +109,58 @@ class Report:
                     model_histories.append(stock.history)
 
             logger.info(f"Conducting Simulations on the following tickers: {top_tickers}")
-            future_prices = pd.DataFrame() # will be a dataframe of price per day per stock
+            future_prices_list = []
             for history in tqdm(model_histories, desc='Stocks Simulation'):
                 future_price = analysis.conduct_simulations(history) # one price per day
                 stock_series = pd.Series(future_price)
-                future_prices = future_prices.append(stock_series, ignore_index=True)
+                future_prices_list.append(stock_series)
 
+            # concatenate all series objects in the list into a dataframe 
+            future_prices = pd.DataFrame(future_prices_list)
             future_prices.index = top_tickers
-            future_prices = self.format_future_prices(future_prices, True)
+            future_prices = self.format_future_prices(future_prices)
 
-            close_histories = pd.DataFrame()
+            close_histories_list = []
             for i in range(int(self.args.number_to_highlight)):
-                close_histories = close_histories.append(model_histories[i]['Close'], ignore_index=True)
+                close_histories_list.append(model_histories[i]['Close'])
 
+            close_histories = pd.DataFrame(close_histories_list)
             close_histories.index = top_tickers
             close_histories = close_histories.T
-            close_histories.index = close_histories.index.date
+
             combined_df = pd.concat([close_histories, future_prices], axis=0, ignore_index=False)
             combined_df.index = combined_df.index.rename('Date')
-            sheet_name = "Future_Prices" + datetime.today().strftime('%b_%d')
 
-            analysis.write_to_excel(combined_df, sheet_name)
+            sheet_name = "Future_Prices" + datetime.today().strftime('%b_%d')
+            analysis.write_to_excel(df=combined_df, sheet_name=sheet_name, string_index=True)
 
             df = analysis.conduct_simulations(market_data)
-            market_series = pd.Series(df)
-            market_df = pd.DataFrame()
-            market_df = market_df.append(market_series, ignore_index=True)
-            market_df = self.format_future_prices(market_df, True)
-            market_df.columns = ['Price']
-            market_history = pd.Series(market_data['Close'])
-            market_history_df = pd.DataFrame()
-            market_history_df = market_history_df.append(market_history, ignore_index=False)
-            market_history_df = self.format_future_prices(market_history_df, False)
-            market_history_df.index = market_history_df.index.date
-            market_history_df.columns = ['Price']
+            market_df = pd.DataFrame(df)
+            dates = self.generate_dates_with_intervals()
+            market_df['Date'] = dates
+            market_df.set_index('Date', inplace=True)
+            market_df.columns = ['Index Price']
+            market_history_df = pd.DataFrame(market_data['Close'])
+            market_history_df.columns = ['Index Price']
             # combine the market history with market futures
             combined_market_df = pd.concat([market_history_df, market_df], axis=0, ignore_index=False)
             combined_market_df.index = combined_market_df.index.rename('Date')
 
-
         # Create Plots
         self.output.add_to_report_card('top_performers', top_tickers)
         self.output.add_to_report_card('best', number_one_ticker)
-        figures = self.create_plots(Stock_best, market_index, market_data, combined_df, combined_market_df, analysis)
+        output_handler
+        if self.args.include_history:
+            figures = self.create_plots(Stock_best, market_index, market_data, combined_df, combined_market_df, analysis)
+        else:
+            figures = self.create_plots(Stock_best, market_index, future_prices, market_df, analysis)
+
         self.output.add_to_report_card('figures', figures)
 
-    def create_plots(self, Stock_best, market_index, market_data, combined_stock_df, combined_market_df, analysis):
-        filename = ""
-        figures = []
-        if Stock_best is None:
-            logger.warning("No best stock was found. Skipping plotting.")
-            return
 
-        if self.args.output.endswith(".docx"):
-            filename = self.args.output.replace(".docx", ".png")
-        filepath = pkg_resources.resource_filename('output', filename)
-
-        # here the model handler will be based off the user's input for time_delta
-        number_one_model = Model_Handler(Stock_list=Stock_best, market_data=market_data, risk_free_rate=analysis.risk_free_rate, args=self.args)
-        number_one_model.pass_futures_data(combined_stock_df)
-        number_one_model.pass_futures_market_data(combined_market_df)
-        number_one_model.pass_market_stock(market_index.index)
-        if self.args.simulations > 0:
-            number_one_model.add_all_plotting_models(True)
-        else:
-            number_one_model.add_all_plotting_models(False)
-
-        figures = number_one_model.plot_catcher(filepath)
-
-        return figures
-
-    def format_future_prices(self, df, md):
+    def format_future_prices(self, df):
         df = df.T
-        if md:
-            dates = [(datetime.today() + timedelta(days=i)) for i in range(self.args.sim_time)]
-            dates = [dt.date() for dt in dates]
-            df['Date'] = dates
-            df.set_index('Date', inplace=True)
+        dates = self.generate_dates_with_intervals()
+        df['Date'] = dates
+        df.set_index('Date', inplace=True)
         return df

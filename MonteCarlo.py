@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class MonteCarlo:
-    def __init__(self, data, num_simulations, sim_time, processes=1, jump_param=1., apply_function=None):
+    def __init__(self, data, num_simulations, sim_time, history_time, processes=1, jump_param=1., apply_function=None):
         self.data = data
         self.num_simulations = num_simulations
         self.sim_time = sim_time
@@ -19,6 +19,8 @@ class MonteCarlo:
         self.jump_threshold = None
         self.jump_threshold_parameter = jump_param
         self.jumps = None
+        self.jump_intensity = None 
+        self.num_days = history_time 
 
     def __del__(self):
         pass
@@ -33,6 +35,9 @@ class MonteCarlo:
         self.initial_condition = param1[-1]
         self.jump_threshold = self.jump_threshold_parameter * np.std(param1)
         self.jumps = np.abs(param1[param2 > self.jump_threshold])
+        num_jumps = self.jumps.sum()
+        self.jump_intensity = num_jumps/self.num_days # lambda 
+
 
     def apply_function(self, func):
         try:
@@ -42,21 +47,24 @@ class MonteCarlo:
             logger.exception(f"Error occuring while applying function: {e}")
             return None
 
-    def execute_normal_simulation_with_mp(self, drift, volatility):
+    def execute_normal_simulation_with_mp(self, drift, volatility, interval_minutes):
         # Multiprocessing only likes local variables
         initial_condition = self.initial_condition
         sim_time = self.sim_time
         num_simulations = self.num_simulations
         processes = self.processes
+        # Define the number of intervals per day
+        intervals_per_day = int(24 * 60 / interval_minutes)
+        total_intervals = sim_time * intervals_per_day
 
         jump_mean = np.mean(self.jumps) if len(self.jumps) > 0 else 0.
         jump_std = np.std(self.jumps) if len(self.jumps) > 0 else 0.
 
-        simulations = np.zeros((self.num_simulations, self.sim_time))
+        simulations = np.zeros((self.num_simulations, total_intervals))
 
         pool = mp.Pool(processes=processes)
         chunk_size = num_simulations // processes
-        chunks = [(simulations[i:i + chunk_size], sim_time, initial_condition, drift, volatility, jump_mean, jump_std)
+        chunks = [(simulations[i:i + chunk_size], intervals_per_day, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std)
                   for i in range(0, num_simulations, chunk_size)]
 
         results = pool.starmap(self.normal_simulation_worker, chunks)
@@ -71,12 +79,14 @@ class MonteCarlo:
 
 
     @staticmethod
-    def normal_simulation_worker(simulations_chunk, sim_time, initial_condition, drift, volatility, jump_mean, jump_std):
+    def normal_simulation_worker(simulations_chunk, intervals_per_day, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std):
+        min_shock = -1 + 1e-10  # Minimum value to prevent underflow
+        max_shock = 1e10  # Maximum value to prevent overflow
         for sim in range(simulations_chunk.shape[0]):
             data = [initial_condition]
-            for _ in range(sim_time):
-                result = np.random.normal(drift, volatility)
-                jump = np.random.normal(jump_mean, jump_std)
+            for _ in range(total_intervals):
+                result = np.random.normal(drift / intervals_per_day, volatility / np.sqrt(intervals_per_day))
+                jump = np.random.normal(jump_mean / intervals_per_day, jump_std / np.sqrt(intervals_per_day))
                 shock = result + jump
                 next_result = data[-1] * (1 + shock)
                 data.append(next_result)
@@ -84,20 +94,37 @@ class MonteCarlo:
 
         return simulations_chunk
 
-    def execute_normal_simulation(self, drift, volatility):
+    def execute_normal_simulation(self, drift, volatility, interval_minutes):
+        # Define the number of intervals per day
+        intervals_per_day = int(24 * 60 / interval_minutes)
+        total_intervals = self.sim_time * intervals_per_day
+        # assign the small time difference 
+        dt = 1 / intervals_per_day
+        # Calculate jump mean and std
         jump_mean = np.mean(self.jumps) if len(self.jumps) > 0 else 0.
         jump_std = np.std(self.jumps) if len(self.jumps) > 0 else 0.
-        simulations = np.zeros((self.num_simulations, self.sim_time))
+        
+        # Initialize the simulations array
+        simulations = np.zeros((self.num_simulations, total_intervals))
+        min_shock = -1 + 1e-10  # Minimum value to prevent underflow
+        max_shock = 1e10  # Maximum value to prevent overflow
         for sim in range(self.num_simulations):
             data = [self.initial_condition]
-            for _ in range(self.sim_time):
-                result = np.random.normal(drift, volatility)
-                jump = np.random.normal(jump_mean, jump_std)
-                shock = result + jump
-                next_result = data[-1] * (1 + shock)
+            for _ in range(total_intervals):
+                # Standard GBM component
+                normal_shock = np.random.normal(drift * dt, volatility * np.sqrt(dt))
+                
+                # Jump component
+                num_jumps = np.random.poisson(self.jump_intensity * dt)
+                jump_shock = np.sum(np.random.normal(jump_mean, jump_std, num_jumps))
+                
+                # Combine both components
+                shock = normal_shock + jump_shock
+                next_result = data[-1] * np.exp(shock)
                 data.append(next_result)
+            
             simulations[sim, :] = data[1:]
-
+        
         return simulations
 
     def execute_poisson_gamma_simulation_with_mp(self):
@@ -209,7 +236,6 @@ class MonteCarlo:
             simulations_chunk[sim, :] = data[1:]
 
         return simulations_chunk
-
 
     def gamma_log_likelihood(self, params, jumps):
         alpha, beta = params
