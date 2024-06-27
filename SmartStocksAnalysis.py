@@ -21,6 +21,7 @@ from SmartStocksStock import Stock, IndexStock
 from MonteCarlo import MonteCarlo
 from Simulation_Analysis import Simulation_Analysis
 from DateGenerator import DateGenerator
+from Models import MACD 
 
 logger = logging.getLogger(__name__)
 
@@ -240,13 +241,20 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                 model_histories.append(stock.history) 
             
             future_prices_list = []
+            future_stds_list = []
             for history in tqdm(model_histories, desc='Stocks Simulation'):
-                future_price = self.conduct_simulations(history)
-                stock_series = pd.Series(future_price) 
-                future_prices_list.append(stock_series) 
+                future_price, stock_stds = self.conduct_simulations(history) # future_price and stock_stds should be returned as series 
+                # stock_series = pd.Series(future_price) 
+                # stock_stds = pd.Series(stock_stds)
+                future_prices_list.append(future_price)
+                future_stds_list.append(stock_stds) 
 
             future_prices = pd.DataFrame(future_prices_list)
-            future_prices = future_prices.T 
+            future_prices.index = filtered_tickers 
+            future_stds = pd.DataFrame(future_stds_list)
+            future_stds.index = filtered_tickers
+            future_prices = future_prices.T
+            future_stds = future_stds.T
             date_gen = DateGenerator(self.args)
             dates = date_gen.generate_dates_with_intervals()
             future_prices['Date'] = dates 
@@ -267,8 +275,9 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                 sheet_name = "Future_Prices" + datetime.today().strftime('%b_%d')
                 output.write_to_excel(df=future_prices, sheet_name=sheet_name, data_w_dates=True)
             if self.args.sim_market:
-                df = self.conduct_simulations(market_data)
+                df, stds = self.conduct_simulations(market_data)
                 market_df = pd.DataFrame(df)
+                market_stds_df = pd.DataFrame(stds)
                 date_gen = DateGenerator(self.args)
                 dates = date_gen.generate_dates_with_intervals()
                 market_df['Date'] = dates
@@ -288,10 +297,10 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                     model_handler.pass_futures_market_data(combined_market_df)
                     model_handler.pass_futures_data(combined_df)
                 else:
-                    model_handler.pass_futures_market_data(market_df)
-                    model_handler.pass_futures_data(future_prices)
+                    model_handler.pass_futures_market_data(market_df, market_stds_df)
+                    model_handler.pass_futures_data(future_prices, future_stds)
             else:
-                model_handler.pass_futures_data(future_prices)
+                model_handler.pass_futures_data(future_prices, future_stds)
 
             model = model_handler.get_futures_instance()
             figure = model.plot(stock_name="Stocks")
@@ -304,6 +313,8 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
     
     def conduct_simulations(self, history):
         sim_analysis = Simulation_Analysis()
+        macd = MACD()
+        avg_bull_adj, avg_bear_adj = macd.calculate_historical_adjustments(history['Close'])
         drift, volatility = sim_analysis.calculate_drift_and_volatility(history['Close'], self.args.use_log_returns) # takes series of the closed prices
         if self.args.model_period == "1d":
             model_period = 1
@@ -367,23 +378,31 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             interval_minutes = 1
 
         if self.args.processes > 1:
-            if self.args.simulation_model == "gaussian":
-                simulated_price = monte.execute_normal_simulation_with_mp(drift=drift, volatility=volatility, interval_minutes=interval_minutes)
-            elif self.args.simulation_model == "poisson-gamma":
-                simulated_price = monte.execute_poisson_gamma_simulation_with_mp()
+            #if self.args.simulation_model == "gaussian":
+            interval_means, interval_stds = monte.execute_normal_simulation_with_mp(drift=drift, 
+                                                                                    volatility=volatility, 
+                                                                                    interval_minutes=interval_minutes,
+                                                                                    average_reduction=average_reduction,
+                                                                                    bull=avg_bull_adj,
+                                                                                    bear=avg_bear_adj)
+            # elif self.args.simulation_model == "poisson-gamma":
+            #     simulated_price = monte.execute_poisson_gamma_simulation_with_mp()
         else:
-            if self.args.simulation_model == "gaussian":
-                simulated_price = monte.execute_normal_simulation(drift=drift, volatility=volatility, interval_minutes=interval_minutes, average_reduction=average_reduction) # all simulated prices for individual stock
-            elif self.args.simulation_model == "poisson-gamma":
-                beta_guess = np.var(history['Close']) / np.mean(history['Close'])
-                alpha_guess = (np.mean(history['Close']) / np.var(history['Close'])) **2.
-                simulated_price = monte.execute_poisson_gamma_simulation(alpha_guess, beta_guess)
-
-        sim_df = pd.DataFrame(simulated_price) # write to 2-D dataframe
-
-        del simulated_price
-
-        return sim_df.mean(axis=0) # returns just one price per day
+            #if self.args.simulation_model == "gaussian":
+            interval_means, interval_stds = monte.execute_normal_simulation(drift=drift, 
+                                                                            volatility=volatility, 
+                                                                            interval_minutes=interval_minutes, 
+                                                                            average_reduction=average_reduction, 
+                                                                            bull=avg_bull_adj, 
+                                                                            bear=avg_bear_adj) # all simulated prices for individual stock
+            # elif self.args.simulation_model == "poisson-gamma":
+            #     beta_guess = np.var(history['Close']) / np.mean(history['Close'])
+            #     alpha_guess = (np.mean(history['Close']) / np.var(history['Close'])) **2.
+            #     simulated_price = monte.execute_poisson_gamma_simulation(alpha_guess, beta_guess)
+        
+        sim_df = pd.Series(interval_means) # returned as series 
+        std_df = pd.Series(interval_stds) # returned as series 
+        return sim_df, std_df # returns just one price per interval
 
     def pull_top_performers(self, df, tickers, filter=3):
         top_history_df = pd.DataFrame()

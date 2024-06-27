@@ -428,7 +428,7 @@ class SmartStocksOutput(WordPrinter, Email):
         " The simulation was conducted used the Merton Jump Diffusion Model."\
         )
 
-    def smartstock_plots(self, Stock_best, stock_df, market_df, analysis, market_data=None):
+    def smartstock_plots(self, Stock_best, stock_df, stds_df, analysis, market_df=None, market_stds=None, market_data=None):
         filename = ""
         figures = []
         if Stock_best is None:
@@ -442,8 +442,8 @@ class SmartStocksOutput(WordPrinter, Email):
 
         # here the model handler will be based off the user's input for time_delta
         number_one_model = Model_Handler(Stock_list=Stock_best, market_data=market_data, risk_free_rate=analysis.risk_free_rate, args=self.args)
-        number_one_model.pass_futures_data(stock_df)
-        number_one_model.pass_futures_market_data(market_df)
+        number_one_model.pass_futures_data(stock_df, stds_df)
+        number_one_model.pass_futures_market_data(market_df, market_stds)
         #number_one_model.pass_market_stock(market_index.index)
 
         if self.args.simulations > 0:

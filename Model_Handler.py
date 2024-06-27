@@ -22,8 +22,9 @@ class Model_Handler:
         self.args = args
 
         self.futures_data = []
+        self.futures_stds = []
         self.sim_market_data = []
-        self.sim_market_stock = None
+        self.sim_market_stds = []
 
     def __del__(self):
         pass
@@ -97,14 +98,13 @@ class Model_Handler:
         model = TwoHundred_Day_Model(self.stock_list)
         return model.execute_model()
 
-    def pass_futures_data(self, futures_data):
+    def pass_futures_data(self, futures_data, futures_stds):
         self.futures_data = futures_data
+        self.futures_stds = futures_stds
 
-    def pass_futures_market_data(self, market_data):
+    def pass_futures_market_data(self, market_data, market_stds):
         self.sim_market_data = market_data
-
-    # def pass_market_stock(self, stock):
-    #     self.sim_market_stock = stock
+        self.sim_market_stds = market_stds
 
     def get_capm_model(self):
         model = CAPM(Stock_list=self.stock_list, md=self.market_data, rfr=self.risk_free_rate)
@@ -127,7 +127,7 @@ class Model_Handler:
         return model.execute_model()
 
     def get_futures_instance(self):
-        model = Futures(self.futures_data, self.sim_market_data, self.args)
+        model = Futures(self.futures_data, self.futures_stds, self.sim_market_data, self.sim_market_stds, self.args)
         model.execute_model()
         return model
 

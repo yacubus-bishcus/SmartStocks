@@ -29,7 +29,8 @@ class Simulation_Analysis:
         volatility = returns.std()
         return drift, volatility      
     
-    def detect_head_and_shoulders(self, prices, window_size=20):
+    @staticmethod
+    def detect_head_and_shoulders(prices, window_size=20):
         patterns = np.zeros(len(prices))
         reductions = []
         
@@ -51,7 +52,7 @@ class Simulation_Analysis:
 
 
     def calculate_average_reduction(self, prices, window_size=20):
-        _, reductions = self.detect_head_and_shoulders(prices, window_size)
+        _, reductions = Simulation_Analysis.detect_head_and_shoulders(prices, window_size)
         if reductions:
             return np.mean(reductions)
         else:

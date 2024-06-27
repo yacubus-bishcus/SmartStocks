@@ -4,8 +4,11 @@ from scipy.optimize import minimize
 from scipy.special import gammaln
 import multiprocessing as mp
 import logging
+import pandas as pd 
 
+# MY Modules
 from Simulation_Analysis import Simulation_Analysis
+from Models import MACD 
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +55,9 @@ class MonteCarlo(Simulation_Analysis):
             logger.exception(f"Error occuring while applying function: {e}")
             return None
 
-    def execute_normal_simulation_with_mp(self, drift, volatility, interval_minutes):
-        # Multiprocessing only likes local variables
+    def execute_normal_simulation_with_mp(self, drift, volatility, interval_minutes, average_reduction, bull, bear):
+        # Multiprocessing only works with static methods/properties 
+        macd = MACD()
         initial_condition = self.initial_condition
         sim_time = self.sim_time
         num_simulations = self.num_simulations
@@ -73,7 +77,7 @@ class MonteCarlo(Simulation_Analysis):
         simulations = np.zeros((self.num_simulations, total_intervals))
         pool = mp.Pool(processes=processes)
         chunk_size = num_simulations // processes
-        chunks = [(simulations[i:i + chunk_size], num_simulations, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std)
+        chunks = [(simulations[i:i + chunk_size], num_simulations, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear)
                   for i in range(0, num_simulations, chunk_size)]
 
         results = pool.starmap(self.normal_simulation_worker, chunks)
@@ -84,11 +88,15 @@ class MonteCarlo(Simulation_Analysis):
         for i, result in enumerate(results):
             simulations[i*chunk_size:(i+1)*chunk_size, :] = result
 
-        return simulations
+        # Calculate mean and standard deviation for each interval
+        interval_means = np.mean(simulations, axis=0)
+        interval_stds = np.std(simulations, axis=0)
+
+        return interval_means, interval_stds
 
 
     @staticmethod
-    def normal_simulation_worker(simulations_chunk, num_simulations, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std):
+    def normal_simulation_worker(simulations_chunk, num_simulations, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear):
 
         for sim in range(num_simulations):
             data = [initial_condition]
@@ -104,12 +112,33 @@ class MonteCarlo(Simulation_Analysis):
                 shock = normal_shock + jump_shock
                 next_result = data[-1] * np.exp(shock)
                 data.append(next_result)
+            # HEAD AND SHOULDERS ADJUSTMENT     
+            # Detect Head and Shoulders pattern in the simulated data
+            patterns, _ = Simulation_Analysis.detect_head_and_shoulders(data)
+            # Adjust prices based on detected patterns
+            for i in range(1, len(data)):
+                if patterns[i] == 1:
+                    data[i] *= (1 - average_reduction) # Adjust based on average reduction
+            # MACD ADJUSTMENT 
+            # Convert data to pandas Series for MACD calculation
+            data_series = pd.Series(data)
+            macd_line, signal_line, _ = MACD.calculate_model(data_series)
 
+            # Adjust prices based on MACD signals
+            for i in range(1, len(data)):
+                if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
+                    # Bullish MACD crossover
+                    data[i] *= (1 + bull)
+                elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
+                    # Bearish MACD crossover
+                    data[i] *= (1 - bear)
+            
             simulations_chunk[sim, :] = data[1:]
+
 
         return simulations_chunk
 
-    def execute_normal_simulation(self, drift, volatility, interval_minutes, average_reduction):
+    def execute_normal_simulation(self, drift, volatility, interval_minutes, average_reduction, bull, bear):
         # Define the number of intervals per day
         intervals_per_day = int(24 * 60 / interval_minutes)
         total_intervals = self.sim_time * intervals_per_day
@@ -118,7 +147,7 @@ class MonteCarlo(Simulation_Analysis):
         # Calculate jump mean and std
         jump_mean = np.mean(self.jumps) if len(self.jumps) > 0 else 0.
         jump_std = np.std(self.jumps) if len(self.jumps) > 0 else 0.
-        
+        macd = MACD()
         # Initialize the simulations array
         simulations = np.zeros((self.num_simulations, total_intervals))
 
@@ -136,18 +165,33 @@ class MonteCarlo(Simulation_Analysis):
                 shock = normal_shock + jump_shock
                 next_result = data[-1] * np.exp(shock)
                 data.append(next_result)
+            # HEAD AND SHOULDERS ADJUSTMENT     
             # Detect Head and Shoulders pattern in the simulated data
-            patterns, _ = self.detect_head_and_shoulders(data)
-                    # Adjust prices based on detected patterns
-
+            patterns, _ = Simulation_Analysis.detect_head_and_shoulders(data)
+            # Adjust prices based on detected patterns
             for i in range(1, len(data)):
                 if patterns[i] == 1:
                     data[i] *= (1 - average_reduction) # Adjust based on average reduction
+            # MACD ADJUSTMENT 
+            # Convert data to pandas Series for MACD calculation
+            data_series = pd.Series(data)
+            macd_line, signal_line, _ = MACD.calculate_model(data_series)
 
+            # Adjust prices based on MACD signals
+            for i in range(1, len(data)):
+                if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
+                    # Bullish MACD crossover
+                    data[i] *= (1 + bull)
+                elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
+                    # Bearish MACD crossover
+                    data[i] *= (1 - bear)
             
             simulations[sim, :] = data[1:]
-        
-        return simulations
+        # Calculate mean and standard deviation for each interval
+        interval_means = np.mean(simulations, axis=0)
+        interval_stds = np.std(simulations, axis=0)
+            
+        return interval_means, interval_stds
 
     def execute_poisson_gamma_simulation_with_mp(self):
         initial_condition = self.initial_condition

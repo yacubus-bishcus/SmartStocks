@@ -637,7 +637,8 @@ class MACD(BaseModel):
                     else:
                         history = self.futures_data
 
-                    macd_line, signal_line, macd_histogram = self.calculate_model(stock, history)
+                    self.macd_line, self.signal_line, self.macd_histogram = MACD.calculate_model(history)
+
                     output = self.calculate_performance_score()
                     output_list.append(output)
 
@@ -648,7 +649,8 @@ class MACD(BaseModel):
                 else:
                     history = self.futures_data
 
-                macd_line, signal_line, macd_histogram = self.calculate_model(self.stock_list[0], history)
+                self.macd_line, self.signal_line, self.macd_histogram = MACD.calculate_model(history)
+
                 output = self.calculate_performance_score()
 
         else:
@@ -657,21 +659,22 @@ class MACD(BaseModel):
             else:
                 history = self.futures_data
 
-            macd_line, signal_line, macd_histogram = self.calculate_model(self.stock_list, history)
+            self.macd_line, self.signal_line, self.macd_histogram = MACD.calculate_model(history)
             output = self.calculate_performance_score()
-
+        self.history = history 
         return output
 
-    def calculate_model(self, myStock, history):
-        self.history = history
-        short_ema = self.history.ewm(span=12, min_periods=1, adjust=False).mean()
-        long_ema = self.history.ewm(span=26, min_periods=1, adjust=False).mean()
+    @staticmethod 
+    def calculate_model(prices, short_window=12, long_window=26, signal_window=9):
+
+        short_ema = prices.ewm(span=12, min_periods=1, adjust=False).mean()
+        long_ema = prices.ewm(span=26, min_periods=1, adjust=False).mean()
         # Calculate MACD Line
-        self.macd_line = short_ema - long_ema
+        macd_line = short_ema - long_ema
         # Calculate signal line
-        self.signal_line = self.macd_line.ewm(span=9, min_periods=1, adjust=False).mean()
-        self.macd_histogram = self.macd_line - self.signal_line
-        return self.macd_line, self.signal_line, self.macd_histogram
+        signal_line = macd_line.ewm(span=9, min_periods=1, adjust=False).mean()
+        macd_histogram = macd_line - signal_line
+        return macd_line, signal_line, macd_histogram
 
     def calculate_performance_score(self):
         performance_score = 0.
@@ -683,9 +686,27 @@ class MACD(BaseModel):
             elif self.macd_line[i] < self.signal_line[i] and self.macd_line[i-1] >= self.signal_line[i-1]:
                 # Bearish crossover: MACD line crosses below the signal line
                 performance_score -= 1
-
         return performance_score
-
+    
+    def calculate_historical_adjustments(self, prices, short_window=12, long_window=26, signal_window=9):
+        macd_line, signal_line, _ = self.calculate_model(prices, short_window, long_window, signal_window)
+        bullish_adjustments = []
+        bearish_adjustments = []
+        
+        for i in range(1, len(prices)):
+            if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
+                # Bullish MACD crossover
+                adjustment = (prices[i] - prices[i-1]) / prices[i-1]
+                bullish_adjustments.append(adjustment)
+            elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
+                # Bearish MACD crossover
+                adjustment = (prices[i-1] - prices[i]) / prices[i-1]
+                bearish_adjustments.append(adjustment)
+        
+        avg_bullish_adjustment = np.mean(bullish_adjustments) if bullish_adjustments else 0.01  # Default to 1% increase
+        avg_bearish_adjustment = np.mean(bearish_adjustments) if bearish_adjustments else 0.01  # Default to 1% decrease
+        
+        return avg_bullish_adjustment, avg_bearish_adjustment
 
     def auto_bin_macd_histogram(self):
         if self.macd_histogram is not None:
@@ -747,6 +768,7 @@ class MACD(BaseModel):
         ax1.legend(loc='upper left')
 
         ax2 = ax1.twinx()
+        
         ax2.plot(self.history, label='Stock Price', color='black', linestyle='--')
         ax2.set_ylabel('Stock Price')
         ax2.legend(loc='upper right')

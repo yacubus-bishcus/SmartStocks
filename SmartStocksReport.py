@@ -109,14 +109,18 @@ class Report:
 
             logger.info(f"Conducting Simulations on the following tickers: {top_tickers}")
             future_prices_list = []
+            future_stds_list = []
             for history in tqdm(model_histories, desc='Stocks Simulation'):
-                future_price = analysis.conduct_simulations(history) # one price per day
-                stock_series = pd.Series(future_price)
-                future_prices_list.append(stock_series)
+                future_price, stock_stds = analysis.conduct_simulations(history) # one price per day
+                future_prices_list.append(future_price)
+                future_stds_list.append(stock_stds)
 
             # concatenate all series objects in the list into a dataframe 
             future_prices = pd.DataFrame(future_prices_list)
             future_prices.index = top_tickers
+            future_stds= pd.DataFrame(future_stds_list)
+            future_stds.index = top_tickers 
+            future_stds = future_stds.T
             future_prices = self.format_future_prices(future_prices)
 
             if self.args.include_history:
@@ -134,18 +138,20 @@ class Report:
             sheet_name = "Future_Prices" + datetime.today().strftime('%b_%d')
             self.output.write_to_excel(df=future_prices, sheet_name=sheet_name, data_w_dates=True)
             if self.args.sim_market:
-                df = analysis.conduct_simulations(market_data)
+                df, stds = analysis.conduct_simulations(market_data)
                 market_df = pd.DataFrame(df)
+                market_stds_df = pd.DataFrame(stds)
                 date_gen = DateGenerator(self.args)
                 dates = date_gen.generate_dates_with_intervals()
                 market_df['Date'] = dates
                 market_df.set_index('Date', inplace=True)
                 market_df.columns = ['Index Price']
-                market_history_df = pd.DataFrame(market_data['Close'])
-                market_history_df.columns = ['Index Price']
-                # combine the market history with market futures
-                combined_market_df = pd.concat([market_history_df, market_df], axis=0, ignore_index=False)
-                combined_market_df.index = combined_market_df.index.rename('Date')
+                if self.args.include_history:
+                    market_history_df = pd.DataFrame(market_data['Close'])
+                    market_history_df.columns = ['Index Price']
+                    # combine the market history with market futures
+                    combined_market_df = pd.concat([market_history_df, market_df], axis=0, ignore_index=False)
+                    combined_market_df.index = combined_market_df.index.rename('Date')
 
         # Create Plots
         self.output.top_performers = top_tickers
@@ -153,14 +159,31 @@ class Report:
         
         if self.args.include_history:
             if self.args.sim_market:
-                figures = self.output.smartstock_plots(Stock_best, stock_df=combined_df, market_df=combined_market_df, analysis=analysis)
+                figures = self.output.smartstock_plots(Stock_best, 
+                                                       stock_df=combined_df, 
+                                                       stds_df=future_stds, 
+                                                       market_df=combined_market_df,
+                                                       market_stds=market_stds_df, 
+                                                       analysis=analysis
+                                                       )
             else:
-                figures = self.output.smartstock_plots(Stock_best, stock_df=combined_df, analysis=analysis)
+                figures = self.output.smartstock_plots(Stock_best, 
+                                                       stock_df=combined_df,
+                                                       stds_df=future_stds, 
+                                                       analysis=analysis)
         else:
             if self.args.sim_market:
-                figures = self.output.smartstock_plots(Stock_best, stock_df=future_prices, market_df=market_df, analysis=analysis)
+                figures = self.output.smartstock_plots(Stock_best, 
+                                                       stock_df=future_prices,
+                                                       stds_df=future_stds, 
+                                                       market_df=market_df, 
+                                                       market_stds=market_stds_df,
+                                                       analysis=analysis)
             else:
-                figures = self.output.smartstock_plots(Stock_best, stock_df=future_prices, analysis=analysis)
+                figures = self.output.smartstock_plots(Stock_best, 
+                                                       stock_df=future_prices, 
+                                                       stds_df=future_stds,
+                                                       analysis=analysis)
 
         self.output.figures = figures
 
