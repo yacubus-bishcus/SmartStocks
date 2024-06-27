@@ -14,6 +14,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from yfinance import Ticker
+import matplotlib.pyplot as plt 
 
 # My Modules 
 from Model_Handler import Model_Handler
@@ -322,7 +323,9 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         stds_6 = 6*np.std(history['Close'])
         min_cap = history['Close'][-1] - stds_6 
         max_cap = history['Close'][-1] + stds_6 
-
+        logger.info(f"Minimum Cap set to: {min_cap}")
+        logger.info(f"Maximum Cap set to: {max_cap}")
+        
         if self.args.model_period == "1d":
             model_period = 1
         elif self.args.model_period == "5d":
@@ -397,7 +400,8 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                                                                             bull=avg_bull_adj, 
                                                                             bear=avg_bear_adj,
                                                                             min_cap=min_cap,
-                                                                            max_cap=max_cap) # all simulated prices for individual stock
+                                                                            max_cap=max_cap,
+                                                                            incremental_adjustment_steps=self.args.incremental_steps) 
             # elif self.args.simulation_model == "poisson-gamma":
             #     beta_guess = np.var(history['Close']) / np.mean(history['Close'])
             #     alpha_guess = (np.mean(history['Close']) / np.var(history['Close'])) **2.
@@ -694,3 +698,108 @@ class CompareStocks:
             string = self.stock1.name + " is underperforming " + self.stock2.name, " by " + str(self.difference) + " percent."
 
         return string
+
+
+## -----------------------------------------------------------------------------------------##
+## ----------------------------- DataAnalysis CLASS    ----------- ------------------------##
+## -----------------------------------------------------------------------------------------##
+
+class DataAnalysis:
+    def __init__(self, directory=None, files=None, sheet_name=None):
+        if directory is None:
+            # Get the current working directory
+            current_directory = os.getcwd()
+            self._directory = current_directory
+        else: 
+            self._directory = directory 
+
+        self._files = files 
+        if sheet_name is None:
+            self._sheet_name = "Future_Prices" + datetime.today().strftime('%b_%d')
+        else:
+            self._sheet_name = sheet_name 
+
+        self._fig = None 
+
+    def __del__(self):
+        pass 
+    
+    @property 
+    def fig(self):
+        return self._fig 
+    
+    @fig.setter 
+    def fig(self, value):
+        self._fig = value 
+
+    @property 
+    def directory(self):
+        return self._directory
+    
+    @directory.setter 
+    def directory(self, value):
+        self._directory = value 
+
+    @property 
+    def sheet_name(self):
+        return self._sheet_name 
+    
+    @sheet_name.setter 
+    def sheet_name(self, value):
+        self._sheet_name = value 
+
+    @property 
+    def files(self):
+        return self._files
+    
+    @files.setter 
+    def files(self, value):
+        base_filename, numbers = value 
+        filenames = []
+        for number in numbers:
+            complete_filename = base_filename.replace('*', str(number))
+            filenames.append(complete_filename)
+        
+        self._files = filenames 
+    
+    @directory.setter 
+    def directory(self, value):
+        self._directory = value 
+
+    def read_table(self, sheet_name):
+        df_list = []
+        for filename in self.files:
+            filepath = os.path.join(self.directory, filename)
+            try:
+                df = pd.read_excel(filepath, sheet_name=sheet_name)
+            except Exception as e:
+                logger.exception(f"Error: {e}")
+                continue
+            df_list.append(df)
+        return df_list
+            
+
+    
+    def plot(self, column_names, title="Plots from Files", ylabel="Prices", show=True):
+        df_list = self.read_table(sheet_name=self.sheet_name)
+        self._fig = plt.figure(figsize=(10, 6))
+        i = 0
+        for df in df_list:
+            plt.plot(df[column_names[0]], df[column_names[1]], label=self.files[i])
+            i += 1 
+        
+        plt.xlabel(column_names[0])
+        plt.ylabel(ylabel)
+        plt.title(title)
+        plt.legend() 
+        if show:
+            plt.show() 
+
+        return self.fig 
+    
+    def figsave(self, filename):
+        filepath = os.path.join(self.directory, filename)
+        if self.fig is not None:
+            self.fig.savefig(filepath)
+        else:
+            logger.error("No figure to save.")

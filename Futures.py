@@ -36,13 +36,13 @@ class Futures(BaseModel):
     def execute_model(self):
         pass
 
-    def plot(self, stock_name=None, current_prices=None, show_every_nth_errorbar=1, ax=None):
+    def plot(self, stock_name=None, current_prices=None, show_every_nth_errorbar=0, ax=None):
         plt.ioff()
         string_title = f"{stock_name} Future Prices" if stock_name else "Future Prices"
         fig, ax1 = plt.subplots(figsize=(10,6))
         self.stock_futures = self.check_index_type(self.stock_futures)
         if self.stock_futures is not None:
-            if self.futures_stds is not None:
+            if self.futures_stds is not None and show_every_nth_errorbar > 0:
                 i = 0
                 for column in self.stock_futures.columns:
                     if current_prices is not None:

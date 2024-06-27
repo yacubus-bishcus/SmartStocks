@@ -29,7 +29,7 @@ class SmartStocksClock:
             sheet_name = "2Processor"
             try:
                 df = pd.read_excel(filepath, sheet_name=sheet_name)
-                df['Run Time (s)'] = df['Run Time (s)']*(processors/2.)
+                df['Run Time (s)'] = df['Run Time (s)']*(2./processors)
             except Exception as e:
                 logger.error(f"Could not find {filepath} Error: {e}")
                 return 

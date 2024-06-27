@@ -23,10 +23,10 @@ class MonteCarlo(Simulation_Analysis):
         self.apply_function = apply_function
         self.initial_condition = None
         self.jump_threshold = None
-        self.jump_threshold_parameter = jump_param
+        self.jump_threshold_parameter = jump_param # amount in standard deviations that the user qualifies as a "jump"
         self.jumps = None
         self.jump_intensity = None 
-        self.num_days = history_time 
+        self.num_days = history_time # this is the model_period typically ran at 30 days 
 
     def __del__(self):
         pass
@@ -171,10 +171,12 @@ class MonteCarlo(Simulation_Analysis):
                                   bull, 
                                   bear, 
                                   min_cap, 
-                                  max_cap):
+                                  max_cap,
+                                  incremental_adjustment_steps):
         # Define the number of intervals per day
         intervals_per_day = int(24 * 60 / interval_minutes)
         total_intervals = self.sim_time * intervals_per_day
+        logger.info(f"Total Intervals to Simulate: {total_intervals}")
         # assign the small time difference 
         dt = 1 / intervals_per_day
         # Calculate jump mean and std
@@ -184,15 +186,23 @@ class MonteCarlo(Simulation_Analysis):
         simulations = np.zeros((self.num_simulations, total_intervals))
         # for debugging easier to work with local variables 
         initial_condition = self.initial_condition 
+        jump_intensity = self.jump_intensity
+        # incremental adjustment steps is the Number of intervals over which to spread the adjustment
+        bull_increment = bull / incremental_adjustment_steps
+        bear_increment = bear / incremental_adjustment_steps
+        average_reduction_increment = average_reduction / incremental_adjustment_steps
 
         for sim in tqdm(range(self.num_simulations), desc="Trials", mininterval=120, maxinterval=3600):
             data = [initial_condition]
+            pending_bull_adjustments = 0
+            pending_bear_adjustments = 0
+            pending_reduction_adjustments = 0
             for _ in range(total_intervals):
                 # Standard GBM component
                 normal_shock = np.random.normal(drift * dt, volatility * np.sqrt(dt))
                 
                 # Jump component
-                num_jumps = np.random.poisson(self.jump_intensity * dt)
+                num_jumps = np.random.poisson(jump_intensity * dt)
                 jump_shock = np.sum(np.random.normal(jump_mean, jump_std, num_jumps))
                 
                 # Combine both components
@@ -206,21 +216,29 @@ class MonteCarlo(Simulation_Analysis):
             patterns, _ = Simulation_Analysis.detect_head_and_shoulders(data)
             # Adjust prices based on detected patterns
             for i in range(1, len(data)):
+                if pending_reduction_adjustments > 0:
+                    data[i] *= (1 - average_reduction_increment)
+                    pending_reduction_adjustments -= 1
                 if patterns[i] == 1:
-                    data[i] *= (1 - average_reduction) # Adjust based on average reduction
+                    pending_reduction_adjustments = incremental_adjustment_steps
             # MACD ADJUSTMENT 
             # Convert data to pandas Series for MACD calculation
             data_series = pd.Series(data)
             macd_line, signal_line, _ = MACD.calculate_model(data_series)
 
-            # Adjust prices based on MACD signals
             for i in range(1, len(data)):
+                if pending_bull_adjustments > 0:
+                    data[i] *= (1 + bull_increment)
+                    pending_bull_adjustments -= 1
+                if pending_bear_adjustments > 0:
+                    data[i] *= (1 - bear_increment)
+                    pending_bear_adjustments -= 1
+
                 if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
-                    # Bullish MACD crossover
-                    data[i] *= (1 + bull)
+                    pending_bull_adjustments = incremental_adjustment_steps
                 elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
-                    # Bearish MACD crossover
-                    data[i] *= (1 - bear)
+                    pending_bear_adjustments = incremental_adjustment_steps
+
             
             simulations[sim, :] = data[1:]
         # Calculate mean and standard deviation for each interval
