@@ -5,6 +5,7 @@ from colorama import Fore, Style
 
 # My Modules 
 from Models import BaseModel
+from symbol import continue_stmt
 
 logger = logging.getLogger(__name__)
 
@@ -61,33 +62,38 @@ class Futures(BaseModel):
             ax1.set_xlabel(xlabel_string)
             ax1.set_ylabel("Predicted Price")
             ax1.legend(loc='upper left')
-            if self.market_futures is not None and self.market_futures != []:
-                ax2 = ax1.twinx()
-                self.market_futures = self.check_index_type(self.market_futures)
-                if self.market_futures is not None:
-                    if self.market_stds is not None:
-                        for column in self.market_futures.columns:
-                            ax1.errorbar(self.market_futures.index, 
-                                        self.market_futures[column].values, 
-                                        yerr=self.market_stds[column].values, 
-                                        label=column, 
-                                        ecolor='red', 
-                                        capsize=5, 
-                                        capthick=2, color='black', linestyle='--')
-                    else:
-                        for column in self.market_futures.columns:
-                            ax1.plot(self.market_futures.index, 
+
+            
+            if self.market_futures is None or self.market_futures.empty:      
+                plt.title(string_title)
+                fig.autofmt_xdate()
+                return fig
+            
+            ax2 = ax1.twinx()
+            self.market_futures = self.check_index_type(self.market_futures)
+            if self.market_futures is not None:
+                if self.market_stds is not None:
+                    for column in self.market_futures.columns:
+                        ax1.errorbar(self.market_futures.index, 
                                     self.market_futures[column].values, 
-                                    label=column, linestyle='--', color='black')
+                                    yerr=self.market_stds[column].values, 
+                                    label=column, 
+                                    ecolor='red', 
+                                    capsize=5, 
+                                    capthick=2, color='black', linestyle='--')
+                else:
+                    for column in self.market_futures.columns:
+                        ax1.plot(self.market_futures.index, 
+                                self.market_futures[column].values, 
+                                label=column, linestyle='--', color='black')
 
 
-                ax2.set_ylabel("Market Predicted Price")
-                ax2.legend(loc='upper right')
+            ax2.set_ylabel("Market Predicted Price")
+            ax2.legend(loc='upper right')
             plt.title(string_title)
             fig.autofmt_xdate()
             return fig
         else:
-            logger.error(Fore.YELLOW + f"Futures Data attempted to plot NoneType object. Returning None." + Style.RESET_ALL)
-            logger.warning(self.stock_futures)
+            logger.error("Futures Data is NoneType returning none.")
             return None 
     

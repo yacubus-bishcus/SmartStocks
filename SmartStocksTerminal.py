@@ -61,8 +61,10 @@ def SmartStocksTerminal():
     input_manager.stocks = (input_manager.tickers)
     if len(input_manager.tickers) > 0: 
         result = input_manager.apply_input_conditions(output=output, args=args)
-        if args.simulations > 0 and not args.report:
-            plt.show() 
+        if args.simulations > 0 and not args.report and args.show_plot:
+            plt.show()
+        elif args.simulations > 0 and not args.report and output is not None:
+            output.savefig(result)
     else:
         logger.error("No Tickers Found. Program Exiting.")
 

@@ -59,6 +59,7 @@ class ArgsParser:
         self.parser.add_argument('--report',              action='store_true', help='Create Montly Report', required=False, default=False)
         self.parser.add_argument('--research',            action='store_true', help='Use in conjunction with --report if you want randomly selected stocks to be included in the report. Otherwise --research will execute any of the other provided functions E.g. --compare.', required=False, default=None)
         self.parser.add_argument('--seed',                type=int, help='The Seed used for the simulation for recreation purposes...stock prices do change though.', required=False, default=42)
+        self.parser.add_argument('--show_plot',           action='store_true', help='Choose to show plot after a simulation (without report flagged) Default is False.', required=False, default=False)
         self.parser.add_argument('--sim_market',          action='store_true', help='Choose to include market simulations for market comparison. Results may vary. Default is false.', required=False, default=False)
         self.parser.add_argument('--sim_time',            type=int, help='The number of days to calculate future prices. The default is 30.', required=False, default=30)
         self.parser.add_argument('--simulations',         type=int, help='Number of Simulations to run on each stock to predict future price. Default is 0.', required=False, default=0)

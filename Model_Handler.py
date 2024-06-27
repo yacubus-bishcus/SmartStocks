@@ -21,10 +21,10 @@ class Model_Handler:
         self.risk_free_rate = risk_free_rate
         self.args = args
 
-        self.futures_data = []
-        self.futures_stds = []
-        self.sim_market_data = []
-        self.sim_market_stds = []
+        self.futures_data = None 
+        self.futures_stds = None 
+        self.sim_market_data = None 
+        self.sim_market_stds = None 
 
     def __del__(self):
         pass
@@ -98,11 +98,11 @@ class Model_Handler:
         model = TwoHundred_Day_Model(self.stock_list)
         return model.execute_model()
 
-    def pass_futures_data(self, futures_data, futures_stds):
+    def pass_futures_data(self, futures_data, futures_stds=None):
         self.futures_data = futures_data
         self.futures_stds = futures_stds
 
-    def pass_futures_market_data(self, market_data, market_stds):
+    def pass_futures_market_data(self, market_data, market_stds=None):
         self.sim_market_data = market_data
         self.sim_market_stds = market_stds
 

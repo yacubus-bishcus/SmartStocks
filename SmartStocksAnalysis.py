@@ -244,8 +244,6 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             future_stds_list = []
             for history in tqdm(model_histories, desc='Stocks Simulation'):
                 future_price, stock_stds = self.conduct_simulations(history) # future_price and stock_stds should be returned as series 
-                # stock_series = pd.Series(future_price) 
-                # stock_stds = pd.Series(stock_stds)
                 future_prices_list.append(future_price)
                 future_stds_list.append(stock_stds) 
 
@@ -300,7 +298,10 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                     model_handler.pass_futures_market_data(market_df, market_stds_df)
                     model_handler.pass_futures_data(future_prices, future_stds)
             else:
-                model_handler.pass_futures_data(future_prices, future_stds)
+                if self.args.include_history:
+                    model_handler.pass_futures_data(combined_df)
+                else:
+                    model_handler.pass_futures_data(future_prices, future_stds)
 
             model = model_handler.get_futures_instance()
             figure = model.plot(stock_name="Stocks")

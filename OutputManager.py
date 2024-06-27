@@ -18,6 +18,7 @@ from tqdm import tqdm
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import ssl
+import re 
 
 # My Modules 
 from Model_Handler import Model_Handler
@@ -461,7 +462,7 @@ class SmartStocksOutput(WordPrinter, Email):
             return 
         
         if data_w_dates:
-            df = self.make_dates_timezone_unaware(df)
+            df = SmartStocksOutput.make_dates_timezone_unaware(df)
 
         # Define the file path
         if self.args.output.endswith(".docx"):
@@ -498,10 +499,24 @@ class SmartStocksOutput(WordPrinter, Email):
         except Exception as e:
             logger.exception(Fore.RED + f"An error occurred while writing to Excel: {e}" + Style.RESET_ALL)
 
-    def make_dates_timezone_unaware(self, df):
+    @staticmethod 
+    def make_dates_timezone_unaware(df):
         # Check if the index is datetime and has timezone info
         if isinstance(df.index, pd.DatetimeIndex):
             if df.index.tz is not None:
                 df.index = df.index.tz_localize(None)
 
         return df 
+    
+    def savefig(self, fig):
+        filename = SmartStocksOutput.replace_pattern(self.filename, ".png")
+        filepath = pkg_resources.resource_filename(self.directory, filename)
+        fig.savefig(filepath)
+        logger.info(Fore.GREEN + f"Figure saved to {filepath}" + Style.RESET_ALL)
+    @staticmethod
+    def replace_pattern(input_string, replacement):
+        # Define the regex pattern to match .*
+        pattern = r'\..*'
+        # Use re.sub to replace the pattern with the replacement string
+        result = re.sub(pattern, replacement, input_string)
+        return result
