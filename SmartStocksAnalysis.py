@@ -306,7 +306,7 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                     model_handler.pass_futures_data(future_prices, future_stds)
 
             model = model_handler.get_futures_instance()
-            figure = model.plot(stock_name="Stocks", current_prices=filtered_prices)
+            figure = model.plot(stock_name="Stocks", current_prices=filtered_prices, show_every_nth_errorbar=self.args.show_every_nth_errorbar)
             caption = model.caption 
             if figure is not None:
                 figure.text(0.5,-0.2, caption, ha='center', fontsize=8)

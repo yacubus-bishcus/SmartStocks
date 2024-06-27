@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import logging
-import pandas as pd 
-from colorama import Fore, Style 
+import numpy as np 
 
 # My Modules 
 from Models import BaseModel
@@ -37,9 +36,9 @@ class Futures(BaseModel):
     def execute_model(self):
         pass
 
-    def plot(self, stock_name=None, current_prices=None, ax=None):
+    def plot(self, stock_name=None, current_prices=None, show_every_nth_errorbar=1, ax=None):
         plt.ioff()
-        string_title = stock_name + " Future Prices"
+        string_title = f"{stock_name} Future Prices" if stock_name else "Future Prices"
         fig, ax1 = plt.subplots(figsize=(10,6))
         self.stock_futures = self.check_index_type(self.stock_futures)
         if self.stock_futures is not None:
@@ -50,9 +49,12 @@ class Futures(BaseModel):
                         label_string = column + f" Current Price: {current_prices[i]}"
                     else:
                         label_string = column 
-                    ax1.errorbar(self.stock_futures.index, 
-                                 self.stock_futures[column].values, 
-                                 yerr=self.futures_stds[column].values, 
+
+                    indices = np.arange(len(self.stock_futures.index))
+                    error_indices = indices[::show_every_nth_errorbar]
+                    ax1.errorbar(self.stock_futures.index[error_indices], 
+                                 self.stock_futures[column].values[error_indices], 
+                                 yerr=self.futures_stds[column].values[error_indices], 
                                  label=label_string, 
                                  ecolor='red', 
                                  capsize=5, 
@@ -110,4 +112,3 @@ class Futures(BaseModel):
         else:
             logger.error("Futures Data is NoneType returning none.")
             return None 
-    
