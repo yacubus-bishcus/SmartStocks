@@ -74,31 +74,30 @@ class MonteCarlo(Simulation_Analysis):
         jump_std = np.std(jumps) if len(jumps) > 0 else 0.
         
         # Initialize the simulations array
-        simulations = np.zeros((self.num_simulations, total_intervals))
+        simulations_chunk = np.zeros((self.num_simulations, total_intervals))
         pool = mp.Pool(processes=processes)
-        chunk_size = num_simulations // processes
-        chunks = [(simulations[i:i + chunk_size], num_simulations, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear)
-                  for i in range(0, num_simulations, chunk_size)]
-
+        chunk_size = (num_simulations + processes - 1) // processes  # Ensure all chunks are the same size
+        chunks = [(chunk_size, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear)
+                  for _ in range(processes)]
         results = pool.starmap(self.normal_simulation_worker, chunks)
         pool.close()
         pool.join()
 
         # Assemble results into the simulations array
         for i, result in enumerate(results):
-            simulations[i*chunk_size:(i+1)*chunk_size, :] = result
+            simulations_chunk[i*chunk_size:(i+1)*chunk_size, :] = result[:chunk_size]
 
         # Calculate mean and standard deviation for each interval
-        interval_means = np.mean(simulations, axis=0)
-        interval_stds = np.std(simulations, axis=0)
+        interval_means = np.mean(simulations_chunk, axis=0)
+        interval_stds = np.std(simulations_chunk, axis=0)
 
         return interval_means, interval_stds
 
 
     @staticmethod
-    def normal_simulation_worker(simulations_chunk, num_simulations, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear):
-
-        for sim in range(num_simulations):
+    def normal_simulation_worker(chunk_size, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear):
+        simulations_chunk = np.zeros((chunk_size, total_intervals))
+        for sim in range(chunk_size):
             data = [initial_condition]
             for _ in range(total_intervals):
                 # Standard GBM component
