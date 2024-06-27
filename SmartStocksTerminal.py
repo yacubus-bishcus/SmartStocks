@@ -13,7 +13,7 @@ from OutputManager import SmartStocksOutput
 from SmartStocksInputManager import SmartStocksInputManager
 from ArgsParser import ArgsParser
 from SmartStocksResearch import Research 
-
+from SmartStocksClock import SmartStocksClock
 
 class CachedLimiterSession(CacheMixin, LimiterMixin, Session):
     pass
@@ -45,6 +45,7 @@ def SmartStocksTerminal():
     if args is None:
         print(args.h)
         sys.exit(1)
+
     # Open Word Doc file for Output
     output = None
     if args.output is not None:
@@ -59,6 +60,10 @@ def SmartStocksTerminal():
 
     input_manager.tickers = (args.ticker, args.input, args.u, research)
     input_manager.stocks = (input_manager.tickers)
+
+    # Determine ETC 
+    SmartStocksClock.guess_etc(args.processes, len(input_manager.stocks), args.number_to_highlight, args.simulations, args.sim_time, args.model_interval, args.report)
+
     if len(input_manager.tickers) > 0: 
         result = input_manager.apply_input_conditions(output=output, args=args)
         if args.simulations > 0 and not args.report and args.show_plot:

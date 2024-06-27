@@ -366,14 +366,6 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             interval_minutes = 60 
         elif self.args.model_interval == "1d":
             interval_minutes = 24*60 
-        elif self.args.model_interval == "5d":
-            interval_minutes = 24*60*5 
-        elif self.args.model_interval == "1w":
-            interval_minutes = 24*60*7
-        elif self.args.model_interval == "1mo":
-            interval_minutes = 24*60*30 # assumes 30 days in a month may cause issues 
-        elif self.args.model_interval == "3mo":
-            interval_minutes = 24*60*30*3 # assumes 30 days in a month and that 3 months is 90 days 
         else:
             logger.error(f"Interval Minutes could not be set by Model Interval {self.args.model_interval}. Applying interval of 1m.")
             interval_minutes = 1

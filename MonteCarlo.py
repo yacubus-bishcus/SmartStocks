@@ -5,6 +5,7 @@ from scipy.special import gammaln
 import multiprocessing as mp
 import logging
 import pandas as pd 
+from tqdm import tqdm
 
 # MY Modules
 from Simulation_Analysis import Simulation_Analysis
@@ -97,7 +98,7 @@ class MonteCarlo(Simulation_Analysis):
     @staticmethod
     def normal_simulation_worker(chunk_size, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear):
         simulations_chunk = np.zeros((chunk_size, total_intervals))
-        for sim in range(chunk_size):
+        for sim in tqdm(range(chunk_size), desc="Trials",mininterval=120, maxinterval=3600):
             data = [initial_condition]
             for _ in range(total_intervals):
                 # Standard GBM component
@@ -150,7 +151,7 @@ class MonteCarlo(Simulation_Analysis):
         # Initialize the simulations array
         simulations = np.zeros((self.num_simulations, total_intervals))
 
-        for sim in range(self.num_simulations):
+        for sim in tqdm(range(self.num_simulations), desc="Trials", mininterval=120, maxinterval=3600):
             data = [self.initial_condition]
             for _ in range(total_intervals):
                 # Standard GBM component
