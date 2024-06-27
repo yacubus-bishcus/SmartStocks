@@ -56,7 +56,15 @@ class MonteCarlo(Simulation_Analysis):
             logger.exception(f"Error occuring while applying function: {e}")
             return None
 
-    def execute_normal_simulation_with_mp(self, drift, volatility, interval_minutes, average_reduction, bull, bear):
+    def execute_normal_simulation_with_mp(self, 
+                                          drift, 
+                                          volatility, 
+                                          interval_minutes, 
+                                          average_reduction, 
+                                          bull, 
+                                          bear, 
+                                          min_cap, 
+                                          max_cap):
         # Multiprocessing only works with static methods/properties 
         macd = MACD()
         initial_condition = self.initial_condition
@@ -79,7 +87,7 @@ class MonteCarlo(Simulation_Analysis):
         pool = mp.Pool(processes=processes)
         chunk_size = (num_simulations + processes - 1) // processes  # Ensure all chunks are the same size
         # Create a list of arguments for each chunk
-        chunks = [(min(chunk_size, num_simulations - i * chunk_size), jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear)
+        chunks = [(min(chunk_size, num_simulations - i * chunk_size), jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, average_reduction, bull, bear, min_cap, max_cap)
                   for i in range(processes)]
         results = pool.starmap(self.normal_simulation_worker, chunks)
         pool.close()
@@ -100,7 +108,19 @@ class MonteCarlo(Simulation_Analysis):
 
 
     @staticmethod
-    def normal_simulation_worker(chunk_size, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear):
+    def normal_simulation_worker(chunk_size, 
+                                 jump_intensity, 
+                                 dt, 
+                                 total_intervals, 
+                                 initial_condition, 
+                                 drift, volatility, 
+                                 jump_mean, 
+                                 jump_std, 
+                                 average_reduction, 
+                                 bull, 
+                                 bear, 
+                                 min_cap, 
+                                 max_cap):
         simulations_chunk = np.zeros((chunk_size, total_intervals))
         for sim in tqdm(range(chunk_size), desc="Trials",mininterval=120, maxinterval=3600):
             data = [initial_condition]
@@ -115,6 +135,7 @@ class MonteCarlo(Simulation_Analysis):
                 # Combine both components
                 shock = normal_shock + jump_shock
                 next_result = data[-1] * np.exp(shock)
+                next_result = max(min(next_result, max_cap), min_cap)
                 data.append(next_result)
             # HEAD AND SHOULDERS ADJUSTMENT     
             # Detect Head and Shoulders pattern in the simulated data
@@ -142,7 +163,15 @@ class MonteCarlo(Simulation_Analysis):
 
         return simulations_chunk
 
-    def execute_normal_simulation(self, drift, volatility, interval_minutes, average_reduction, bull, bear):
+    def execute_normal_simulation(self, 
+                                  drift, 
+                                  volatility, 
+                                  interval_minutes, 
+                                  average_reduction, 
+                                  bull, 
+                                  bear, 
+                                  min_cap, 
+                                  max_cap):
         # Define the number of intervals per day
         intervals_per_day = int(24 * 60 / interval_minutes)
         total_intervals = self.sim_time * intervals_per_day
@@ -151,12 +180,13 @@ class MonteCarlo(Simulation_Analysis):
         # Calculate jump mean and std
         jump_mean = np.mean(self.jumps) if len(self.jumps) > 0 else 0.
         jump_std = np.std(self.jumps) if len(self.jumps) > 0 else 0.
-        macd = MACD()
         # Initialize the simulations array
         simulations = np.zeros((self.num_simulations, total_intervals))
+        # for debugging easier to work with local variables 
+        initial_condition = self.initial_condition 
 
         for sim in tqdm(range(self.num_simulations), desc="Trials", mininterval=120, maxinterval=3600):
-            data = [self.initial_condition]
+            data = [initial_condition]
             for _ in range(total_intervals):
                 # Standard GBM component
                 normal_shock = np.random.normal(drift * dt, volatility * np.sqrt(dt))
@@ -168,6 +198,8 @@ class MonteCarlo(Simulation_Analysis):
                 # Combine both components
                 shock = normal_shock + jump_shock
                 next_result = data[-1] * np.exp(shock)
+                # Apply min and max cap
+                next_result = max(min(next_result, max_cap), min_cap)
                 data.append(next_result)
             # HEAD AND SHOULDERS ADJUSTMENT     
             # Detect Head and Shoulders pattern in the simulated data

@@ -319,6 +319,10 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         macd = MACD()
         avg_bull_adj, avg_bear_adj = macd.calculate_historical_adjustments(history['Close'])
         drift, volatility = sim_analysis.calculate_drift_and_volatility(history['Close'], self.args.use_log_returns) # takes series of the closed prices
+        stds_6 = 6*np.std(history['Close'])
+        min_cap = history['Close'][-1] - stds_6 
+        max_cap = history['Close'][-1] + stds_6 
+
         if self.args.model_period == "1d":
             model_period = 1
         elif self.args.model_period == "5d":
@@ -379,7 +383,9 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                                                                                     interval_minutes=interval_minutes,
                                                                                     average_reduction=average_reduction,
                                                                                     bull=avg_bull_adj,
-                                                                                    bear=avg_bear_adj)
+                                                                                    bear=avg_bear_adj,
+                                                                                    min_cap=min_cap,
+                                                                                    max_cap=max_cap)
             # elif self.args.simulation_model == "poisson-gamma":
             #     simulated_price = monte.execute_poisson_gamma_simulation_with_mp()
         else:
@@ -389,7 +395,9 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                                                                             interval_minutes=interval_minutes, 
                                                                             average_reduction=average_reduction, 
                                                                             bull=avg_bull_adj, 
-                                                                            bear=avg_bear_adj) # all simulated prices for individual stock
+                                                                            bear=avg_bear_adj,
+                                                                            min_cap=min_cap,
+                                                                            max_cap=max_cap) # all simulated prices for individual stock
             # elif self.args.simulation_model == "poisson-gamma":
             #     beta_guess = np.var(history['Close']) / np.mean(history['Close'])
             #     alpha_guess = (np.mean(history['Close']) / np.var(history['Close'])) **2.
