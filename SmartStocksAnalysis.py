@@ -226,12 +226,14 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         if len(stock_list) > 0:
             filtered_stocks = []
             filtered_tickers = []
+            filtered_prices = []
             logger.info("Processing Stocks...")
             for stock in tqdm(stock_list, desc="Stocks"):
                 my_stock = Stock(stock, self.args.model_period, self.args.model_interval)
                 if not self.apply_cuts(my_stock):
                     filtered_stocks.append(my_stock)
                     filtered_tickers.append(my_stock.symbol)
+                    filtered_prices.append(my_stock.price)
 
             logger.info("Data Processing Complete.")
             logger.info(f"Total Number of Stocks Cut --> {self.total_cuts}")
@@ -304,7 +306,7 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                     model_handler.pass_futures_data(future_prices, future_stds)
 
             model = model_handler.get_futures_instance()
-            figure = model.plot(stock_name="Stocks")
+            figure = model.plot(stock_name="Stocks", current_prices=filtered_prices)
             caption = model.caption 
             if figure is not None:
                 figure.text(0.5,-0.2, caption, ha='center', fontsize=8)

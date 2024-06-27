@@ -37,26 +37,40 @@ class Futures(BaseModel):
     def execute_model(self):
         pass
 
-    def plot(self, stock_name=None, ax=None):
+    def plot(self, stock_name=None, current_prices=None, ax=None):
         plt.ioff()
         string_title = stock_name + " Future Prices"
         fig, ax1 = plt.subplots(figsize=(10,6))
         self.stock_futures = self.check_index_type(self.stock_futures)
         if self.stock_futures is not None:
             if self.futures_stds is not None:
+                i = 0
                 for column in self.stock_futures.columns:
+                    if current_prices is not None:
+                        label_string = column + f" Current Price: {current_prices[i]}"
+                    else:
+                        label_string = column 
                     ax1.errorbar(self.stock_futures.index, 
                                  self.stock_futures[column].values, 
                                  yerr=self.futures_stds[column].values, 
-                                 label=column, 
+                                 label=label_string, 
                                  ecolor='red', 
                                  capsize=5, 
                                  capthick=2)
+                    
+                    i += 1
             else:
+                i = 0
                 for column in self.stock_futures.columns:
+                    if current_prices is not None:
+                        label_string = column + f" Current Price: {current_prices[i]}"
+                    else:
+                        label_string = column 
                     ax1.plot(self.stock_futures.index, 
                              self.stock_futures[column].values, 
-                             label=column)
+                             label=label_string)
+                    
+                    i += 1
 
             xlabel_string = "Date"
             ax1.set_xlabel(xlabel_string)
