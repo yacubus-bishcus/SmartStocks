@@ -78,15 +78,19 @@ class MonteCarlo(Simulation_Analysis):
         simulations_chunk = np.zeros((self.num_simulations, total_intervals))
         pool = mp.Pool(processes=processes)
         chunk_size = (num_simulations + processes - 1) // processes  # Ensure all chunks are the same size
-        chunks = [(chunk_size, jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear)
-                  for _ in range(processes)]
+        # Create a list of arguments for each chunk
+        chunks = [(min(chunk_size, num_simulations - i * chunk_size), jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, macd, average_reduction, bull, bear)
+                  for i in range(processes)]
         results = pool.starmap(self.normal_simulation_worker, chunks)
         pool.close()
         pool.join()
 
         # Assemble results into the simulations array
-        for i, result in enumerate(results):
-            simulations_chunk[i*chunk_size:(i+1)*chunk_size, :] = result[:chunk_size]
+        start_index = 0
+        for result in results:
+            end_index = start_index + result.shape[0]
+            simulations_chunk[start_index:end_index, :] = result
+            start_index = end_index
 
         # Calculate mean and standard deviation for each interval
         interval_means = np.mean(simulations_chunk, axis=0)
