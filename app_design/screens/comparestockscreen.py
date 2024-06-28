@@ -18,7 +18,6 @@ from kivy.uix.switch import Switch
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivymd.uix.screen import MDScreen
-from kivy.uix.image import Image
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.widget import Widget

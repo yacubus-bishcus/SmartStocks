@@ -8,6 +8,7 @@ from kivymd.uix.menu import MDDropdownMenu
 from kivy.metrics import dp
 from kivy.properties import ObjectProperty
 from kivymd.uix.button import MDRaisedButton
+from kivy.clock import Clock
 
 # My Imported Modules
 from SmartStocksInputManager import SmartStocksInputManager
@@ -155,11 +156,15 @@ class FutureScreen(MDScreen):
         # Set the Futures args
         number_trials = self.get_number_trials_value()
         days_to_sim = self.get_days_to_sim_value()
-        log_value = self.get_use_log_value()
-        historic_period = self.get_historic_period_value() 
+        log_value = self.get_use_log_value() 
         include_history = self.get_include_history_value() 
 
         # Make the Argument 
         if 1 <= len(ticker_list) <= 5:
             argument = f"--ticker {','.join(ticker_list)} {number_trials} {days_to_sim} \
-                {log_value} {historic_period} {include_history}" 
+                {log_value} {include_history}" 
+        
+        Clock.schedule_once(self.change_screen)
+
+    def change_screen(self, dt):
+        self.manager.current = 'future_result'

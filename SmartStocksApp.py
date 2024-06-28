@@ -28,10 +28,11 @@ from kivymd.uix.menu import MDDropdownMenu
 from kivymd.toast import toast
 
 # MyApp Classes
-from app_design.loginscreen import LoginPage
-from app_design.menuscreen import MenuScreen
-from app_design.createreportscreen import CreateReportScreen
-from app_design.futurescreen import FutureScreen 
+from app_design.screens.loginscreen import LoginPage
+from app_design.screens.menuscreen import MenuScreen
+from app_design.screens.createreportscreen import CreateReportScreen
+from app_design.screens.futurescreen import FutureScreen 
+from app_design.screens.futureresultscreen import FutureResultScreen 
 
 class SmartStocksApp(MDApp):
     def build(self):
@@ -51,14 +52,16 @@ class SmartStocksApp(MDApp):
         self.color_dark_text = [1, 1, 1, 1]  # Light text for dark background
         self.secondary_color_dark = [max(0, c - 0.2) for c in secondary_color[:3]] + [secondary_color[3]]
 
-        Builder.load_file('app_design/loginkv.kv')  # Load the KV file
+        Builder.load_file('app_design/kv_files/loginkv.kv')  # Load the KV file
         logger.info("loginkv.kv loaded.")
-        Builder.load_file('app_design/menukv.kv')
+        Builder.load_file('app_design/kv_files/menukv.kv')
         logger.info("menukv.kv loaded.")
-        Builder.load_file('app_design/createreportscreen.kv')
+        Builder.load_file('app_design/kv_files/createreportscreen.kv')
         logger.info("createreportscreen.kv loaded.")
-        Builder.load_file('app_design/futureskv.kv')
+        Builder.load_file('app_design/kv_files/futureskv.kv')
         logger.info('futureskv.kv loaded.')
+        Builder.load_file('app_design/kv_files/futureresultscreen.kv')
+        logger.info("futureresultscreen kv loaded.")
 
         sm = MDScreenManager(transition=MDFadeSlideTransition())
         logger.info("Screen Manager Initialized.")
@@ -72,7 +75,9 @@ class SmartStocksApp(MDApp):
         logger.info("CreateReportScreen Initialized.")
         sm.add_widget(FutureScreen(name='future'))
         logger.info("FutureScreen initialized.")
-        from app_design.comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
+        sm.add_widget(FutureResultScreen(name='future_result'))
+        logger.info('FutureResultScreen initialized.')
+        from app_design.screens.comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
         sm.add_widget(CompareStocksScreen(name='compare_stocks'))
         logger.info("CompareStocksScreen Initialized.")
 
