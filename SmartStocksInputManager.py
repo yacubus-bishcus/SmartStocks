@@ -35,11 +35,11 @@ class SmartStocksInputManager:
 
     @tickers.setter
     def tickers(self, values):
-        ticker, input, use_dow, research = values
+        ticker, _input, use_dow, research = values
         if ticker is not None:
             self._tickers = ticker.split(',')
         # Check if there is an input file to read for tickers
-        if input is not None:
+        if _input is not None:
             self._tickers += self.read_txt_file(input)
 
         if use_dow:
@@ -82,6 +82,7 @@ class SmartStocksInputManager:
             # user is requesting a simulation only 
             figure = self.analysis.calculate_futures(self.stocks, output)
             return figure 
+        
             if args.e and output is not None:
                 # email the output file to given email
                 email_to = input("Email Recipient: ")

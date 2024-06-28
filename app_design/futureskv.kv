@@ -12,7 +12,7 @@
             title: "Smart Stocks by Jacob E Bickus"
             left_action_items: [["menu", lambda x: app.open_menu(x)]]
             right_action_items: [["account-circle", lambda x: app.callback_right()]]
-            elevation: 10
+            elevation: 5
             height: dp(56)
 
         MDGridLayout:
@@ -21,14 +21,14 @@
             padding: dp(10)
             spacing: dp(20)
             size_hint_y: None
-                height: self.minimum_height
-                pos_hint: {"center_x": 0.5}
-                canvas.before:
-                    Color:
-                        rgba: app.secondary_color_dark
-                    Rectangle:
-                        pos: self.pos
-                        size: self.size
+            height: self.minimum_height
+            pos_hint: {"center_x": 0.5}
+            canvas.before:
+                Color:
+                    rgba: app.secondary_color_dark
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
         MDLabel:
             text: "Futures Required Inputs"
             font_size: "36sp"
@@ -157,4 +157,4 @@
             id: index_dropdown
             text: 'Market Index'
             pos_hint: {"center_x": 0.5, "center_y": 0.5}
-            on_release: root.open_index_menu(self)
+            on_release: root.open_menu_index(self)

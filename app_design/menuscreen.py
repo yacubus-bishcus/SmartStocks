@@ -1,27 +1,7 @@
 # Kivy Imported Modules
-from kivy.uix.widget import Widget
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
 from kivymd.uix.screen import MDScreen
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.behaviors import ButtonBehavior
 from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDIconButton
-from kivymd.uix.label import MDLabel
-from kivy.uix.floatlayout import FloatLayout
-from kivy.graphics import Color, Line, Rectangle
-from kivymd.uix.relativelayout import MDRelativeLayout
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.stacklayout import MDStackLayout
-from kivymd.uix.gridlayout import MDGridLayout
-from kivymd.uix.menu import MDDropdownMenu
 from kivy.properties import StringProperty
-from kivymd.app import MDApp
-# App Imported Modules
-from app_design.customoptions import BackgroundColorBoxLayout
-
 import logging
 # Ensure logging.basicConfig is not called after setting the level for your logger
 logger = logging.getLogger(__name__)
@@ -70,6 +50,7 @@ class MenuScreen(MDScreen):
 
     def show_futures(self):
         logger.info("Show Futures selected.")
+        self.manager.current = "future"
 
     def lucky_stock(self):
         logger.info("Lucky Stock selected.")
