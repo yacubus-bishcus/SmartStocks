@@ -1,48 +1,114 @@
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib.ticker as ticker
 import logging
+import numpy as np 
+
+# My Modules 
+from Models import BaseModel
+from symbol import continue_stmt
 
 logger = logging.getLogger(__name__)
 
-class Futures:
-    def __init__(self, stock_futures=None, market_futures=None, args=None):
+class Futures(BaseModel):
+    def __init__(self, stock_futures=None, futures_stds=None, market_futures=None, market_stds=None, args=None):
         self.stock_futures = stock_futures
+        self.futures_stds = futures_stds
         self.market_futures = market_futures
+        self.market_stds = market_stds
         self.args = args
-        self.caption = """
+        self._caption = """
         Future prices here are calculated from a monte carlo calculation incorporating
         drift, volatility and jumps of a stock over the desired time horizon.
         The jump threshold standard deviation used was two standard deviations.
         """
+        self._name = "Futures"
 
     def __del__(self):
         pass
+    
+    @property
+    def name(self):
+        return self._name 
 
-    def get_name(self, name):
-        return "Futures"
-
-    def get_caption(self):
-        return self.caption
+    @property
+    def caption(self):
+        return self._caption
 
     def execute_model(self):
         pass
 
-
-    def plot(self, stock_name=None, ax=None):
+    def plot(self, stock_name=None, current_prices=None, show_every_nth_errorbar=0, ax=None):
         plt.ioff()
-        string_title = stock_name + " Future Prices"
+        string_title = f"{stock_name} Future Prices" if stock_name else "Future Prices"
         fig, ax1 = plt.subplots(figsize=(10,6))
-        ax1.plot(self.stock_futures.index, self.stock_futures.values, label=self.stock_futures.columns)
-        xlabel_string = "Date"
-        ax1.set_xlabel(xlabel_string)
-        ax1.set_ylabel("Predicted Price")
-        ax1.legend(loc='upper left')
+        self.stock_futures = self.check_index_type(self.stock_futures)
+        if self.stock_futures is not None:
+            if self.futures_stds is not None and show_every_nth_errorbar > 0:
+                i = 0
+                for column in self.stock_futures.columns:
+                    if current_prices is not None:
+                        label_string = column + f" Current Price: {current_prices[i]}"
+                    else:
+                        label_string = column 
 
-        ax2 = ax1.twinx()
-        ax2.plot(self.market_futures.index, self.market_futures.values, label='Market Predicted Price', color='black', linestyle='--')
-        ax2.set_ylabel("Market Predicted Price")
-        ax2.legend(loc='upper right')
-        plt.title(string_title)
-        fig.autofmt_xdate()
-        return fig
+                    indices = np.arange(len(self.stock_futures.index))
+                    error_indices = indices[::show_every_nth_errorbar]
+                    ax1.errorbar(self.stock_futures.index[error_indices], 
+                                 self.stock_futures[column].values[error_indices], 
+                                 yerr=self.futures_stds[column].values[error_indices], 
+                                 label=label_string, 
+                                 ecolor='red', 
+                                 capsize=5, 
+                                 capthick=2)
+                    
+                    i += 1
+            else:
+                i = 0
+                for column in self.stock_futures.columns:
+                    if current_prices is not None:
+                        label_string = column + f" Current Price: {current_prices[i]}"
+                    else:
+                        label_string = column 
+                    ax1.plot(self.stock_futures.index, 
+                             self.stock_futures[column].values, 
+                             label=label_string)
+                    
+                    i += 1
+
+            xlabel_string = "Date"
+            ax1.set_xlabel(xlabel_string)
+            ax1.set_ylabel("Predicted Price")
+            ax1.legend(loc='upper left')
+
+            
+            if self.market_futures is None or self.market_futures.empty:      
+                plt.title(string_title)
+                fig.autofmt_xdate()
+                return fig
+            
+            ax2 = ax1.twinx()
+            self.market_futures = self.check_index_type(self.market_futures)
+            if self.market_futures is not None:
+                if self.market_stds is not None:
+                    for column in self.market_futures.columns:
+                        ax1.errorbar(self.market_futures.index, 
+                                    self.market_futures[column].values, 
+                                    yerr=self.market_stds[column].values, 
+                                    label=column, 
+                                    ecolor='red', 
+                                    capsize=5, 
+                                    capthick=2, color='black', linestyle='--')
+                else:
+                    for column in self.market_futures.columns:
+                        ax1.plot(self.market_futures.index, 
+                                self.market_futures[column].values, 
+                                label=column, linestyle='--', color='black')
+
+
+            ax2.set_ylabel("Market Predicted Price")
+            ax2.legend(loc='upper right')
+            plt.title(string_title)
+            fig.autofmt_xdate()
+            return fig
+        else:
+            logger.error("Futures Data is NoneType returning none.")
+            return None 

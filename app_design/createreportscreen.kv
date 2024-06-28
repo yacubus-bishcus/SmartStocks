@@ -1,0 +1,699 @@
+<CheckItem>:
+    adaptive_height: True
+    MDBoxLayout:
+        orientation: 'horizontal'
+        size_hint: (None, None)
+        width: dp(160)
+        height: dp(48)
+        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+        MDCheckbox:
+            group: root.group
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+        MDLabel:
+            text: root.text
+            adaptive_height: True
+            padding_x: "1dp"
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+<CreateReportScreen>:
+    ticker_input: ticker_input_id  # Reference the ID of the ticker input field
+    dow_input: dow_input_id
+    include_list: include_list_id
+    fifty_day_model: fifty_day_model_id
+    twohundred_day_model: twohundred_day_model_id
+    capm_model: capm_model_id
+    macd_model: macd_model_id
+    rsi_model: rsi_model_id
+    stoch_model: stoch_model_id
+    process_factor: process_factor_id
+    weights_value: weights_id
+
+    number_to_sim: number_to_sim_id
+    num_trials: slider
+    sim_date: sim_date_id
+    seed: seed_id
+    jump_param: slider2
+    processes: slider3
+
+    include_research: include_research_id
+    data_source: data_source_id
+    default_data: default_data_id
+    min_price: min_price_id
+    max_price: max_price_id
+    num_research: slider4
+
+    output: output_id
+    email: email_id
+    same_as_user: same_as_user_id
+
+    BoxLayout:
+        orientation: 'vertical'
+
+        MDTopAppBar:
+            title: "Smart Stocks by Jacob E Bickus"
+            left_action_items: [["menu", lambda x: app.open_menu(x)]]
+            right_action_items: [["account-circle", lambda x: app.callback_right()]]
+            elevation: 10
+            height: dp(56)
+
+        MDScrollView:
+            do_scroll_x: False
+            do_scroll_y: True
+
+            GridLayout:
+                id: main_layout  # Assign an ID to the main layout
+                cols: 1
+                padding: dp(10)
+                spacing: dp(20)
+                size_hint_y: None
+                height: self.minimum_height
+                pos_hint: {"center_x": 0.5}
+                canvas.before:
+                    Color:
+                        rgba: app.secondary_color_dark
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+
+                MDLabel:
+                    text: "Report Required Inputs"
+                    font_size: "36sp"
+                    adaptive_size: True
+                    color: "grey"
+                    pos_hint: {"center_x": 0.5}
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                GridLayout:
+                    cols: 1
+                    padding: dp(12)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    pos_hint: {"center_x": 0.5}
+
+                    GridLayout:
+                        cols: 1
+                        size_hint_y: None
+                        height: dp(50)
+                        pos_hint: {"center_x": 0.5}
+                        spacing: dp(16)
+
+                        MDTextField:
+                            id: ticker_input_id
+                            mode: "fill"
+                            theme_text_color: "Custom"
+                            text_color_normal: "red"
+                            text_color_focus: "black"
+                            line_color_normal: "orange"
+                            line_color_focus: "white"
+                            fill_color_normal: "grey"
+                            fill_color_focus: "white"
+                            hint_text: "Ticker"
+                            helper_text: "Choose your Tickers"
+                            icon_right: "information"
+                            size_hint_x: None
+                            width: "240dp"
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                    GridLayout:
+                        cols: 2
+                        size_hint_y: None
+                        height: self.minimum_height
+                        pos_hint: {"center_x": 0.5}
+                        padding: "24dp"
+                        spacing: "48dp"
+
+                        MDLabel:
+                            text: "Use Dow 30:"
+                            size_hint_x: None
+                            width: "120dp"
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                        MDSwitch:
+                            id: dow_input_id
+                            active: False
+                            icon_active: "check"
+                            icon_inactive: "close"
+                            icon_active_color: "white"
+                            icon_inactive_color: "grey"
+                            pos_hint: {"center_y": 0.5}
+
+                    GridLayout:
+                        cols: 2
+                        size_hint_y: None
+                        height: self.minimum_height
+                        pos_hint: {"center_x": 0.5}
+                        padding: "24dp"
+                        spacing: "48dp"
+
+                        MDLabel:
+                            text: "Include from List:"
+                            size_hint_x: None
+                            width: "120dp"
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                        MDSwitch:
+                            id: include_list_id
+                            active: False
+                            icon_active: "check"
+                            icon_inactive: "close"
+                            icon_active_color: "white"
+                            icon_inactive_color: "grey"
+                            pos_hint: {"center_y": 0.5}
+
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+
+                    MDDropDownItem:
+                        id: index_dropdown
+                        text: 'Select Index'
+                        pos_hint: {"center_x": 0.5}
+                        on_release: root.open_menu(self)
+
+                    GridLayout:
+                        cols: 2
+                        size_hint: None, None
+                        width: self.minimum_width
+                        height: self.minimum_height
+                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                        MDLabel:
+                            text: "All Models"
+                            size_hint: (None, None)
+                            width: dp(120)
+                            height: self.texture_size[1]
+                            valign: "top"
+                            halign: "center"
+
+                        CheckItem:
+                            group: "root"
+                            size_hint: (None, None)
+                            width: dp(48)
+                            height: dp(48)
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                    GridLayout:
+                        cols: 3
+                        size_hint_y: None
+                        height: self.minimum_height
+                        pos_hint: {"center_x": 0.5}
+                        spacing: "2dp"
+
+                        CheckItem:
+                            id: fifty_day_model_id
+                            text: "50 Day Average"
+                            group: "child"
+
+                        CheckItem:
+                            id: twohundred_day_model_id
+                            text: "200 Day Average"
+                            group: "child"
+
+                        CheckItem:
+                            id: capm_model_id
+                            text: "CAPM"
+                            group: "child"
+
+                        CheckItem:
+                            id: macd_model_id
+                            text: "MACD"
+                            group: "child"
+
+                        CheckItem:
+                            id: rsi_model_id
+                            text: "RSI"
+                            group: "child"
+
+                        CheckItem:
+                            id: stoch_model_id
+                            text: "Stochastic"
+                            group: "child"
+
+                    GridLayout:
+                        cols: 1
+                        size_hint_y: None
+                        height: self.minimum_height
+                        pos_hint: {"center_x": 0.5}
+                        padding: "24dp"
+
+                        MDDropDownItem:
+                            id: model_time_dropdown
+                            text: 'Model Time'
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                            on_release: root.open_menu_model_time(self)
+
+                    GridLayout:
+                        cols: 4
+                        size_hint_y: None
+                        height: self.minimum_height
+                        pos_hint: {"center_x": 0.5}
+                        padding: "24dp"
+                        spacing: "48dp"
+
+                        MDLabel:
+                            text: "Process Factor:"
+                            size_hint_x: None
+                            width: "120dp"
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                        MDLabel:
+                            text: "Close-Open"
+                            size_hint_x: None
+                            width: "100dp"
+                            pos_hint: {"center_y": 0.5}
+
+                        MDSwitch:
+                            id: process_factor_id
+                            active: False
+                            icon_active: "check"
+                            icon_inactive: "close"
+                            icon_active_color: "white"
+                            icon_inactive_color: "grey"
+                            pos_hint: {"center_y": 0.5}
+
+                        MDLabel:
+                            text: "High-Low"
+                            size_hint_x: None
+                            width: "120dp"
+                            pos_hint: {"center_y": 0.5}
+
+                    MDTextField:
+                        id: weights_id
+                        mode: "rectangle"
+                        hint_text: "Weights"
+                        helper_text: "Choose Model Weighting"
+                        icon_right: "information"
+                        size_hint_x: None
+                        width: "240dp"
+                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                        theme_text_color: "Custom"
+                        text_color_normal: "black"
+                        text_color_focus: "black"
+                        line_color_normal: "orange"
+                        line_color_focus: "white"
+                        fill_color_normal: "grey"
+                        fill_color_focus: "white"
+
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+
+                    MDSeparator:
+                        height: "10dp"
+                        color: [0, 0, 0, 1]
+
+                MDLabel:
+                    text: "Simulations"
+                    font_size: "36sp"
+                    adaptive_size: True
+                    color: "grey"
+                    pos_hint: {"center_x": 0.5}
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                GridLayout:
+                    cols: 1
+                    padding: dp(48)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    pos_hint: {"center_x": 0.5}
+
+                    GridLayout:
+                        cols: 1
+                        size_hint_y: None
+                        height: dp(50)
+                        pos_hint: {"center_x": 0.5}
+                        spacing: "8dp"
+
+                        MDTextField:
+                            id: number_to_sim_id
+                            mode: "rectangle"
+                            hint_text: "Number"
+                            helper_text: 'Number of Top Stocks to Simulate'
+                            icon_right: "information"
+                            size_hint_x: None
+                            width: "240dp"
+                            pos_hint: {"center_x": 0.5}
+                            theme_text_color: "Custom"
+                            text_color_normal: "black"
+                            text_color_focus: "black"
+                            line_color_normal: "orange"
+                            line_color_focus: "white"
+                            fill_color_normal: "grey"
+                            fill_color_focus: "white"
+
+                    Widget:
+                        size_hint_y: None
+                        height: dp(20)
+
+                    GridLayout:
+                        cols: 3
+                        size_hint_y: None
+                        height: dp(80)
+                        pos_hint: {"center_x": 0.5}
+                        spacing: "16dp"
+
+                        MDLabel:
+                            text: "Number of Trials"
+                            pos_hint: {"center_x": 0.4, "center_y": 0.5}
+
+                        MDSlider:
+                            id: slider
+                            min: 0
+                            max: 1e6
+                            step: 100000
+                            orientation: 'horizontal'
+                            size_hint_x: 0.85
+                            pos_hint: {"center_x": 0.75}
+                            height: dp(40)  # Increased height
+                            thumb_size: dp(24)  # Larger thumb size
+
+                        MDLabel:
+                            text: str(slider.value)
+
+                    MDTextField:
+                        id: sim_date_id
+                        mode: "rectangle"
+                        hint_text: "Sim Date"
+                        helper_text: "Pick the Date for Simulations"
+                        pos_hint: {'center_x': .5, 'center_y': .5}
+                        size_hint_x: .35
+                        icon_right: "calendar"
+                        on_focus: root.show_date_picker(self.focus)
+                        theme_text_color: "Custom"
+                        text_color_normal: "black"
+                        text_color_focus: "black"
+                        line_color_normal: "orange"
+                        line_color_focus: "white"
+                        fill_color_normal: "grey"
+                        fill_color_focus: "white"
+
+                    MDTextField:
+                        id: seed_id
+                        mode: "rectangle"
+                        hint_text: "Seed"
+                        helper_text: 'Choose your Simulation Seed'
+                        size_hint_x: 0.35
+                        pos_hint: {'center_x': .5, 'center_y': .5}
+                        theme_text_color: "Custom"
+                        text_color_normal: "black"
+                        text_color_focus: "black"
+                        line_color_normal: "orange"
+                        line_color_focus: "white"
+                        fill_color_normal: "grey"
+                        fill_color_focus: "white"
+
+                    MDDropDownItem:
+                        text: 'Model'
+                        pos_hint: {'center_x': .5, 'center_y': .5}
+
+                    GridLayout:
+                        cols: 1
+                        spacing: "16dp"
+                        size_hint_y: None
+                        height: self.minimum_height
+                        pos_hint: {"center_x": 0.5}
+
+                        GridLayout:
+                            cols: 3
+                            spacing: "8dp"
+                            size_hint_y: None
+                            height: dp(80)
+
+                            MDLabel:
+                                text: "Jump Parameter"
+                                pos_hint: {"center_x": 0.25, "center_y": 0.5}
+
+                            MDSlider:
+                                id: slider2
+                                min: 0.01
+                                max: 3.0
+                                step: 0.05
+                                orientation: 'horizontal'
+                                size_hint_x: 0.75
+                                pos_hint: {"center_x": 0.75}
+                                height: dp(40)  # Increased height
+                                thumb_size: dp(24)  # Larger thumb size
+
+                            MDLabel:
+                                text: str(round(slider2.value,4))
+                                pos_hint: {"center_x": 0.75, "center_y": 0.5}
+
+                        Widget:
+                            size_hint_y: None
+                            height: dp(8)
+
+                        GridLayout:
+                            cols: 3
+                            spacing: "8dp"
+                            size_hint_y: None
+                            height: dp(80)
+
+                            MDLabel:
+                                text: "Processes"
+                                pos_hint: {"center_x": 0.25, "center_y": 0.5}
+
+                            MDSlider:
+                                id: slider3
+                                min: 1
+                                max: 6
+                                step: 1
+                                orientation: 'horizontal'
+                                size_hint_x: 0.75
+                                pos_hint: {"center_x": 0.75}
+                                height: dp(40)  # Increased height
+                                thumb_size: dp(24)  # Larger thumb size
+
+                            MDLabel:
+                                text: str(slider3.value)
+                                pos_hint: {"center_x": 0.75, "center_y": 0.5}
+
+                MDSeparator:
+                    height: "10dp"
+                    color: [0, 0, 0, 1]
+
+                MDLabel:
+                    text: 'Research'
+                    font_size: "36sp"
+                    adaptive_size: True
+                    color: "grey"
+                    pos_hint: {"center_x": 0.5}
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                GridLayout:
+                    cols: 2
+                    size_hint_y: None
+                    height: self.minimum_height
+                    pos_hint: {"center_x": 0.5}
+                    padding: "24dp"
+                    spacing: "48dp"
+
+                    MDLabel:
+                        text: "Include Research"
+                        size_hint_x: None
+                        width: "120dp"
+                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                    MDSwitch:
+                        id: include_research_id
+                        active: False
+                        icon_active: "check"
+                        icon_inactive: "close"
+                        icon_active_color: "white"
+                        icon_inactive_color: "grey"
+                        pos_hint: {"center_y": 0.5}
+
+                GridLayout:
+                    cols: 1
+                    size_hint_x: .35
+                    pos_hint: {"center_x": .5, 'center_y': .5}
+                    spacing: dp(16)
+
+                    MDTextField:
+                        id: data_source_id
+                        mode: "rectangle"
+                        hint_text: 'Data'
+                        helper_text: "Custom Data List of Stocks"
+                        pos_hint: {'center_x': .5, 'center_y': .5}
+                        size_hint_x: .35
+                        theme_text_color: "Custom"
+                        text_color_normal: "black"
+                        text_color_focus: "black"
+                        line_color_normal: "orange"
+                        line_color_focus: "white"
+                        fill_color_normal: "grey"
+                        fill_color_focus: "white"
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                GridLayout:
+                    cols: 2
+                    size_hint_y: None
+                    height: self.minimum_height
+                    pos_hint: {"center_x": 0.5}
+                    padding: "24dp"
+                    spacing: "48dp"
+
+                    MDLabel:
+                        text: "Use Default"
+                        size_hint_x: None
+                        width: "120dp"
+                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                    MDSwitch:
+                        id: default_data_id
+                        active: False
+                        icon_active: "check"
+                        icon_inactive: "close"
+                        icon_active_color: "white"
+                        icon_inactive_color: "grey"
+                        pos_hint: {"center_y": 0.5}
+
+                MDTextField:
+                    id: min_price_id
+                    mode: "rectangle"
+                    hint_text: 'Minimum Price'
+                    helper_text: "Minimum Price of Research Stocks"
+                    pos_hint: {"center_x": .5, 'center_y': .5}
+                    size_hint_x: .35
+                    theme_text_color: "Custom"
+                    text_color_normal: "black"
+                    text_color_focus: "black"
+                    line_color_normal: "orange"
+                    line_color_focus: "white"
+                    fill_color_normal: "grey"
+                    fill_color_focus: "white"
+
+                MDTextField:
+                    id: max_price_id
+                    mode: "rectangle"
+                    hint_text: 'Maximum Price'
+                    helper_text: "Maximum Price of Research Stocks"
+                    pos_hint: {"center_x": .5, 'center_y': .5}
+                    size_hint_x: .35
+                    theme_text_color: "Custom"
+                    text_color_normal: "black"
+                    text_color_focus: "black"
+                    line_color_normal: "orange"
+                    line_color_focus: "white"
+                    fill_color_normal: "grey"
+                    fill_color_focus: "white"
+
+                GridLayout:
+                    cols: 3
+                    size_hint_y: None
+                    height: dp(80)
+                    pos_hint: {"center_x": 0.5}
+                    padding: "24dp"
+                    spacing: "48dp"
+
+                    MDLabel:
+                        text: "Number to Research"
+                        size_hint_x: None
+                        width: "200dp"
+                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                    MDSlider:
+                        id: slider4
+                        min: 10
+                        max: 200
+                        step: 20
+                        orientation: 'horizontal'
+                        pos_hint: {"center_x": 0.5}
+                        height: dp(40)  # Increased height
+                        thumb_size: dp(24)  # Larger thumb size
+
+                    MDLabel:
+                        text: str(slider4.value)
+
+                MDSeparator:
+                    height: "10dp"
+                    color: [0, 0, 0, 1]
+
+                MDLabel:
+                    text: 'Output'
+                    font_size: "36sp"
+                    adaptive_size: True
+                    color: "grey"
+                    pos_hint: {"center_x": 0.5}
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                GridLayout:
+                    cols: 1
+                    padding: dp(12)
+                    spacing: dp(12)
+                    size_hint_y: None
+                    height: self.minimum_height
+                    pos_hint: {"center_x": 0.5}
+
+                    MDTextField:
+                        id: output_id
+                        mode: "rectangle"
+                        hint_text: "Output"
+                        helper_text: 'Output Filename (.docx)'
+                        pos_hint: {"center_x": .5, 'center_y': .5}
+                        size_hint_x: .35
+                        theme_text_color: "Custom"
+                        text_color_normal: "black"
+                        text_color_focus: "black"
+                        line_color_normal: "orange"
+                        line_color_focus: "white"
+                        fill_color_normal: "grey"
+                        fill_color_focus: "white"
+
+                    MDTextField:
+                        id: email_id
+                        mode: "rectangle"
+                        hint_text: 'Email'
+                        helper_text: "Email to Send Report"
+                        pos_hint: {"center_x": .5, 'center_y': .5}
+                        size_hint_x: .35
+                        theme_text_color: "Custom"
+                        text_color_normal: "black"
+                        text_color_focus: "black"
+                        line_color_normal: "orange"
+                        line_color_focus: "white"
+                        fill_color_normal: "grey"
+                        fill_color_focus: "white"
+
+                    GridLayout:
+                        cols: 2
+                        size_hint_x: None
+                        width: "240dp"
+                        pos_hint: {"center_x": 0.5, "top": 1}
+
+                        CheckItem:
+                            id: same_as_user_id
+                            group: "root"
+                            pos_hint: {"center_y": 0.5}
+
+                        MDLabel:
+                            text: "Same as User"
+                            size_hint_x: None
+                            width: "180dp"
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                MDSeparator:
+                    height: "10dp"
+                    color: [0, 0, 0, 1]
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)

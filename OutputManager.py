@@ -1,6 +1,5 @@
 from docx import Document
 from docx.shared import Pt, RGBColor, Inches
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from datetime import datetime
 import smtplib
@@ -19,46 +18,102 @@ from tqdm import tqdm
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import ssl
-from docx.oxml.ns import nsdecls
-#from docx.oxml import register_namespace
+import re 
+
+# My Modules 
+from Model_Handler import Model_Handler
 
 logger = logging.getLogger(__name__)
-#register_namespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main')
 
-class WordPrinter:
-    _instance = None
 
-    def __new__(cls, filename):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._create_report_card()
-            if filename is not None:
-                if not filename.endswith(".docx"):
-                    cls._instance.filename = filename + ".docx"
-                else:
-                    cls._instance.filename = filename
-
-                cls._instance.filepath = pkg_resources.resource_filename('StockApp.output', cls._instance.filename)
-            cls._instance.doc = Document()
-
-        return cls._instance
+class Email:
+    def __init__(self, filename):
+        if not filename.endswith(".docx"):
+            self.filename = filename + ".docx"
+        else:
+            self.filename = filename
+        self.filepath = pkg_resources.resource_filename('output', self.filename)
 
     def __del__(self):
         pass
 
-    def _create_report_card(self):
-        # the report card is a dictionary data structure with every output for the report
-        self.report_card = {'filename':'', 'filepath':'',
-        'top_performers':[], 'table_sheet_name':'', 'figures':[] ,'best':'',
-        'total_stocks':0,'mse':0,'r_squared':0
-        } # add any additional report outputs to the report card
+    @property 
+    def filename(self):
+        return self._filename  
+    
+    @filename.setter 
+    def filename(self):
+        self.filename = self._filename 
 
-    def add_to_report_card(self, key, value):
-        self.report_card[key] = value
+    @property 
+    def filepath(self):
+        return self._filepath 
+    
+    @filepath.setter 
+    def filepath(self, value):
+        self._filepath = value 
 
-    def grab_report_card_value(self, key):
-        return self.report_card[key]
+    def email(self, email_to, smtp_username, smtp_password, email_subject, email_body, filename=None, smtp_server="smtp.gmail.com", smtp_port=587):
+        # Create a multipart message
+        if filename is None:
+            filename = self.filepath
 
+        msg = MIMEMultipart()
+        msg['From'] = smtp_username
+        msg['To'] = email_to
+        msg['Subject'] = email_subject
+
+        # Add body to email
+        msg.attach(MIMEText(email_body, 'plain'))
+
+        # Open and attach the file to the email
+        attachment = open(filename, "rb")
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        if filename is not None: 
+            part.add_header('Content-Disposition', f"attachment; filename= {filename}")
+            msg.attach(part)
+        # SSL context configuration
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        # Send the email
+        try:
+            # Connect to SMTP server and send email
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(smtp_username, smtp_password)
+                server.sendmail(smtp_username, email_to, msg.as_string())
+                print("Email Sent!")
+        except Exception as e:
+            print(f"Error sending email: {e}")
+
+class WordPrinter: # manager for anything printing to word doc 
+    _instance = None
+
+    def __new__(cls, filename, directory):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.init_instance(filename, directory)
+        return cls._instance
+
+    def init_instance(self, filename, directory):
+        if not filename.endswith(".docx"):
+            self.filename = filename + ".docx"
+        else:
+            self.filename = filename
+
+        self.filepath = pkg_resources.resource_filename(directory, self.filename)
+        self.doc = Document()
+
+    def __init__(self, filename, directory):
+        pass
+
+    def __del__(self):
+        pass
+    
     def write(self, content, font_size=12, font_name='Arial', bold=False, italic=False, underline=False, color=None, alignment=None):
         content = self.remove_invalid_characters(content)
         paragraph = self.doc.add_paragraph()
@@ -142,22 +197,6 @@ class WordPrinter:
                     for run in paragraph.runs:
                         run.font.size = Pt(6)
 
-        # Additional styling and adjustments can be uncommented and modified as needed
-
-        # Adjust column width and cell padding
-        # for row in table.rows:
-        #     for cell in row.cells:
-        #         cell_width = Pt(60)
-        #         self.set_column_width(cell, cell_width)
-        #         cell_margin = OxmlElement('w:tcMar')
-        #         cell_margin.set(qn('w:top'), '100')
-        #         cell_margin.set(qn('w:start'), '100')
-        #         cell_margin.set(qn('w:bottom'), '100')
-        #         cell_margin.set(qn('w:end'), '100')
-        #         cell._element.get_or_add_tcPr().append(cell_margin)
-
-        # Return or save the document as needed
-
     def set_column_width(self, cell, width):
         """
         Set the width of a table cell in a Word document.
@@ -167,106 +206,6 @@ class WordPrinter:
         - width: The width of the cell in points (Pt).
         """
         cell.width = width
-
-    def create_explanation_statement(self):
-        self.write("For each stock your requested models were applied to deliver two resulting metrics. "\
-        "Metric one, the Weighted Aggregate Merit or WAM is a simple weighted sum of the normalized performance measures."\
-        " The performance measures were normalized using the Yeo-Johnson power transformation due to the assumption that stocks do not behave normally.  "\
-        "The second performance metric, Supervised Aggregate Merit (SAM) was derived from a regression analysis with test size being 10 percent."\
-        " Stocks with a higher WAM and/or SAM are more likely to succeed than others."\
-        " Additionally, a Monte-Carlo Futures Price 'MCFP' was determined."\
-        " The simulation was conducted used an averaged Gaussian/Poisson-Gamma distribution."\
-        )
-
-    def create_document_heading(self):
-        # creates default document heading for montly reports
-        self.add_to_report_card('header', 'Stock Market Report Powered by Smart Stocks')
-        disclaimer = "DISCLAIMER: The creator referenced shall be known as Jacob E Bickus. " \
-        "The Application referenced shall be known as Smart Stocks. " \
-        "\nThe Content is for informational purposes only, you should not construe any such " \
-        "information or other material as legal, tax, investment, financial, or other advice."
-        "Nothing contained on the Application constitutes a solicitation, recommendation," \
-        " endorsement, or offer by the creator or any third party service provider to buy" \
-        " or sell any securities or other financial instruments in this or" \
-        " in in any other jurisdiction in which such solicitation or offer would be unlawful" \
-        " under the securities laws of such jurisdiction. All Content on this site is" \
-        " information of a general nature and does not address the circumstances of"\
-        " any particular individual or entity. Nothing in the Site constitutes professional"\
-        " and/or financial advice, nor does any information on the Site constitute a"\
-        " comprehensive or complete statement of the matters discussed or the law relating thereto."\
-        " The creator is not a fiduciary by virtue of any person’s use of or access to the Site or Content."\
-        " You alone assume the sole responsibility of evaluating the merits and risks associated with"\
-        " the use of any information or other Content on the Site before making any decisions based on such"\
-        " information or other Content. In exchange for using the Site, you agree not"\
-        " to hold the creator, its affiliates or any third party service provider liable"\
-        " for any possible claim for damages arising from any decision you make based"\
-        " on information or other Content made available to you through the Application."
-
-        self.add_to_report_card('disclaimer', disclaimer)
-        current_date_time = datetime.now()
-        current_date = current_date_time.date()
-        header_date = "Report Date: " + str(current_date)
-        self.add_to_report_card('date',header_date)
-        self.write(self.report_card['header'], font_size=24, bold=True, underline=True, alignment=WD_PARAGRAPH_ALIGNMENT.CENTER)
-        self.write(header_date, color=(128,0,0))
-        self.write(self.report_card['disclaimer'], font_size=8)
-        self.write("\nEXECUTIVE SUMMARY:")
-
-    def create_document_tables(self, user_list=None, research_list=None, top_perf=None, research_top=None, table_count=0):
-        if table_count == 4:
-            if top_perf is not None:
-                self.write_table(top_perf, "TABLE 1. User Top Performers")
-            if research_top is not None:
-                self.write_table(research_top, "TABLE 2. Research Top Performers")
-            if user_list is not None:
-                self.write_table(user_list, "TABLE 3. User Listed Stocks")
-            if research_list is not None:
-                self.write_table(research_list, "TABLE 4. Research Listed Stocks")
-        elif table_count == 2:
-            # if top_perf is not None:
-            #     self.write_table(top_perf, "TABLE 1. User Top Performers")
-            if research_top is not None:
-                self.write_table(research_top, "TABLE 1. Research Top Performers")
-            if user_list is not None:
-                self.write_table(user_list, "TABLE 2. User Listed Stocks")
-            if research_list is not None:
-                self.write_table(research_list, "TABLE 2. Research Listed Stocks")
-        else:
-            print(Fore.RED + "StockOutputManager::create_document_tables FATAL ERROR --> Table Count must equal 2 or 4." + Style.RESET_ALL)
-
-    def remove_invalid_characters(self, content):
-        return content.encode('ascii', 'ignore').decode('ascii')
-
-    def save(self):
-        self.doc.save(self.filepath)
-
-    # takes input stock name (str) and a list of figures (figure objs)
-    def add_plots_to_word(self, stock_name, figures):
-        logger.info(f"Creating {stock_name} Plots")
-        for figure in tqdm(figures, desc="Figures"):
-            if figure is not None:
-                self.doc.add_heading(stock_name, level=1)
-                temp_file = pkg_resources.resource_filename('StockApp.output', "figure.png")
-                figure.savefig(temp_file, bbox_inches='tight')
-                self.doc.add_picture(temp_file, width=Inches(6))
-                plt.close(figure)
-                os.remove(temp_file)
-                self.doc.add_page_break()
-            else:
-                logger.warning("Tried to Add NoneType Figure to Word doc. Skipping model figure.")
-        logger.info(f"{stock_name} Plots Created.")
-
-
-class OutputHandler:
-    def __init__(self, filename):
-        if not filename.endswith(".docx"):
-            self.filename = filename + ".docx"
-        else:
-            self.filename = filename
-        self.filepath = pkg_resources.resource_filename('StockApp.output', self.filename)
-
-    def __del__(self):
-        pass
 
     def convert_word_to_pdf(self):
         # Check if the Word document exists
@@ -289,63 +228,295 @@ class OutputHandler:
         # Save the PDF
         pdf.output(pdf_filename)
 
-    def email_file(self, email_to, smtp_username, smtp_password, filename=None, email_subject="Smart Stock Report", email_body="See attached.", smtp_server="smtp.gmail.com", smtp_port=587):
-        # Create a multipart message
-        if filename is None:
-            filename = self.filepath
+    def remove_invalid_characters(self, content):
+        return content.encode('ascii', 'ignore').decode('ascii')
 
-        msg = MIMEMultipart()
-        msg['From'] = smtp_username
-        msg['To'] = email_to
-        msg['Subject'] = email_subject
+    def save(self):
+        self.doc.save(self.filepath)
 
-        # Add body to email
-        msg.attach(MIMEText(email_body, 'plain'))
+    # takes input name (str) and a list of figures (figure objs)
+    def create_plots(self, name, figures):
+        logger.info(f"Creating {name} Plots")
+        if figures is not None:
+            for figure in tqdm(figures, desc="Figures"):
+                if figure is not None:
+                    self.doc.add_heading(name, level=1)
+                    temp_file = pkg_resources.resource_filename('output', "figure.png")
+                    figure.savefig(temp_file, bbox_inches='tight')
+                    self.doc.add_picture(temp_file, width=Inches(6))
+                    plt.close(figure)
+                    os.remove(temp_file)
+                    self.doc.add_page_break()
+                else:
+                    logger.warning("Tried to Add NoneType Figure to Word doc. Skipping model figure.")
+        else:
+            logger.warning("Tried to Add NoneType Figure to Word doc. Skipping model figure.")
+        
+        logger.info(f"{name} Plots Created.")
 
-        # Open and attach the file to the email
-        attachment = open(filename, "rb")
-        part = MIMEBase('application', 'octet-stream')
-        part.set_payload(attachment.read())
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', f"attachment; filename= {filename}")
-        msg.attach(part)
-        # SSL context configuration
-        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        context.minimum_version = ssl.TLSVersion.TLSv1_2
-        # Send the email
+class SmartStocksOutput(WordPrinter, Email):
+    def __new__(cls, filename, directory, *args, **kwargs):
+        return super(SmartStocksOutput, cls).__new__(cls, filename, directory)
+
+    def __init__(self, filename, directory, args):
+        WordPrinter.__init__(self, filename=filename, directory=directory)
+        Email.__init__(self, filename=filename)
+        self.args = args
+        self._filename = filename 
+        self._directory = directory 
+        self._args = args 
+        self._filepath = pkg_resources.resource_filename(directory, self.filename)
+        self._top_performers = None 
+        self._table_sheet_name = None 
+        self._figures = None 
+        self._total_stocks = None 
+        self._best = None 
+        self._mse = None 
+        self._r_squared = None 
+
+    def __del__(self):
+        pass 
+
+    @property 
+    def filename(self) -> str:
+        return self._filename 
+    
+    @filename.setter 
+    def filename(self, value):
+        self._filename = value 
+
+    @property 
+    def directory(self):
+        return self._directory 
+    
+    @directory.setter 
+    def directory(self, value):
+        self._directory = value 
+
+    @property 
+    def args(self):
+        return self._args 
+    
+    @args.setter 
+    def args(self, value):
+        self._args = value 
+
+    @property 
+    def filepath(self)-> str:
+        return self._filepath 
+    
+    @filepath.setter 
+    def filepath(self, value):
+        self._filepath = value 
+
+    @property 
+    def top_performers(self) -> pd.DataFrame:
+        return self._top_performers 
+    
+    @top_performers.setter 
+    def top_performers(self, value):
+        self._top_performers = value 
+
+    @property 
+    def table_sheet_name(self):
+        return self._table_sheet_name 
+    
+    @table_sheet_name.setter
+    def table_sheet_name(self, value):
+        self._table_sheet_name = value 
+
+    @property 
+    def figures(self) -> list:
+        return self._figures 
+    
+    @figures.setter
+    def figures(self, value):
+        self._figures = value 
+
+    @property 
+    def best(self):
+        return self._best  
+    
+    @best.setter
+    def best(self, value):
+        self._best = value 
+
+    @property 
+    def total_stocks(self) -> int:
+        return self._total_stocks 
+    
+    @total_stocks.setter 
+    def total_stocks(self, value):
+        self._total_stocks = value 
+        
+    @property 
+    def mse(self) -> float:
+        return self._mse  
+    
+    @mse.setter 
+    def mse(self, value):
+        self._mse = value 
+
+    @property
+    def r_squared(self) -> float:
+        return self._r_squared
+    
+    @r_squared.setter
+    def r_squared(self, value):
+        self._r_squared = value 
+
+    def smartstock_heading(self):
+        # creates default document heading for montly reports
+        disclaimer = "DISCLAIMER: The creator referenced shall be known as Jacob E Bickus. " \
+        "The Application referenced shall be known as Smart Stocks. " \
+        "\nThe Content is for informational purposes only, you should not construe any such " \
+        "information or other material as legal, tax, investment, financial, or other advice."
+        "Nothing contained on the Application constitutes a solicitation, recommendation," \
+        " endorsement, or offer by the creator or any third party service provider to buy" \
+        " or sell any securities or other financial instruments in this or" \
+        " in in any other jurisdiction in which such solicitation or offer would be unlawful" \
+        " under the securities laws of such jurisdiction. All Content on this site is" \
+        " information of a general nature and does not address the circumstances of"\
+        " any particular individual or entity. Nothing in the Site constitutes professional"\
+        " and/or financial advice, nor does any information on the Site constitute a"\
+        " comprehensive or complete statement of the matters discussed or the law relating thereto."\
+        " The creator is not a fiduciary by virtue of any persons use of or access to the Site or Content."\
+        " You alone assume the sole responsibility of evaluating the merits and risks associated with"\
+        " the use of any information or other Content on the Site before making any decisions based on such"\
+        " information or other Content. In exchange for using the Site, you agree not"\
+        " to hold the creator, its affiliates or any third party service provider liable"\
+        " for any possible claim for damages arising from any decision you make based"\
+        " on information or other Content made available to you through the Application."
+
+   
+        current_date_time = datetime.now()
+        current_date = current_date_time.date()
+        header_date = "Report Date: " + str(current_date)
+        self.write("Report Brought to you by SMART STOCKS created by Jacob E Bickus", font_size=36, bold=True, underline=True)
+        self.write(header_date, color=(128,0,0))
+        self.write(disclaimer, font_size=8)
+        self.write("\nEXECUTIVE SUMMARY:")
+
+    def smartstock_tables(self, user_list=None, research_list=None, top_perf=None, research_top=None, table_count=0):
+        if table_count == 4:
+            if top_perf is not None:
+                self.write_table(top_perf, "TABLE 1. User Top Performers")
+            if research_top is not None:
+                self.write_table(research_top, "TABLE 2. Research Top Performers")
+            if user_list is not None:
+                self.write_table(user_list, "TABLE 3. User Listed Stocks")
+            if research_list is not None:
+                self.write_table(research_list, "TABLE 4. Research Listed Stocks")
+        elif table_count == 2:
+            # if top_perf is not None:
+            #     self.write_table(top_perf, "TABLE 1. User Top Performers")
+            if research_top is not None:
+                self.write_table(research_top, "TABLE 1. Research Top Performers")
+            if user_list is not None:
+                self.write_table(user_list, "TABLE 2. User Listed Stocks")
+            if research_list is not None:
+                self.write_table(research_list, "TABLE 2. Research Listed Stocks")
+        else:
+            print(Fore.RED + "StockOutputManager::create_document_tables FATAL ERROR --> Table Count must equal 2 or 4." + Style.RESET_ALL)
+
+    def smartstock_explanation_statement(self):
+        self.write("For each stock your requested models were applied to deliver two resulting metrics. "\
+        "Metric one, the Weighted Aggregate Merit or WAM is a simple weighted sum of the normalized performance measures."\
+        " The performance measures were normalized using the Yeo-Johnson power transformation due to the assumption that stocks do not behave normally.  "\
+        "The second performance metric, Supervised Aggregate Merit (SAM) was derived from a regression analysis with test size being 10 percent."\
+        " Stocks with a higher WAM and/or SAM are more likely to succeed than others."\
+        " Additionally, a Monte-Carlo Futures Price 'MCFP' was determined."\
+        " The simulation was conducted used the Merton Jump Diffusion Model."\
+        )
+
+    def smartstock_plots(self, Stock_best, stock_df, stds_df, analysis, market_df=None, market_stds=None, market_data=None):
+        filename = ""
+        figures = []
+        if Stock_best is None:
+            logger.warning("No best stock was found. Skipping plotting.")
+            return
+
+        if self.filename.endswith(".docx"):
+            filename = self.filename.replace(".docx", ".png")
+            
+        filepath = pkg_resources.resource_filename(self.directory, filename)
+
+        # here the model handler will be based off the user's input for time_delta
+        number_one_model = Model_Handler(Stock_list=Stock_best, market_data=market_data, risk_free_rate=analysis.risk_free_rate, args=self.args)
+        number_one_model.pass_futures_data(stock_df, stds_df)
+        number_one_model.pass_futures_market_data(market_df, market_stds)
+        #number_one_model.pass_market_stock(market_index.index)
+
+        if self.args.simulations > 0:
+            number_one_model.add_all_plotting_models(True)
+        else:
+            number_one_model.add_all_plotting_models(False)
+
+        figures = number_one_model.plot_catcher(filepath)
+
+        return figures
+    
+    def write_to_excel(self, df, sheet_name, data_w_dates=False): 
+        if df is None:
+            logger.warning(Fore.YELLOW + "Write To excel received nonetype (empty) dataframe." + Style.RESET_ALL)
+            return 
+        
+        if data_w_dates:
+            df = SmartStocksOutput.make_dates_timezone_unaware(df)
+
+        # Define the file path
+        if self.args.output.endswith(".docx"):
+            filename = self.args.output.replace(".docx", ".xlsx")
+        else:
+            filename = self.args.output + ".xlsx"
+
+        filepath = pkg_resources.resource_filename(self.directory, filename)
+        
         try:
-            # Connect to SMTP server and send email
-            with smtplib.SMTP(smtp_server, smtp_port) as server:
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-                server.login(smtp_username, smtp_password)
-                server.sendmail(smtp_username, email_to, msg.as_string())
-                print("Email Sent!")
-        except Exception as e:
-            print(f"Error sending email: {e}")
-
-    def write_table(self, content, heading, output_file):
-        # Creates a table in a word document from a pandas dataframe (content)
-        content = content.astype(str)
-        doc = Document()
-        doc.add_heading(heading, level=1)
-        table = doc.add_table(rows=content.shape[0] + 1, cols=content.shape[1] - 1)  # Adjust cols to skip first column
-
-        # Set column headers, skipping the first column
-        for i, column in enumerate(content.columns[1:], start=1):
-            table.cell(0, i - 1).text = str(column)
-
-        # Populate table with data, skipping the first column
-        for index, row in content.iterrows():
-            for i, value in enumerate(row[1:], start=1):
+            # Check if the file already exists and is a valid Excel file
+            if os.path.exists(filepath):
+                with pd.ExcelWriter(filepath, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+                    # Write the DataFrame to the specified sheet
+                    logger.warning(Fore.YELLOW + f"Replacing data in {filepath}" + Style.RESET_ALL)
+                    df.to_excel(writer, index=True, sheet_name=sheet_name)
+            else:
                 try:
-                    # Try to convert value to string
-                    table.cell(index + 1, i - 1).text = str(value)
+                    # Create a new workbook and write the DataFrame to it
+                    with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+                        df.to_excel(writer, index=True, sheet_name=sheet_name)
+                        
                 except Exception as e:
-                    # If conversion fails, handle the error
-                    error_msg = f"Error converting value at index {index}, column {content.columns[i]}: {e}"
-                    print(error_msg)
-                    table.cell(index + 1, i - 1).text = ""  # Set empty string if conversion fails
+                    logger.exception(Fore.RED + f"An error occuring while writing to sheet {sheet_name} in new file {filepath}. Error: {e}." + Style.RESET_ALL)
+                    logger.warning(Fore.YELLOW + "Printing dataframe..." + Style.RESET_ALL)
+                    logger.warning(df)
 
-        doc.save(output_file)
+        except KeyError as e:
+            if "[Content_Types].xml" in str(e):
+                logger.error(Fore.RED + f"File {filepath} is corrupt or not a valid Excel file. Creating a new file." + Style.RESET_ALL)
+                # Create a new workbook and write the DataFrame to it
+                with pd.ExcelWriter(filepath, engine='openpyxl') as writer:
+                    df.to_excel(writer, index=True, sheet_name=sheet_name)
+        except Exception as e:
+            logger.exception(Fore.RED + f"An error occurred while writing to Excel: {e}" + Style.RESET_ALL)
+
+    @staticmethod 
+    def make_dates_timezone_unaware(df):
+        # Check if the index is datetime and has timezone info
+        if isinstance(df.index, pd.DatetimeIndex):
+            if df.index.tz is not None:
+                df.index = df.index.tz_localize(None)
+
+        return df 
+    
+    def savefig(self, fig):
+        filename = SmartStocksOutput.replace_pattern(self.filename, ".png")
+        filepath = pkg_resources.resource_filename(self.directory, filename)
+        fig.savefig(filepath)
+        logger.info(Fore.GREEN + f"Figure saved to {filepath}" + Style.RESET_ALL)
+    @staticmethod
+    def replace_pattern(input_string, replacement):
+        # Define the regex pattern to match .*
+        pattern = r'\..*'
+        # Use re.sub to replace the pattern with the replacement string
+        result = re.sub(pattern, replacement, input_string)
+        return result

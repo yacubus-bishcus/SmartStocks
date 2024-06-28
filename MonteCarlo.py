@@ -4,12 +4,18 @@ from scipy.optimize import minimize
 from scipy.special import gammaln
 import multiprocessing as mp
 import logging
+import pandas as pd 
+from tqdm import tqdm
 
+# MY Modules
+from Simulation_Analysis import Simulation_Analysis
+from Models import MACD 
 
 logger = logging.getLogger(__name__)
 
-class MonteCarlo:
-    def __init__(self, data, num_simulations, sim_time, processes=1, jump_param=1., apply_function=None):
+class MonteCarlo(Simulation_Analysis):
+    def __init__(self, data, num_simulations, sim_time, history_time, processes=1, jump_param=1., apply_function=None):
+        super().__init__()
         self.data = data
         self.num_simulations = num_simulations
         self.sim_time = sim_time
@@ -17,15 +23,20 @@ class MonteCarlo:
         self.apply_function = apply_function
         self.initial_condition = None
         self.jump_threshold = None
-        self.jump_threshold_parameter = jump_param
+        self.jump_threshold_parameter = jump_param # amount in standard deviations that the user qualifies as a "jump"
         self.jumps = None
+        self.jump_intensity = None 
+        self.num_days = history_time # this is the model_period typically ran at 30 days 
 
     def __del__(self):
         pass
 
-    # Calculating the intial condition allows for two parameters to be set to
-    # 'fix' the data according to your simulation the function to set your
-    # paramaters is a method in your own code
+    """ Calculating the intial condition allows for two parameters to be set to
+    'fix' the data according to your simulation the function to set your
+    paramaters is a method in your own code.
+    jump_threshold_parameter := The standard deviations that the user qualifies as a "Jump". 
+    jumps is 
+    """
 
     def calculate_initial_condition(self, data_keys):
         processed_data = self.apply_function(self.data)
@@ -33,6 +44,9 @@ class MonteCarlo:
         self.initial_condition = param1[-1]
         self.jump_threshold = self.jump_threshold_parameter * np.std(param1)
         self.jumps = np.abs(param1[param2 > self.jump_threshold])
+        num_jumps = len(self.jumps)
+        self.jump_intensity = num_jumps/self.num_days # lambda 
+
 
     def apply_function(self, func):
         try:
@@ -42,63 +56,215 @@ class MonteCarlo:
             logger.exception(f"Error occuring while applying function: {e}")
             return None
 
-    def execute_normal_simulation_with_mp(self, drift, volatility):
-        # Multiprocessing only likes local variables
+    def execute_normal_simulation_with_mp(self, 
+                                          drift, 
+                                          volatility, 
+                                          interval_minutes, 
+                                          average_reduction, 
+                                          bull, 
+                                          bear, 
+                                          min_cap, 
+                                          max_cap,
+                                          incremental_adjustment_steps):
+        # Multiprocessing only works with static methods/properties 
         initial_condition = self.initial_condition
         sim_time = self.sim_time
         num_simulations = self.num_simulations
         processes = self.processes
-
-        jump_mean = np.mean(self.jumps) if len(self.jumps) > 0 else 0.
-        jump_std = np.std(self.jumps) if len(self.jumps) > 0 else 0.
-
-        simulations = np.zeros((self.num_simulations, self.sim_time))
-
+        jumps = self.jumps 
+        jump_intensity = self.jump_intensity
+        # Define the number of intervals per day
+        intervals_per_day = int(24 * 60 / interval_minutes)
+        total_intervals = sim_time * intervals_per_day
+        logger.info(f"Total Intervals to Simulate: {total_intervals}")
+        logger.info(f"Jump Intensity: {jump_intensity}")
+        # assign the small time difference 
+        dt = 1 / intervals_per_day
+        # Calculate jump mean and std
+        jump_mean = np.mean(jumps) if len(jumps) > 0 else 0.
+        jump_std = np.std(jumps) if len(jumps) > 0 else 0.
+        
+        # Initialize the simulations array
+        simulations_chunk = np.zeros((self.num_simulations, total_intervals))
         pool = mp.Pool(processes=processes)
-        chunk_size = num_simulations // processes
-        chunks = [(simulations[i:i + chunk_size], sim_time, initial_condition, drift, volatility, jump_mean, jump_std)
-                  for i in range(0, num_simulations, chunk_size)]
-
+        chunk_size = (num_simulations + processes - 1) // processes  # Ensure all chunks are the same size
+        # Create a list of arguments for each chunk
+        chunks = [(min(chunk_size, num_simulations - i * chunk_size), jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, average_reduction, bull, bear, min_cap, max_cap, incremental_adjustment_steps)
+                  for i in range(processes)]
         results = pool.starmap(self.normal_simulation_worker, chunks)
         pool.close()
         pool.join()
 
         # Assemble results into the simulations array
-        for i, result in enumerate(results):
-            simulations[i*chunk_size:(i+1)*chunk_size, :] = result
+        start_index = 0
+        for result in results:
+            end_index = start_index + result.shape[0]
+            simulations_chunk[start_index:end_index, :] = result
+            start_index = end_index
 
-        return simulations
+        # Calculate mean and standard deviation for each interval
+        interval_means = np.mean(simulations_chunk, axis=0)
+        interval_stds = np.std(simulations_chunk, axis=0)
+
+        return interval_means, interval_stds
 
 
     @staticmethod
-    def normal_simulation_worker(simulations_chunk, sim_time, initial_condition, drift, volatility, jump_mean, jump_std):
-        for sim in range(simulations_chunk.shape[0]):
+    def normal_simulation_worker(chunk_size, 
+                                 jump_intensity, 
+                                 dt, 
+                                 total_intervals, 
+                                 initial_condition, 
+                                 drift, volatility, 
+                                 jump_mean, 
+                                 jump_std, 
+                                 average_reduction, 
+                                 bull, 
+                                 bear, 
+                                 min_cap, 
+                                 max_cap,
+                                 incremental_adjustment_steps):
+        # incremental adjustment steps is the Number of intervals over which to spread the adjustment
+        bull_increment = bull / incremental_adjustment_steps
+        bear_increment = bear / incremental_adjustment_steps
+        average_reduction_increment = average_reduction / incremental_adjustment_steps
+        simulations_chunk = np.zeros((chunk_size, total_intervals))
+
+        for sim in tqdm(range(chunk_size), desc="Trials",mininterval=120, maxinterval=3600):
             data = [initial_condition]
-            for _ in range(sim_time):
-                result = np.random.normal(drift, volatility)
-                jump = np.random.normal(jump_mean, jump_std)
-                shock = result + jump
-                next_result = data[-1] * (1 + shock)
+            pending_bull_adjustments = 0
+            pending_bear_adjustments = 0
+            pending_reduction_adjustments = 0
+            for _ in range(total_intervals):
+                # Standard GBM component
+                normal_shock = np.random.normal(drift * dt, volatility * np.sqrt(dt))
+                
+                # Jump component
+                num_jumps = np.random.poisson(jump_intensity * dt)
+                jump_shock = np.sum(np.random.normal(jump_mean, jump_std, num_jumps))
+                
+                # Combine both components
+                shock = normal_shock + jump_shock
+                next_result = data[-1] * np.exp(shock)
+                next_result = max(min(next_result, max_cap), min_cap)
                 data.append(next_result)
+            # HEAD AND SHOULDERS ADJUSTMENT     
+            # Detect Head and Shoulders pattern in the simulated data
+            patterns, _ = Simulation_Analysis.detect_head_and_shoulders(data)
+            # Adjust prices based on detected patterns
+            for i in range(1, len(data)):
+                if pending_reduction_adjustments > 0:
+                    data[i] *= (1 - average_reduction_increment)
+                    pending_reduction_adjustments -= 1
+                if patterns[i] == 1:
+                    pending_reduction_adjustments = incremental_adjustment_steps
+            # MACD ADJUSTMENT 
+            # Convert data to pandas Series for MACD calculation
+            data_series = pd.Series(data)
+            macd_line, signal_line, _ = MACD.calculate_model(data_series)
+
+            for i in range(1, len(data)):
+                if pending_bull_adjustments > 0:
+                    data[i] *= (1 + bull_increment)
+                    pending_bull_adjustments -= 1
+                if pending_bear_adjustments > 0:
+                    data[i] *= (1 - bear_increment)
+                    pending_bear_adjustments -= 1
+
+                if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
+                    pending_bull_adjustments = incremental_adjustment_steps
+                elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
+                    pending_bear_adjustments = incremental_adjustment_steps
+
             simulations_chunk[sim, :] = data[1:]
+
 
         return simulations_chunk
 
-    def execute_normal_simulation(self, drift, volatility):
+    def execute_normal_simulation(self, 
+                                  drift, 
+                                  volatility, 
+                                  interval_minutes, 
+                                  average_reduction, 
+                                  bull, 
+                                  bear, 
+                                  min_cap, 
+                                  max_cap,
+                                  incremental_adjustment_steps):
+        # Define the number of intervals per day
+        intervals_per_day = int(24 * 60 / interval_minutes)
+        total_intervals = self.sim_time * intervals_per_day
+        logger.info(f"Total Intervals to Simulate: {total_intervals}")
+        # assign the small time difference 
+        dt = 1 / intervals_per_day
+        # Calculate jump mean and std
         jump_mean = np.mean(self.jumps) if len(self.jumps) > 0 else 0.
         jump_std = np.std(self.jumps) if len(self.jumps) > 0 else 0.
-        simulations = np.zeros((self.num_simulations, self.sim_time))
-        for sim in range(self.num_simulations):
-            data = [self.initial_condition]
-            for _ in range(self.sim_time):
-                result = np.random.normal(drift, volatility)
-                jump = np.random.normal(jump_mean, jump_std)
-                shock = result + jump
-                next_result = data[-1] * (1 + shock)
-                data.append(next_result)
-            simulations[sim, :] = data[1:]
+        # Initialize the simulations array
+        simulations = np.zeros((self.num_simulations, total_intervals))
+        # for debugging easier to work with local variables 
+        initial_condition = self.initial_condition 
+        jump_intensity = self.jump_intensity
+        logger.info(f"Jump Intensity: {jump_intensity}")
+        # incremental adjustment steps is the Number of intervals over which to spread the adjustment
+        bull_increment = bull / incremental_adjustment_steps
+        bear_increment = bear / incremental_adjustment_steps
+        average_reduction_increment = average_reduction / incremental_adjustment_steps
 
-        return simulations
+        for sim in tqdm(range(self.num_simulations), desc="Trials", mininterval=120, maxinterval=3600):
+            data = [initial_condition]
+            pending_bull_adjustments = 0
+            pending_bear_adjustments = 0
+            pending_reduction_adjustments = 0
+            for _ in range(total_intervals):
+                # Standard GBM component
+                normal_shock = np.random.normal(drift * dt, volatility * np.sqrt(dt))
+                
+                # Jump component
+                num_jumps = np.random.poisson(jump_intensity * dt)
+                jump_shock = np.sum(np.random.normal(jump_mean, jump_std, num_jumps))
+                
+                # Combine both components
+                shock = normal_shock + jump_shock
+                next_result = data[-1] * np.exp(shock)
+                # Apply min and max cap
+                next_result = max(min(next_result, max_cap), min_cap)
+                data.append(next_result)
+            # HEAD AND SHOULDERS ADJUSTMENT     
+            # Detect Head and Shoulders pattern in the simulated data
+            patterns, _ = Simulation_Analysis.detect_head_and_shoulders(data)
+            # Adjust prices based on detected patterns
+            for i in range(1, len(data)):
+                if pending_reduction_adjustments > 0:
+                    data[i] *= (1 - average_reduction_increment)
+                    pending_reduction_adjustments -= 1
+                if patterns[i] == 1:
+                    pending_reduction_adjustments = incremental_adjustment_steps
+            # MACD ADJUSTMENT 
+            # Convert data to pandas Series for MACD calculation
+            data_series = pd.Series(data)
+            macd_line, signal_line, _ = MACD.calculate_model(data_series)
+
+            for i in range(1, len(data)):
+                if pending_bull_adjustments > 0:
+                    data[i] *= (1 + bull_increment)
+                    pending_bull_adjustments -= 1
+                if pending_bear_adjustments > 0:
+                    data[i] *= (1 - bear_increment)
+                    pending_bear_adjustments -= 1
+
+                if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
+                    pending_bull_adjustments = incremental_adjustment_steps
+                elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
+                    pending_bear_adjustments = incremental_adjustment_steps
+
+            
+            simulations[sim, :] = data[1:]
+        # Calculate mean and standard deviation for each interval
+        interval_means = np.mean(simulations, axis=0)
+        interval_stds = np.std(simulations, axis=0)
+            
+        return interval_means, interval_stds
 
     def execute_poisson_gamma_simulation_with_mp(self):
         initial_condition = self.initial_condition
@@ -146,7 +312,7 @@ class MonteCarlo:
 
         # Assemble results into the simulations array
         for i, result in enumerate(results):
-          simulations[i*chunk_size:(i+1)*chunk_size, :] = result
+            simulations[i*chunk_size:(i+1)*chunk_size, :] = result
 
         return simulations
 
@@ -209,7 +375,6 @@ class MonteCarlo:
             simulations_chunk[sim, :] = data[1:]
 
         return simulations_chunk
-
 
     def gamma_log_likelihood(self, params, jumps):
         alpha, beta = params
