@@ -704,7 +704,7 @@ class CompareStocks:
 ## -----------------------------------------------------------------------------------------##
 
 class DataAnalysis:
-    def __init__(self, directory=None, files=None, sheet_name=None):
+    def __init__(self, directory=None, files=[], sheet_name=None):
         if directory is None:
             # Get the current working directory
             current_directory = os.getcwd()
@@ -751,7 +751,7 @@ class DataAnalysis:
     def files(self):
         return self._files
     
-    @files.setter 
+    @files.setter # example use object.files = (test*sims.xlsx, [1,2,3,4])
     def files(self, value):
         base_filename, numbers = value 
         filenames = []
@@ -759,8 +759,11 @@ class DataAnalysis:
             complete_filename = base_filename.replace('*', str(number))
             filenames.append(complete_filename)
         
-        self._files = filenames 
+        self._files.append(filenames) 
     
+    def reset_files(self):
+        self._files = [] 
+
     @directory.setter 
     def directory(self, value):
         self._directory = value 
@@ -768,7 +771,7 @@ class DataAnalysis:
     def read_table(self, sheet_name):
         df_list = []
         for filename in self.files:
-            filepath = os.path.join(self.directory, filename)
+            filepath = os.path.join(self.directory, filename[0])
             try:
                 df = pd.read_excel(filepath, sheet_name=sheet_name)
             except Exception as e:
