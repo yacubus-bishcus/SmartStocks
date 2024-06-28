@@ -112,7 +112,12 @@ class Stock: # takes a Ticker Object and makes it into a Stock Object
 
 
             df = stock.history(period=self._period, interval=self._interval)[['Open','High','Low','Close']]
-            df.index = df.index.tz_localize(None)
+            try:
+                df.index = df.index.tz_localize(None)
+            except Exception as e:
+                logger.exception(Fore.RED + f"Error Setting Stock Index {e}" + Style.RESET_ALL)
+                logger.info("Printing History: ")
+                logger.info(df)
             self._history = df 
         
 

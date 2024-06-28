@@ -37,7 +37,7 @@ class ArgsParser:
         self.parser.add_argument('--data',                nargs='+', help='Import Research Ticker Data from list of files. Default is nasdaqlisted.txt and otherlisted.txt', required=False, default=['nasdaqlisted.txt', 'otherlisted.txt'])
         self.parser.add_argument('-d',                    action='store_true', help='Debugging mode for developing', required=False, default=False)
         self.parser.add_argument('-e',                    action='store_true', help='Email Outfile to provided email.', required=False)
-        self.parser.add_argument('--h_s_window',          type=int, help='Head and Shoulders Reduction method window size measured in intervals of X. Default=20', required=False, default=20)
+        self.parser.add_argument('--h_s_window',          type=int, help='Head and Shoulders Reduction method window size measured in intervals of X. Default=40', required=False, default=40)
         self.parser.add_argument('--import_model_class',  nargs='+', help='Input the class name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
         self.parser.add_argument('--import_model_module', nargs='+', help='Input the module name to import your own finance model. WARNING: User Code may not be compatible.', required=False)
         self.parser.add_argument('--input',               type=str, help='Input File Path to Read Stock Tickers', required=False)
@@ -106,21 +106,26 @@ class ArgsParser:
 
         # If importing own finance model you MUST input a Module name and class name
         if self.args.import_model_class is not None != self.args.import_model_module is None:
-            logger.error(Fore.YELLOW + "USER INPUT ERROR: If importing own finance model must input both a module name and a class name." + Style.RESET_ALL)
+            logger.error(Fore.RED + "USER INPUT ERROR: If importing own finance model must input both a module name and a class name." + Style.RESET_ALL)
             return False
 
         # Number to Research must be at least 1 greater than number to highlight
         if self.args.number_to_research < (self.args.number_to_highlight + 1):
-            logger.error(Fore.YELLOW + "USER INPUT ERROR: Number to Research must be at least 1 greater than number to highlight." + Style.RESET_ALL)
+            logger.error(Fore.RED + "USER INPUT ERROR: Number to Research must be at least 1 greater than number to highlight." + Style.RESET_ALL)
             return False
 
         if self.args.min_price > self.args.max_price:
-            logger.error(Fore.YELLOW + f"USER ERROR: Minimum Price {self.args.min_price} Set Higher than Maximum Price {self.args.max_price}." + Style.RESET_ALL)
+            logger.error(Fore.RED + f"USER ERROR: Minimum Price {self.args.min_price} Set Higher than Maximum Price {self.args.max_price}." + Style.RESET_ALL)
             return False 
         
         if self.args.processes > mp.cpu_count():
-            logger.warning("Requested more processors than you have, defaulting to all processors.")
+            logger.warning(Fore.YELLOW + "Requested more processors than you have, defaulting to all processors." + Style.RESET_ALL)
             self.args.processes = mp.cpu_count()
+
+        if self.args.model_period in ['3mo','6mo','1y','2y','5y','10y','ytd']:
+            if self.args.model_interval in ['1m','2m','5m','15m','30m']:
+                logger.error(Fore.RED + f"USER INPUT ERROR: Model Period greater than 1mo cannot use intervals < 60m" + Style.RESET_ALL)
+                return False 
 
         return True
     

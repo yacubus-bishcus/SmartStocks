@@ -1,6 +1,5 @@
 # Imported Modules
 import pandas as pd
-from datetime import datetime
 import logging
 import matplotlib.pyplot as plt
 import random
@@ -10,36 +9,29 @@ import threading
 
 # Kivy Imported Modules
 from kivy.uix.boxlayout import BoxLayout
-from kivymd.uix.tooltip import MDTooltip
 from kivymd.uix.behaviors import HoverBehavior
 from kivymd.uix.button import MDIconButton
-from kivy.properties import StringProperty, ObjectProperty
-from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.properties import StringProperty
 from kivy.uix.button import Button
 from kivy.clock import Clock
 from kivy.uix.switch import Switch
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.behaviors import ButtonBehavior
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivymd.uix.screen import MDScreen
-from kivy.uix.checkbox import CheckBox
 from kivy.uix.image import Image
 from kivy.uix.floatlayout import FloatLayout
-from kivy.graphics import Color, Line, Rectangle, InstructionGroup
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.widget import Widget
-from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
+from kivy_garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.uix.spinner import Spinner
-from kivy.uix.relativelayout import RelativeLayout
 from kivy.core.window import Window
-from kivy.lang import Builder
+
 # My Imported Modules
-from SmartStocksInputManager import StockInputManager
+from SmartStocksInputManager import SmartStocksInputManager
 from ArgsParser import ArgsParser
-from customoptions import CustomCheckBox, BackgroundColorBoxLayout
+from app_design.customoptions import CustomCheckBox, BackgroundColorBoxLayout
 from Models import RSI, FIBONACCI, STOCHASTIC, MACD
-from SmartStocksStock import MyStock
+from SmartStocksStock import Stock 
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -224,7 +216,7 @@ class CompareStocksScreen(MDScreen):
             # Add your keep plots logic here
 
     def compare_daily(self, instance):
-        input_instance = StockInputManager(True)
+        input_instance = SmartStocksInputManager()
         parser = ArgsParser()
         args = None
         ticker_list = [ticker.strip() for ticker in self.stock1_input.text.split(',')]  # Assuming tickers are comma-separated
@@ -264,7 +256,7 @@ class CompareStocksScreen(MDScreen):
         #self.manager.current = 'compare_stocks_output'
 
     def compare_50day(self, instance):
-        input_instance = StockInputManager(True)
+        input_instance = SmartStocksInputManager(True)
         parser = ArgsParser()
         args = None
         ticker_list = [ticker.strip() for ticker in self.stock1_input.text.split(',')]  # Assuming tickers are comma-separated
@@ -303,7 +295,7 @@ class CompareStocksScreen(MDScreen):
         self.manager.current = 'compare_stocks_output'
 
     def compare_200day(self, instance):
-        input_instance = StockInputManager(True)
+        input_instance = SmartStocksInputManager(True)
         parser = ArgsParser()
         args = None
         ticker_list = [ticker.strip() for ticker in self.stock1_input.text.split(',')]  # Assuming tickers are comma-separated
@@ -396,7 +388,7 @@ class CompareStocksOutputScreen(MDScreen):
 
     def update_output(self, output_text, recommendation_info, plot_data, stocks, indexes, model, time_period='1mo'):
         try:
-            my_stocks = [MyStock(stock, time_period=time_period) for stock in stocks]
+            my_stocks = [Stock(stock, time_period=time_period) for stock in stocks]
             stock_info_string = f"{my_stocks[0].name} ({my_stocks[0].symbol})  ${my_stocks[0].price} ({round(my_stocks[0].daily_percent, 2)})"
 
             # Determine color based on daily percent value

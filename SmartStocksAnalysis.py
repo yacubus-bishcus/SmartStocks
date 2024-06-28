@@ -388,7 +388,8 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                                                                                     bull=avg_bull_adj,
                                                                                     bear=avg_bear_adj,
                                                                                     min_cap=min_cap,
-                                                                                    max_cap=max_cap)
+                                                                                    max_cap=max_cap,
+                                                                                    incremental_adjustment_steps=self.args.incremental_steps)
             # elif self.args.simulation_model == "poisson-gamma":
             #     simulated_price = monte.execute_poisson_gamma_simulation_with_mp()
         else:
@@ -412,7 +413,6 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         return sim_df, std_df # returns just one price per interval
 
     def pull_top_performers(self, df, tickers, filter=3):
-        top_history_df = pd.DataFrame()
         if len(tickers) >= filter:
             try:
                 top_performers = df.nlargest(filter, 'WAM') # finds the stock with the largest WAM
@@ -436,7 +436,6 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         return top_df, top_df_tickers
 
     def pull_worst_performers(self, df, tickers, filter=3):
-        low_history_df = pd.DataFrame()
         if len(tickers) > filter:
             try:
                 low_performers = df.nsmallest(filter, 'WAM') # finds the stock with the smallest WAM

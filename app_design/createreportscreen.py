@@ -5,20 +5,16 @@ from datetime import datetime
 
 # Kivy Imported Modules
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.textfield import MDTextField
-from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivy.properties import StringProperty, ObjectProperty, ListProperty, BooleanProperty
+from kivy.properties import StringProperty, ObjectProperty, BooleanProperty
 from kivymd.uix.button import MDRaisedButton
-from kivy.base import runTouchApp
-from kivy.app import App
 from kivy.metrics import dp
 from kivy.clock import Clock
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.pickers.datepicker import MDDatePicker
 
 # My Imported Modules
-from SmartStocksInputManager import StockInputManager
+from SmartStocksInputManager import SmartStocksInputManager
 from ArgsParser import ArgsParser
 
 logger = logging.getLogger(__name__)
@@ -247,25 +243,25 @@ class CreateReportScreen(MDScreen):
     def get_model_time_value(self, model_time):
         logger.info(f"Model Time Value {model_time}")
         if model_time == "1d":
-            self.model_time = "--model_time_delta 1d"
+            self.model_time = "--model_period 1d"
             return self.model_time
         elif model_time == "5d":
-            self.model_time = "--model_time_delta 5d"
+            self.model_time = "--model_period 5d"
             return self.model_time
         elif model_time == "1mo":
-            self.model_time = "--model_time_delta 1mo"
+            self.model_time = "--model_period 1mo"
             return self.model_time
         elif model_time == "3mo":
-            self.model_time = "--model_time_delta 3mo"
+            self.model_time = "--model_period 3mo"
             return self.model_time
         elif model_time == "6mo":
-            self.model_time = "--model_time_delta 6mo"
+            self.model_time = "--model_period 6mo"
             return self.model_time
         elif model_time == "1y":
-            self.model_time = "--model_time_delta 1y"
+            self.model_time = "--model_period 1y"
             return self.model_time
         elif model_time == "ytd":
-            self.model_time = "--model_time_delta ytd"
+            self.model_time = "--model_period ytd"
             return self.model_time
         else:
             return ""
@@ -411,7 +407,7 @@ class CreateReportScreen(MDScreen):
     def calculate(self):
         logger.info("Calculate button pressed")
         ticker_value = self.get_ticker_value()
-        input_instance = StockInputManager(True)
+        input_instance = SmartStocksInputManager()
         parser = ArgsParser()
         args = None
         ticker_list = [ticker.strip() for ticker in ticker_value.split(',')]  # Assuming tickers are comma-separated

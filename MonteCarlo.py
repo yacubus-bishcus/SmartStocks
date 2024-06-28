@@ -64,18 +64,20 @@ class MonteCarlo(Simulation_Analysis):
                                           bull, 
                                           bear, 
                                           min_cap, 
-                                          max_cap):
+                                          max_cap,
+                                          incremental_adjustment_steps):
         # Multiprocessing only works with static methods/properties 
-        macd = MACD()
         initial_condition = self.initial_condition
         sim_time = self.sim_time
         num_simulations = self.num_simulations
         processes = self.processes
         jumps = self.jumps 
         jump_intensity = self.jump_intensity
-         # Define the number of intervals per day
+        # Define the number of intervals per day
         intervals_per_day = int(24 * 60 / interval_minutes)
         total_intervals = sim_time * intervals_per_day
+        logger.info(f"Total Intervals to Simulate: {total_intervals}")
+        logger.info(f"Jump Intensity: {jump_intensity}")
         # assign the small time difference 
         dt = 1 / intervals_per_day
         # Calculate jump mean and std
@@ -87,7 +89,7 @@ class MonteCarlo(Simulation_Analysis):
         pool = mp.Pool(processes=processes)
         chunk_size = (num_simulations + processes - 1) // processes  # Ensure all chunks are the same size
         # Create a list of arguments for each chunk
-        chunks = [(min(chunk_size, num_simulations - i * chunk_size), jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, average_reduction, bull, bear, min_cap, max_cap)
+        chunks = [(min(chunk_size, num_simulations - i * chunk_size), jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, average_reduction, bull, bear, min_cap, max_cap, incremental_adjustment_steps)
                   for i in range(processes)]
         results = pool.starmap(self.normal_simulation_worker, chunks)
         pool.close()
@@ -120,10 +122,19 @@ class MonteCarlo(Simulation_Analysis):
                                  bull, 
                                  bear, 
                                  min_cap, 
-                                 max_cap):
+                                 max_cap,
+                                 incremental_adjustment_steps):
+        # incremental adjustment steps is the Number of intervals over which to spread the adjustment
+        bull_increment = bull / incremental_adjustment_steps
+        bear_increment = bear / incremental_adjustment_steps
+        average_reduction_increment = average_reduction / incremental_adjustment_steps
         simulations_chunk = np.zeros((chunk_size, total_intervals))
+
         for sim in tqdm(range(chunk_size), desc="Trials",mininterval=120, maxinterval=3600):
             data = [initial_condition]
+            pending_bull_adjustments = 0
+            pending_bear_adjustments = 0
+            pending_reduction_adjustments = 0
             for _ in range(total_intervals):
                 # Standard GBM component
                 normal_shock = np.random.normal(drift * dt, volatility * np.sqrt(dt))
@@ -142,22 +153,29 @@ class MonteCarlo(Simulation_Analysis):
             patterns, _ = Simulation_Analysis.detect_head_and_shoulders(data)
             # Adjust prices based on detected patterns
             for i in range(1, len(data)):
+                if pending_reduction_adjustments > 0:
+                    data[i] *= (1 - average_reduction_increment)
+                    pending_reduction_adjustments -= 1
                 if patterns[i] == 1:
-                    data[i] *= (1 - average_reduction) # Adjust based on average reduction
+                    pending_reduction_adjustments = incremental_adjustment_steps
             # MACD ADJUSTMENT 
             # Convert data to pandas Series for MACD calculation
             data_series = pd.Series(data)
             macd_line, signal_line, _ = MACD.calculate_model(data_series)
 
-            # Adjust prices based on MACD signals
             for i in range(1, len(data)):
+                if pending_bull_adjustments > 0:
+                    data[i] *= (1 + bull_increment)
+                    pending_bull_adjustments -= 1
+                if pending_bear_adjustments > 0:
+                    data[i] *= (1 - bear_increment)
+                    pending_bear_adjustments -= 1
+
                 if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
-                    # Bullish MACD crossover
-                    data[i] *= (1 + bull)
+                    pending_bull_adjustments = incremental_adjustment_steps
                 elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
-                    # Bearish MACD crossover
-                    data[i] *= (1 - bear)
-            
+                    pending_bear_adjustments = incremental_adjustment_steps
+
             simulations_chunk[sim, :] = data[1:]
 
 
@@ -187,6 +205,7 @@ class MonteCarlo(Simulation_Analysis):
         # for debugging easier to work with local variables 
         initial_condition = self.initial_condition 
         jump_intensity = self.jump_intensity
+        logger.info(f"Jump Intensity: {jump_intensity}")
         # incremental adjustment steps is the Number of intervals over which to spread the adjustment
         bull_increment = bull / incremental_adjustment_steps
         bear_increment = bear / incremental_adjustment_steps
@@ -293,7 +312,7 @@ class MonteCarlo(Simulation_Analysis):
 
         # Assemble results into the simulations array
         for i, result in enumerate(results):
-          simulations[i*chunk_size:(i+1)*chunk_size, :] = result
+            simulations[i*chunk_size:(i+1)*chunk_size, :] = result
 
         return simulations
 

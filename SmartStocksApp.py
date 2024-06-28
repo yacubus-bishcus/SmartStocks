@@ -19,25 +19,19 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 # Kivy Imported Modules
-import kivy
-from kivy.app import App
-from kivy.uix.screenmanager import ScreenManager, Screen
+
 from kivymd.app import MDApp
-from kivy.uix.screenmanager import ScreenManager, Screen, FadeTransition
-from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.transition import MDFadeSlideTransition
 from kivy.lang import Builder
-from kivy.graphics import Color
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.toast import toast
 
 # MyApp Classes
-from app_design.loginscreen import LoginScreen, LoginPage
+from app_design.loginscreen import LoginPage
 from app_design.menuscreen import MenuScreen
 from app_design.createreportscreen import CreateReportScreen
-# from comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
-
+from app_design.futurescreen import FutureScreen 
 
 class SmartStocksApp(MDApp):
     def build(self):
@@ -57,12 +51,14 @@ class SmartStocksApp(MDApp):
         self.color_dark_text = [1, 1, 1, 1]  # Light text for dark background
         self.secondary_color_dark = [max(0, c - 0.2) for c in secondary_color[:3]] + [secondary_color[3]]
 
-        Builder.load_file('loginkv.kv')  # Load the KV file
+        Builder.load_file('app_design/loginkv.kv')  # Load the KV file
         logger.info("loginkv.kv loaded.")
-        Builder.load_file('menukv.kv')
+        Builder.load_file('app_design/menukv.kv')
         logger.info("menukv.kv loaded.")
-        Builder.load_file('createreportscreen.kv')
+        Builder.load_file('app_design/createreportscreen.kv')
         logger.info("createreportscreen.kv loaded.")
+        Builder.load_file('app_design/futureskv.kv')
+        logger.info('futureskv.kv loaded.')
 
         sm = MDScreenManager(transition=MDFadeSlideTransition())
         logger.info("Screen Manager Initialized.")
@@ -74,7 +70,8 @@ class SmartStocksApp(MDApp):
 
         sm.add_widget(CreateReportScreen(name='create_report'))
         logger.info("CreateReportScreen Initialized.")
-
+        sm.add_widget(FutureScreen(name='future'))
+        logger.info("FutureScreen initialized.")
         from app_design.comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
         sm.add_widget(CompareStocksScreen(name='compare_stocks'))
         logger.info("CompareStocksScreen Initialized.")

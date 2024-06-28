@@ -40,7 +40,8 @@ def SmartStocksTerminal():
         return f"INPUT ERROR. Argument: {args}"
     
     logger.debug(f"Argument: {args}")
-    parser.conduct_smartstock_input_checks()
+    if not parser.conduct_smartstock_input_checks():
+        return 
 
     if args is None:
         print(args.h)
