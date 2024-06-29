@@ -1,21 +1,10 @@
 # Kivy Imported Modules
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.behaviors import ButtonBehavior
-from kivy.uix.label import Label
-from kivy.uix.textinput import TextInput
-from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.checkbox import CheckBox
-from kivy.uix.image import Image
-from kivy.uix.floatlayout import FloatLayout
 from kivy.graphics import Color, Line, Rectangle
-from kivy.uix.anchorlayout import AnchorLayout
-from kivy.uix.widget import Widget
-from kivy.clock import Clock
-from kivy.lang import Builder
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.spinner import Spinner as LoadingSpinner
+from watchdog.events import FileSystemEventHandler 
 
 class BackgroundColorBoxLayout(BoxLayout):
     def __init__(self, **kwargs):
@@ -115,3 +104,11 @@ class LoadingSpinner(ProgressBar):
         self.size_hint = (None, None)
         self.size = (350, 350)
         self.opacity = 0  # Initially hidden
+
+class HotReloadHandler(FileSystemEventHandler):
+    def __init__(self, reload_callback):
+        self.reload_callback = reload_callback
+
+    def on_modified(self, event):
+        if event.src_path.endswith('.kv'):
+            self.reload_callback()

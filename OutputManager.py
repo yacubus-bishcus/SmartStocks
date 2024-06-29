@@ -53,6 +53,41 @@ class Email:
     def filepath(self, value):
         self._filepath = value 
 
+    @staticmethod # your email username, password, phone number to send to, carrier domain, message subject, message, server and port 
+    def text(smtp_username, smtp_password, phone_number, subject, message, carrier="google", smtp_server="smtp.gmail.com", smtp_port=587):
+        # Construct the email
+        if carrier == "tmobile":
+            carrier_domain = "tmomail.net"
+        elif carrier == "google":
+            carrier_domain = "sendemailtotext.com"
+        elif carrier == "verizon":
+            carrier_domain = 'vtext.com'
+        elif carrier == "at&t":
+            carrier_domain = 'txt.att.net'
+        elif carrier == "sprint":
+            carrier_domain = 'messaging.sprintpcs.com'
+        elif carrier == "us_cellular":
+            carrier_domain = 'email.uscc.net'
+        else:
+            print(Fore.RED + f"Phone Carrier {carrier} not found." + Style.RESET_ALL)
+            logger.error(Fore.RED + f"Phone Carrier {carrier} not found." + Style.RESET_ALL)
+            return 
+        
+        to_email = f"{phone_number}@{carrier_domain}"
+        msg = MIMEText(message)
+        msg['From'] = smtp_username
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        # Send the email
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.sendmail(smtp_username, to_email, msg.as_string())
+        print(Fore.GREEN + f"Text message sent to {to_email}!" + Style.RESET_ALL)
+        logger.info(Fore.GREEN + f"Text message sent to {to_email}!" + Style.RESET_ALL)
+        server.quit()
+
+
     def email(self, email_to, smtp_username, smtp_password, email_subject, email_body, filename=None, smtp_server="smtp.gmail.com", smtp_port=587):
         # Create a multipart message
         if filename is None:

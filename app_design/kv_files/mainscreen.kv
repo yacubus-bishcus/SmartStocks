@@ -1,0 +1,18 @@
+###############################################################################
+## MAIN (SPLASH) SCREEN 
+#############################################################################
+MDScreen:
+    name: "mainscreen"
+
+    MDFloatLayout:
+        Image:
+            source: 'app_design/assets/kah.gif'  # Make sure the path to your gif is correct
+            allow_stretch: True 
+            anim_delay: 0
+            anim_reset: True 
+            size_hint: 1, 1  # Ensure the image covers the entire screen
+
+        MDBoxLayout:
+            pos_hint: {'center_y': 0.3, 'center_x': 0.5}
+            padding: '10dp'
+            size_hint_x: 0.7

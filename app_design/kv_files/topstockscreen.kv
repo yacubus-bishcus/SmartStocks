@@ -1,0 +1,29 @@
+<TopStockScreen>:
+    MDFloatLayout:
+        id: main_layout  # Ensure this ID matches the ID used in the Python code
+
+        MDTopAppBar:
+            title: "Smart Stocks by Jacob E Bickus"
+            left_action_items: [["menu", lambda x: app.menu_bar.open_menu(x)]]
+            right_action_items: [["account-circle", lambda x: app.menu_bar.callback_right()]]
+            elevation: 5
+            pos_hint: {"top": 1}
+
+        MDLabel:
+            text: "Today's Top Gainers"
+            font_size: dp(24)
+            font_name: "app_design/fonts/Poppins-SemiBold.ttf"
+            size_hint: None, None
+            size: dp(400), dp(50)
+            halign: 'center'
+            pos_hint: {"center_x": 0.5, "top": 0.9}
+
+        MDRaisedButton:
+            text: "Back to Menu"
+            size_hint: None, None
+            size: dp(200), dp(50)
+            pos_hint: {"right": 1, "bottom": 1}
+            on_release: app.root.current = 'menu'
+
+        # The data table will be added to this layout dynamically from the Python code.
+

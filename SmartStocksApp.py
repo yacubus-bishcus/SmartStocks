@@ -17,29 +17,52 @@ import logging
 # Ensure logging.basicConfig is not called after setting the level for your logger
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
+################################################################################################
 # Kivy Imported Modules
-
+################################################################################################
 from kivymd.app import MDApp
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.transition import MDFadeSlideTransition
 from kivy.lang import Builder
-from kivymd.uix.menu import MDDropdownMenu
-from kivymd.toast import toast
+from kivy.clock import Clock
+#################################################################################################
+## MyApp Classes
+#################################################################################################
+from app_design.screens.loginscreen import LoginPage
+from app_design.screens.menuscreen import MenuScreen
+from app_design.screens.createreportscreen import CreateReportScreen
+from app_design.screens.futurescreen import FutureScreen 
+from app_design.screens.futureresultscreen import FutureResultScreen 
+from app_design.screens.luckyscreen import LuckyScreen
+from app_design.screens.luckyresultscreen import LuckyResultScreen 
+from app_design.menu_bar import MenuBar
+from app_design.screens.topstockscreen import TopStockScreen
+#from app_design.screens.schedulereportscreen import ScheduleReportScreen
+#from app_design.screens.daytraderscreen import DayTraderScreen
+from app_design.screens.betascreen import BetaScreen
+from app_design.smartstocksbuilder import SmartStocksBuilder
+from app_design.screens.aboutscreen import AboutScreen 
+from app_design.screens.feedbackscreen import FeedbackScreen
+from app_design.screens.profilescreen import ProfileScreen
 
-# MyApp Classes
-from app_design.loginscreen import LoginPage
-from app_design.menuscreen import MenuScreen
-from app_design.createreportscreen import CreateReportScreen
-from app_design.futurescreen import FutureScreen 
-
+##################################################################################################
+## MAIN CLASS 
+##################################################################################################
 class SmartStocksApp(MDApp):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Create and initialize ScreenManager
+        self.sm = MDScreenManager(transition=MDFadeSlideTransition())
+        # Initialize MenuBar with the ScreenManager
+        self.menu_bar = MenuBar(screen_manager=self.sm)
+
     def build(self):
+#################################################################################################
         self.theme_cls.theme_style_switch_animation = True
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Orange"
         self.theme_cls.primary_hue = "500"
-
+        self.secondary_color_dark = self.theme_cls.primary_palette 
         primary_color = self.theme_cls.primary_color
         secondary_color = [0.68, 0.85, 0.90, 1]  # Light blue color
         # Lighten the primary color
@@ -50,41 +73,36 @@ class SmartStocksApp(MDApp):
         self.primary_color_dark = [max(0, c - 0.2) for c in primary_color[:3]] + [primary_color[3]]
         self.color_dark_text = [1, 1, 1, 1]  # Light text for dark background
         self.secondary_color_dark = [max(0, c - 0.2) for c in secondary_color[:3]] + [secondary_color[3]]
+        self.title = "SMART STOCKS"
+##################################################################################################  
+        SmartStocksBuilder() 
+##################################################################################################
+        self.sm.add_widget(Builder.load_file("app_design/kv_files/mainscreen.kv"))
+        self.sm.add_widget(TopStockScreen(name="top_stocks"))
+        self.sm.add_widget(LoginPage(name='login_page'))
+        self.sm.add_widget(MenuScreen(name='menu'))
+        self.sm.add_widget(CreateReportScreen(name='create_report'))
+        self.sm.add_widget(FutureScreen(name='future'))
+        self.sm.add_widget(FutureResultScreen(name='future_result'))
+        from app_design.screens.comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
+        self.sm.add_widget(CompareStocksScreen(name='compare_stocks'))
+        self.sm.add_widget(LuckyScreen(name='lucky'))
+        self.sm.add_widget(LuckyResultScreen(name='lucky_result'))
+        self.sm.add_widget(CompareStocksOutputScreen(name='compare_stocks_output'))
+        self.sm.add_widget(BetaScreen(name='betascreen'))
+        self.sm.add_widget(AboutScreen(name='about'))
+        self.sm.add_widget(FeedbackScreen(name='feedback'))
+        self.sm.add_widget(ProfileScreen(name='profile'))
 
-        Builder.load_file('app_design/loginkv.kv')  # Load the KV file
-        logger.info("loginkv.kv loaded.")
-        Builder.load_file('app_design/menukv.kv')
-        logger.info("menukv.kv loaded.")
-        Builder.load_file('app_design/createreportscreen.kv')
-        logger.info("createreportscreen.kv loaded.")
-        Builder.load_file('app_design/futureskv.kv')
-        logger.info('futureskv.kv loaded.')
-
-        sm = MDScreenManager(transition=MDFadeSlideTransition())
-        logger.info("Screen Manager Initialized.")
-
-        sm.add_widget(LoginPage(name='login_page'))
-        logger.info("LoginPage Initialized.")
-        sm.add_widget(MenuScreen(name='menu'))
-        logger.info("MenuScreen Initialized.")
-
-        sm.add_widget(CreateReportScreen(name='create_report'))
-        logger.info("CreateReportScreen Initialized.")
-        sm.add_widget(FutureScreen(name='future'))
-        logger.info("FutureScreen initialized.")
-        from app_design.comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
-        sm.add_widget(CompareStocksScreen(name='compare_stocks'))
-        logger.info("CompareStocksScreen Initialized.")
-
-        sm.add_widget(CompareStocksOutputScreen(name='compare_stocks_output'))
-        logger.info("CompareStocksOutputScreen Initialized.")
-
-        return sm
-
+        return self.sm
+##########################################################################################################
+## ON START
+##########################################################################################################
     def on_start(self):
         logger.info("fps_monitor_start...")
         self.fps_monitor_start()
         logger.info("fps_monitor_start complete.")
+        Clock.schedule_once(self.change_screen, 15) # delay for 15 seconds 
 
     def switch_theme_style(self, *args):
         self.theme_cls.primary_palette = (
@@ -96,47 +114,17 @@ class SmartStocksApp(MDApp):
         self.root.get_ids().label.text = (
             "Theme style - {}".format(self.theme_cls.theme_style)
         )
+    
+    def change_screen(self, dt):
+        self.sm.current = "login_page"
 
-    def callback_left(self):
-        print("left Button clicked!")
-
-    def callback_right(self):
-        print("Right button clicked")
-
-    def open_menu(self, item):
-        menu_items = [
-            {
-                "text": "Today's Top Stocks",
-                "on_release": lambda x="Today's Top Stocks": self.menu_callback_top_stocks(),
-            },
-            {
-                "text": "Today's Worst Stocks",
-                "on_release": lambda x="Today's Worst Stocks": self.menu_callback_worse_stocks(),
-            },
-            {
-                "text": "Recent Finance News",
-                "on_release": lambda x="Recent Finance News": self.menu_callback_finance_news(),
-            },
-        ]
-        MDDropdownMenu(caller=item, items=menu_items).open()
-
-    def menu_callback_top_stocks(self):
-        print("Top Stocks Selected")
-
-    def menu_callback_worse_stocks(self):
-        print("Worse Stocks Selected.")
-
-    def menu_callback_finance_news(self):
-        print("Finance News Selected.")
-
-    def option_selected(self, option):
-        # Handle what happens when an option in the dropdown menu is selected
-        toast(f"Option selected: {option}")
-
-    def back_to_menu(self, instance):
-        self.manager.current = 'menu'
-        logger.info("Going back to Menu screen.")
-
+    def on_stop(self):
+        logger.info("Application stopping...")
+        # Clean up the InternetResearch instance if needed
+        if hasattr(self.sm.get_screen('top_stocks'), 'research'):
+            self.sm.get_screen('top_stocks').research.stop_thread()
+        super().on_stop()
+        
 if __name__ =="__main__":
     print("Starting SmartStocksApp.run()")
     SmartStocksApp().run()
