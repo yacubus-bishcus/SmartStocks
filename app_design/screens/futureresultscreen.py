@@ -6,9 +6,8 @@ import logging
 # Kivy Imported Modules 
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.button import MDRaisedButton, MDFloatingActionButton
+from kivymd.uix.button import MDRaisedButton
 from kivy_garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
-from kivy.uix.anchorlayout import AnchorLayout
 
 # Ensure logging.basicConfig is not called after setting the level for your logger
 logger = logging.getLogger(__name__)

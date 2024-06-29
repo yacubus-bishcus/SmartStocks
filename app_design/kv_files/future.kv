@@ -1,0 +1,160 @@
+<FutureScreen>:
+    ticker_input: ticker_input_id
+    num_trials: slider
+    sim_time: slider2 
+    log_returns: log_returns_id
+    include_history: include_history_id
+    
+    MDBoxLayout:
+        orientation: 'vertical'
+
+        MDTopAppBar:
+            title: "Smart Stocks by Jacob E Bickus"
+            left_action_items: [["menu", lambda x: app.open_menu(x)]]
+            right_action_items: [["account-circle", lambda x: app.callback_right()]]
+            elevation: 5
+            pos_hint: {"top": 1}
+
+        ScrollView:
+            MDGridLayout:
+                id: main_layout 
+                cols: 1
+                padding: dp(10)
+                spacing: dp(20)
+                size_hint_y: None
+                height: self.minimum_height
+                pos_hint: {"center_x": 0.5}
+                
+                MDLabel:
+                    text: "Price Prediction Tool Inputs"
+                    font_size: "36sp"
+                    adaptive_size: True
+                    color: "grey"
+                    pos_hint: {"center_x": 0.5}
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                MDTextField:
+                    id: ticker_input_id 
+                    mode: "fill"
+                    theme_text_color: "Custom"
+                    text_color_normal: "red"
+                    text_color_focus: "black"
+                    line_color_normal: "orange"
+                    line_color_focus: "white"
+                    fill_color_normal: "grey"
+                    fill_color_focus: "white"
+                    hint_text: "Ticker"
+                    helper_text: "Choose your Tickers"
+                    icon_right: "information"
+                    size_hint_x: None
+                    width: "240dp"
+                    pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                MDGridLayout:
+                    cols: 3
+                    size_hint_y: None 
+                    height: dp(80)
+                    pos_hint: {"center_x":0.5}
+                    spacing: dp(16)
+
+                    MDLabel:
+                        text: "Number of Trials"
+                        pos_hint: {"center_x": 0.4, "center_y": 0.5}
+
+                    MDSlider:
+                        id: slider 
+                        min: 1000
+                        max: 100000
+                        step: 1000
+                        orientation: 'horizontal'
+                        size_hint_x: 0.85
+                        pos_hint: {"center_x": 0.75}
+                        height: dp(40)
+                        thumb_size: dp(24)
+
+                    MDLabel:
+                        text: str(slider.value)
+
+                MDGridLayout:
+                    cols: 3 
+                    size_hint_y: None 
+                    height: dp(80)
+                    pos_hint: {"center_x":0.5}
+                    spacing: dp(16)      
+
+                    MDLabel:
+                        text: "Days to Simulate"
+                        pos_hint: {"center_x": 0.4, "center_y": 0.5}
+
+                    MDSlider:
+                        id: slider2 
+                        min: 1
+                        max: 7
+                        step: 1
+                        orientation: 'horizontal'
+                        size_hint_x: 0.85
+                        pos_hint: {"center_x": 0.75}
+                        height: dp(40)
+                        thumb_size: dp(24)
+
+                    MDLabel:
+                        text: str(slider2.value)
+
+                MDGridLayout:
+                    cols: 2
+                    size_hint_y: None
+                    height: self.minimum_height
+                    pos_hint: {"center_x": 0.5}
+                    padding: "24dp"
+                    spacing: "48dp"
+
+                    MDLabel:
+                        text: "Use Log Return Method:"
+                        size_hint_x: None
+                        width: "120dp"
+                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                    MDSwitch:
+                        id: log_returns_id 
+                        active: False 
+                        icon_active: "check"
+                        icon_inactive: "close"
+                        icon_active_color: "white"
+                        icon_inactive_color: "grey"
+                        pos_hint: {"center_y":0.5}
+
+                MDGridLayout:
+                    cols: 2
+                    size_hint_y: None
+                    height: self.minimum_height
+                    pos_hint: {"center_x": 0.5}
+                    padding: "24dp"
+                    spacing: "48dp"
+
+                    MDLabel:
+                        text: "Include History:"
+                        size_hint_x: None
+                        width: "120dp"
+                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+                    MDSwitch:
+                        id: include_history_id 
+                        active: False 
+                        icon_active: "check"
+                        icon_inactive: "close"
+                        icon_active_color: "white"
+                        icon_inactive_color: "grey"
+                        pos_hint: {"center_y":0.5}
+
+                MDDropDownItem:
+                    id: index_dropdown
+                    text: 'Market Index'
+                    pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                    on_release: root.open_menu_index(self)
+
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)

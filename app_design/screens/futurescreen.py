@@ -121,25 +121,6 @@ class FutureScreen(MDScreen):
             return "--include_history"
         else:
             return ""
-    
-    def optimize_parameters(self):
-        if int(self.sim_time.value) <= 3:
-            intervals = "--model_interval 5m"
-            int_interval = 5
-        elif 3 < int(self.sim_time.value) <= 5:
-            intervals = "--model_interval 15m" 
-            int_interval = 15
-        elif 5 < int(self.sim_time.value) <= 7:
-            intervals = "--model_interval 30m" 
-            int_interval = 30
-        else:
-            logger.error(f"Sim Time Outside Available window {self.sim_time.value}")
-            intervals = "" 
-            int_interval = 15
-
-        intervals_per_day = int(24 * 60 / int_interval)
-        dt = 1./intervals_per_day 
-        #jump_parameter =
 
     def start_calculation_thread(self, instance):
         # Start a new thread for the calculation

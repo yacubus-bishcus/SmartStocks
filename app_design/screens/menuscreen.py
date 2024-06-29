@@ -54,6 +54,7 @@ class MenuScreen(MDScreen):
 
     def lucky_stock(self):
         logger.info("Lucky Stock selected.")
+        self.manager.current = "lucky"
 
     def schedule_reports(self):
         logger.info("Schedule Reports option selected")
