@@ -36,39 +36,24 @@ from app_design.screens.futureresultscreen import FutureResultScreen
 from app_design.screens.luckyscreen import LuckyScreen
 from app_design.screens.luckyresultscreen import LuckyResultScreen 
 from app_design.menu_bar import MenuBar
-from app_design.screens.schedulereportscreen import ScheduleReportScreen
-from app_design.screens.daytraderscreen import DayTraderScreen
+from app_design.screens.topstockscreen import TopStockScreen
+#from app_design.screens.schedulereportscreen import ScheduleReportScreen
+#from app_design.screens.daytraderscreen import DayTraderScreen
 from app_design.screens.betascreen import BetaScreen
+from app_design.SmartStocksBuilder import SmartStocksBuilder
 ##################################################################################################
 ## MAIN CLASS 
 ##################################################################################################
-class SmartStocksApp(MDApp, MenuBar):
-    global sm
-    sm = MDScreenManager(transition=MDFadeSlideTransition())
+class SmartStocksApp(MDApp):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # Create and initialize ScreenManager
+        self.sm = MDScreenManager(transition=MDFadeSlideTransition())
+        # Initialize MenuBar with the ScreenManager
+        self.menu_bar = MenuBar(screen_manager=self.sm)
+
     def build(self):
-        super().__init__()
 #################################################################################################
-        Builder.load_file('app_design/kv_files/login.kv') 
-        logger.info("login.kv loaded.")
-        Builder.load_file('app_design/kv_files/menu.kv')
-        logger.info("menu.kv loaded.")
-        Builder.load_file('app_design/kv_files/createreportscreen.kv')
-        logger.info("createreportscreen.kv loaded.")
-        Builder.load_file('app_design/kv_files/future.kv')
-        logger.info('future.kv loaded.')
-        Builder.load_file('app_design/kv_files/futureresultscreen.kv')
-        logger.info("futureresultscreen kv loaded.")
-        Builder.load_file('app_design/kv_files/luckyscreen.kv')
-        logger.info("luckyscreen kv loaded.")
-        Builder.load_file("app_design/kv_files/luckyresultscreen.kv")
-        logger.info("luckyresultscreen loaded.")
-        Builder.load_file("app_design/kv_files/daytraderscreen.kv")
-        logger.info("daytraderscreen.kv loaded.")
-        Builder.load_file("app_design/kv_files/schedulereportscreen.kv")
-        logger.info("schedulereportscreen loaded.")
-        Builder.load_file("app_design/kv_files/betascreen.kv")
-        logger.info("betascreen.kv loaded")
-##################################################################################################
         self.theme_cls.theme_style_switch_animation = True
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Orange"
@@ -85,22 +70,24 @@ class SmartStocksApp(MDApp, MenuBar):
         self.color_dark_text = [1, 1, 1, 1]  # Light text for dark background
         self.secondary_color_dark = [max(0, c - 0.2) for c in secondary_color[:3]] + [secondary_color[3]]
         self.title = "SMART STOCKS"
-##################################################################################################        
-        sm.add_widget(Builder.load_file("app_design/kv_files/mainscreen.kv"))
-        sm.add_widget(LoginPage(name='login_page'))
-        sm.add_widget(MenuScreen(name='menu'))
-        sm.add_widget(CreateReportScreen(name='create_report'))
-        sm.add_widget(FutureScreen(name='future'))
-        sm.add_widget(FutureResultScreen(name='future_result'))
+##################################################################################################  
+        SmartStocksBuilder() 
+##################################################################################################
+        self.sm.add_widget(Builder.load_file("app_design/kv_files/mainscreen.kv"))
+        self.sm.add_widget(TopStockScreen(name="top_stocks"))
+        self.sm.add_widget(LoginPage(name='login_page'))
+        self.sm.add_widget(MenuScreen(name='menu'))
+        self.sm.add_widget(CreateReportScreen(name='create_report'))
+        self.sm.add_widget(FutureScreen(name='future'))
+        self.sm.add_widget(FutureResultScreen(name='future_result'))
         from app_design.screens.comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
-        sm.add_widget(CompareStocksScreen(name='compare_stocks'))
-        sm.add_widget(LuckyScreen(name='lucky'))
-        sm.add_widget(LuckyResultScreen(name='lucky_result'))
-        sm.add_widget(CompareStocksOutputScreen(name='compare_stocks_output'))
-        sm.add_widget(BetaScreen(name='betascreen'))
-        
+        self.sm.add_widget(CompareStocksScreen(name='compare_stocks'))
+        self.sm.add_widget(LuckyScreen(name='lucky'))
+        self.sm.add_widget(LuckyResultScreen(name='lucky_result'))
+        self.sm.add_widget(CompareStocksOutputScreen(name='compare_stocks_output'))
+        self.sm.add_widget(BetaScreen(name='betascreen'))
 
-        return sm
+        return self.sm
 ##########################################################################################################
 ## ON START
 ##########################################################################################################
@@ -108,7 +95,7 @@ class SmartStocksApp(MDApp, MenuBar):
         logger.info("fps_monitor_start...")
         self.fps_monitor_start()
         logger.info("fps_monitor_start complete.")
-        Clock.schedule_once(self.change_screen, 10) # delay for 10 seconds 
+        Clock.schedule_once(self.change_screen, 15) # delay for 15 seconds 
 
     def switch_theme_style(self, *args):
         self.theme_cls.primary_palette = (
@@ -122,8 +109,15 @@ class SmartStocksApp(MDApp, MenuBar):
         )
     
     def change_screen(self, dt):
-        sm.current = "login_page"
+        self.sm.current = "login_page"
 
+    def on_stop(self):
+        logger.info("Application stopping...")
+        # Clean up the InternetResearch instance if needed
+        if hasattr(self.sm.get_screen('top_stocks'), 'research'):
+            self.sm.get_screen('top_stocks').research.stop_thread()
+        super().on_stop()
+        
 if __name__ =="__main__":
     print("Starting SmartStocksApp.run()")
     SmartStocksApp().run()

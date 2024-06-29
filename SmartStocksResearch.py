@@ -1,7 +1,5 @@
-## -----------------------------------------------------------------------------------------##
-## ----------------------------- Research CLASS    ----------- -----------------------------##
-## -----------------------------------------------------------------------------------------##
 import logging
+import threading
 from colorama import Fore, Style
 import requests
 from bs4 import BeautifulSoup
@@ -10,10 +8,18 @@ import os
 import pandas as pd 
 import random
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import pkg_resources
+import time 
+import psutil
+import sys 
 
 logger = logging.getLogger(__name__)
-
+#############################################################################################################################################
+## Research Class 
+#############################################################################################################################################
 class Research:
     def __init__(self, filenames, number_to_research):
         logger.debug("--> Grabbing All Tickers...")
@@ -99,66 +105,6 @@ class Research:
         logger.debug("choose_tickers Tickers Chosen --> ", random_tickers)
         return random_tickers
 
-    def grab_dogs_of_the_dow(self):
-        options = webdriver.ChromeOptions()
-        options.add_argument('--headless')
-        options.add_argument('--disable-gpu')
-        driver = webdriver.Chrome(options=options)
-
-        # Send a GET request to the Dogs of the Dow website
-        url = 'https://www.dogsofthedow.com/dogday.htm'
-        driver.get(url)
-        # Parse the HTML content using BeautifulSoup
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        # Find the table containing the tickers
-        table = soup.find('table', class_='tablepress tablepress-id-5 tablepress-responsive dataTable no-footer')
-        # Extract tickers from the table
-        tickers = []
-        if table:
-            for row in table.find_all('tr')[1:]:  # Skip header row
-                ticker = row.find_all('td')[0].text.strip()
-                tickers.append(ticker)
-
-        else:
-            logger.error(Fore.RED + "grab_dogs_of_the_dow " \
-            "--> Failed to find Table of tickers." + Style.RESET_ALL)
-
-        driver.quit()
-        return soup
-
-    def find_and_print_soup_content(self, soup, target_word, content_amount=1000):
-        # Find all text elements in the soup
-        text_elements = soup.find_all(text=True)
-
-        # Join all text elements into a single string
-        full_text = ' '.join(text_elements)
-
-        # Find the index of the target word in the full text
-        word_index = full_text.find(target_word)
-
-        if word_index != -1:
-            # Extract 100 words before and after the target word
-            context_start = max(0, word_index - content_amount)
-            context_end = min(len(full_text), word_index + len(target_word) + content_amount)
-            context = full_text[context_start:context_end]
-            # Print the context
-            print("Context around '{}':".format(target_word))
-            print(context)
-        else:
-            print("Word '{}' not found in the text.".format(target_word))
-
-    def find_elements_by_keyword(self, soup, keyword):
-        # Find all elements containing the keyword in their text or attributes
-        elements = soup.find_all(lambda tag: keyword in tag.text or keyword in tag.get('class', []))
-        return elements
-
-    # Example usage:
-    # Assuming 'soup' is the BeautifulSoup object and 'keyword' is the keyword to search for
-    # Replace 'soup' and 'keyword' with your specific values
-
-    # Find elements containing the keyword
-    #found_elements = find_elements_by_keyword(soup, 'Symbol')
-
     def read_data(self, input_filename):
         input_filename = pkg_resources.resource_filename('data', input_filename)
         try:
@@ -235,3 +181,157 @@ class Research:
             except Exception as e:
                 logger.exception(f"InputManager::clean_data --> Error occurred while writing to '{output_filename}': {str(e)}")
                 exit(1)
+
+#############################################################################################################################################
+## InternetResearch Class 
+#############################################################################################################################################
+class InternetResearch:
+    def __init__(self):
+        self.driver = None
+        self.thread = None
+        self._stop_event = threading.Event()
+
+    def get_top_gainers(self, url="https://finance.yahoo.com/gainers", callback=None):
+        logger.info("Grabbing top Gainers...")
+        start_time = time.time()
+
+        # Setup Chrome options
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        #options.add_extension('/path/to/ublock.crx')  # Path to your adblock extension
+        # Add capabilities to options
+        options.set_capability('goog:loggingPrefs', {'performance': 'ALL'})
+        # Initialize WebDriver
+        self.driver = webdriver.Chrome(service=Service(), options=options)
+
+        try:
+            # Enable Network Interception
+            self.driver.execute_cdp_cmd('Network.enable', {})
+            self.driver.execute_cdp_cmd('Network.setBlockedURLs', {"urls": ["*.jpg", "*.png", "*.gif", "*.css", "*.js", "*.ads"]})
+            # Open URL
+            self.driver.get(url)
+            logger.info("Driver Got URL")
+
+            # Parse the HTML content using BeautifulSoup
+            if not self._stop_event.is_set():
+                soup = BeautifulSoup(self.driver.page_source, 'html.parser')
+                table = soup.find('table', {'class': 'W(100%)'})
+
+                if table:
+                    rows = table.find('tbody').find_all('tr')[:3]
+                    logger.info("Making Top Stocks Table...")
+
+                    top_stocks = []
+                    for row in rows:
+                        cols = row.find_all('td')
+                        stock = {
+                            'symbol': cols[0].text.strip(),
+                            'name': cols[1].text.strip(),
+                            'price': cols[2].text.strip(),
+                            'change': cols[3].text.strip(),
+                            'percent_change': cols[4].text.strip(),
+                            'volume': cols[5].text.strip()
+                        }
+                        top_stocks.append(stock)
+
+                    logger.info("Top Stocks Table Made...")
+                    end_time = time.time()
+                    elapsed_time = end_time - start_time
+                    logger.info(f"Grabbing Top Stocks took {elapsed_time:.2f} seconds to run.")
+                    if callback:
+                        callback(top_stocks)
+                    return top_stocks
+                else:
+                    logger.warning("Table returned nonetype")
+            else:
+                logger.info("WebDriverWait interrupted by stop event.")
+        except Exception as e:
+            logger.error(f"An error occurred: {e}")
+        finally:
+            self.quit_driver(force=False)
+
+        return []
+
+    def quit_driver(self, force=False):
+        time2_start = time.time()
+        try:
+            if self.driver:
+                self.driver.quit()
+        except Exception as e:
+            logger.error(f"Error quitting driver: {e}")
+        finally:
+            if force:
+                self.force_quit_driver()
+            self.driver = None
+            time2_end = time.time()
+            time_elapsed2 = time2_end - time2_start 
+            logger.info(f"Quiting driver took {time_elapsed2:.2f} seconds to run.")
+
+    def force_quit_driver(self):
+        if self.driver:
+            try:
+                process = psutil.Process(self.driver.service.process.pid)
+                for proc in process.children(recursive=True):
+                    proc.kill()
+                process.kill()
+                logger.info("Forcefully terminated the WebDriver process.")
+            except Exception as e:
+                logger.error(f"Error forcefully terminating the WebDriver process: {e}")
+
+    def start_get_top_gainers_thread(self, callback=None, url="https://finance.yahoo.com/gainers"):
+        self._stop_event.clear()
+        self.thread = threading.Thread(target=self.get_top_gainers, args=(url, callback))
+        self.thread.start()
+
+    def stop_thread(self):
+        if self.thread and self.thread.is_alive():
+            self._stop_event.set()
+            self.quit_driver(force=True)
+            self.thread.join()
+
+    def signal_handler(self, sig, frame):
+        logger.info("Exiting application...")
+        self.stop_thread()
+        sys.exit(0)
+
+#############################################################################################################################################
+## HandleSoup Class 
+#############################################################################################################################################
+class HandleSoup:
+    @staticmethod
+    def find_and_print_soup_content(soup, target_word, content_amount=1000):
+        # Find all text elements in the soup
+        text_elements = soup.find_all(text=True)
+
+        # Join all text elements into a single string
+        full_text = ' '.join(text_elements)
+
+        # Find the index of the target word in the full text
+        word_index = full_text.find(target_word)
+
+        if word_index != -1:
+            # Extract 100 words before and after the target word
+            context_start = max(0, word_index - content_amount)
+            context_end = min(len(full_text), word_index + len(target_word) + content_amount)
+            context = full_text[context_start:context_end]
+            # Print the context
+            print("Context around '{}':".format(target_word))
+            print(context)
+        else:
+            print("Word '{}' not found in the text.".format(target_word))
+
+    @staticmethod
+    def find_elements_by_keyword(soup, keyword):
+        # Find all elements containing the keyword in their text or attributes
+        elements = soup.find_all(lambda tag: keyword in tag.text or keyword in tag.get('class', []))
+        return elements
+    
+
+    # @staticmethod
+    # def signal_handler(sig, frame): # included 
+    #     logger.info("Exiting application...")
+    #     research.stop_thread()
+    #     sys.exit(0)

@@ -5,8 +5,8 @@
 
         MDTopAppBar:
             title: "Smart Stocks by Jacob E Bickus"
-            left_action_items: [["menu", lambda x: app.open_menu(x)]]
-            right_action_items: [["account-circle", lambda x: app.callback_right()]]
+            left_action_items: [["menu", lambda x: app.menu_bar.open_menu(x)]]
+            right_action_items: [["account-circle", lambda x: app.menu_bar.callback_right()]]
             elevation: 5
             pos_hint: {"top": 1}
 

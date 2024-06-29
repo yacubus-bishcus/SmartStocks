@@ -18,3 +18,4 @@ requests_cache
 pyrate_limiter
 requests_ratelimiter
 odfpy
+psutil 

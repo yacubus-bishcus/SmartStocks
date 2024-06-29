@@ -10,8 +10,8 @@ from kivymd.toast import toast
 logger = logging.getLogger(__name__)
 
 class MenuBar:
-    def __init__(self):
-        super().__init__()
+    def __init__(self, screen_manager):
+        self.manager = screen_manager
 
     def callback_left(self):
         print("left Button clicked!")
@@ -38,6 +38,7 @@ class MenuBar:
 
     def menu_callback_top_stocks(self):
         print("Top Stocks Selected")
+        self.manager.current = "top_stocks"
 
     def menu_callback_worse_stocks(self):
         print("Worse Stocks Selected.")

@@ -3,7 +3,6 @@
 #############################################################################
 MDScreen:
     name: "mainscreen"
-    on_enter: self.ids.progress.start()
 
     MDFloatLayout:
         Image:
@@ -17,12 +16,3 @@ MDScreen:
             pos_hint: {'center_y': 0.3, 'center_x': 0.5}
             padding: '10dp'
             size_hint_x: 0.7
-
-            MDProgressBar:
-                id: progress 
-                orientation: 'horizontal'
-                type: 'indeterminate'
-                running_duration: 1
-                catching_duration: 1
-                size_hint_y: 0.05
-                size_hint_x: 0.5
