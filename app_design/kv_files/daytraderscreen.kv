@@ -1,0 +1,48 @@
+<DayTraderScreen>:
+    MDBoxLayout:
+        orientation: 'vertical'
+
+        MDTopAppBar:
+            title: "Smart Stocks by Jacob E Bickus"
+            left_action_items: [["menu", lambda x: app.open_menu(x)]]
+            right_action_items: [["account-circle", lambda x: app.callback_right()]]
+            elevation: 5
+            pos_hint: {"top": 1}
+
+        MDScrollView:
+            MDGridLayout:
+                id: main_layout
+                cols: 1
+                padding: dp(10)
+                spacing: dp(20)
+                size_hint_y: None
+                height: self.minimum_height
+                pos_hint: {"center_x": 0.5}
+
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint: 1, None
+                    height: self.minimum_height
+
+                    Image:
+                        source: 'app_design/assets/logo.png'  # Ensure the path to your GIF is correct
+                        allow_stretch: True
+                        anim_delay: 0
+                        anim_reset: True
+                        size_hint: 1, 0.8  # Adjusted to make the image smaller
+                        pos_hint: {'center_x': 0.5, 'center_y': 0.5}  # Position the image
+
+                    MDBoxLayout:
+                        pos_hint: {'center_y': 0.1, 'center_x': 0.5}  # Adjusted position to place it lower
+                        padding: '10dp'
+                        size_hint_x: 0.8  # Adjusted size_hint_x to make it wider
+                        size_hint_y: None  # Added size_hint_y to allow height adjustment
+                        height: dp(50)  # Set a fixed height for the label
+
+                        MDLabel:
+                            text: "Feature Not Available Yet. Coming Soon..."
+                            halign: 'center'  # Center align the text
+                            theme_text_color: 'Secondary'  # Adjust text color if needed
+
+
+

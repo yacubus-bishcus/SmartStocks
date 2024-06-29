@@ -58,6 +58,8 @@ class MenuScreen(MDScreen):
 
     def schedule_reports(self):
         logger.info("Schedule Reports option selected")
+        self.manager.current = "betascreen"
 
     def smart_trader(self):
         logger.info("Smart Trader option selected")
+        self.manager.current = "betascreen"

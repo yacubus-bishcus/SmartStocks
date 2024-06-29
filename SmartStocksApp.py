@@ -36,6 +36,9 @@ from app_design.screens.futureresultscreen import FutureResultScreen
 from app_design.screens.luckyscreen import LuckyScreen
 from app_design.screens.luckyresultscreen import LuckyResultScreen 
 from app_design.menu_bar import MenuBar
+from app_design.screens.schedulereportscreen import ScheduleReportScreen
+from app_design.screens.daytraderscreen import DayTraderScreen
+from app_design.screens.betascreen import BetaScreen
 ##################################################################################################
 ## MAIN CLASS 
 ##################################################################################################
@@ -59,6 +62,12 @@ class SmartStocksApp(MDApp, MenuBar):
         logger.info("luckyscreen kv loaded.")
         Builder.load_file("app_design/kv_files/luckyresultscreen.kv")
         logger.info("luckyresultscreen loaded.")
+        Builder.load_file("app_design/kv_files/daytraderscreen.kv")
+        logger.info("daytraderscreen.kv loaded.")
+        Builder.load_file("app_design/kv_files/schedulereportscreen.kv")
+        logger.info("schedulereportscreen loaded.")
+        Builder.load_file("app_design/kv_files/betascreen.kv")
+        logger.info("betascreen.kv loaded")
 ##################################################################################################
         self.theme_cls.theme_style_switch_animation = True
         self.theme_cls.theme_style = "Dark"
@@ -88,6 +97,8 @@ class SmartStocksApp(MDApp, MenuBar):
         sm.add_widget(LuckyScreen(name='lucky'))
         sm.add_widget(LuckyResultScreen(name='lucky_result'))
         sm.add_widget(CompareStocksOutputScreen(name='compare_stocks_output'))
+        sm.add_widget(BetaScreen(name='betascreen'))
+        
 
         return sm
 ##########################################################################################################
