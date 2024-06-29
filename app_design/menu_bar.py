@@ -17,7 +17,8 @@ class MenuBar:
         print("left Button clicked!")
 
     def callback_right(self):
-        print("Right button clicked")
+        print("Profile button clicked")
+        self.manager.current = "profile"
 
     def open_menu(self, item):
         menu_items = [
@@ -26,12 +27,12 @@ class MenuBar:
                 "on_release": lambda x="Today's Top Stocks": self.menu_callback_top_stocks(),
             },
             {
-                "text": "Today's Worst Stocks",
-                "on_release": lambda x="Today's Worst Stocks": self.menu_callback_worse_stocks(),
+                "text": "Feedback",
+                "on_release": lambda x="Feedback": self.menu_callback_feedback(),
             },
             {
-                "text": "Recent Finance News",
-                "on_release": lambda x="Recent Finance News": self.menu_callback_finance_news(),
+                "text": "About",
+                "on_release": lambda x="About": self.menu_callback_about(),
             },
         ]
         MDDropdownMenu(caller=item, items=menu_items).open()
@@ -40,11 +41,13 @@ class MenuBar:
         print("Top Stocks Selected")
         self.manager.current = "top_stocks"
 
-    def menu_callback_worse_stocks(self):
-        print("Worse Stocks Selected.")
+    def menu_callback_about(self):
+        print("About Selected.")
+        self.manager.current = "about"
 
-    def menu_callback_finance_news(self):
-        print("Finance News Selected.")
+    def menu_callback_feedback(self):
+        print("Feedback Selected.")
+        self.manager.current ="feedback"
 
     def option_selected(self, option):
         # Handle what happens when an option in the dropdown menu is selected

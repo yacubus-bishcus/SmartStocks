@@ -40,7 +40,11 @@ from app_design.screens.topstockscreen import TopStockScreen
 #from app_design.screens.schedulereportscreen import ScheduleReportScreen
 #from app_design.screens.daytraderscreen import DayTraderScreen
 from app_design.screens.betascreen import BetaScreen
-from app_design.SmartStocksBuilder import SmartStocksBuilder
+from app_design.smartstocksbuilder import SmartStocksBuilder
+from app_design.screens.aboutscreen import AboutScreen 
+from app_design.screens.feedbackscreen import FeedbackScreen
+from app_design.screens.profilescreen import ProfileScreen
+
 ##################################################################################################
 ## MAIN CLASS 
 ##################################################################################################
@@ -86,6 +90,9 @@ class SmartStocksApp(MDApp):
         self.sm.add_widget(LuckyResultScreen(name='lucky_result'))
         self.sm.add_widget(CompareStocksOutputScreen(name='compare_stocks_output'))
         self.sm.add_widget(BetaScreen(name='betascreen'))
+        self.sm.add_widget(AboutScreen(name='about'))
+        self.sm.add_widget(FeedbackScreen(name='feedback'))
+        self.sm.add_widget(ProfileScreen(name='profile'))
 
         return self.sm
 ##########################################################################################################
