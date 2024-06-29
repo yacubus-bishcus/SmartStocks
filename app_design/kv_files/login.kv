@@ -2,7 +2,7 @@
     MDFloatLayout:
         md_bg_color: 1, 1, 1, 1
         Image:
-            source: "app_design/logo.png"
+            source: "app_design/assets/logo.png"
             pos_hint: {"center_x": .50, "top":1}
             size_hint: None, None   # Adjust size_hint as needed (width, height)
             size_hint: 0.25, 0.25
@@ -11,7 +11,7 @@
             pos_hint: {"center_x": 0.5, "center_y":.65}
             size_hint: 0.5, 0.10
             halign: "center"
-            font_name: "fonts/Poppins-SemiBold.ttf"
+            font_name: "app_design/fonts/Poppins-SemiBold.ttf"
             font_size: "40sp"
             theme_text_color: "Custom"
             text_color: 60/255, 43/255, 117/255, 1
@@ -36,7 +36,7 @@
                 foreground_color: 96/255, 74/255, 215/255, 1
                 background_color: 0,0,0,0
                 padding: 15
-                font_name: "fonts/Poppins-Regular.ttf"
+                font_name: "app_design/fonts/Poppins-Regular.ttf"
                 font_size: "18sp"
         MDFloatLayout:
             size_hint: .85, 0.08
@@ -60,14 +60,14 @@
                 foreground_color: 96/255, 74/255, 215/255, 1
                 background_color: 0,0,0,0
                 padding: 15
-                font_name: "fonts/Poppins-Regular.ttf"
+                font_name: "app_design/fonts/Poppins-Regular.ttf"
                 font_size: "18sp"
         MDFloatLayout:
             size_hint: 0.5, 0.10
             pos_hint:{"center_x":0.5, "center_y":0.38}
             Button:
                 text: "Forget your password?"
-                font_name: "fonts/Poppins-Regular.ttf"
+                font_name: "app_design/fonts/Poppins-Regular.ttf"
                 background_color: 1,1,1,0 # transparent
                 color: 246/255, 135/255, 177/255, 1
                 pos_hint: {"center_x":0.5, "top":1}
@@ -76,7 +76,7 @@
                 on_press: root.forgot_password(self)
             Button:
                 text: "Create an Account"
-                font_name: "fonts/Poppins-Regular.ttf"
+                font_name: "app_design/fonts/Poppins-Regular.ttf"
                 background_color: 1,1,1,0 # transparent
                 color: 246/255, 135/255, 177/255, 1
                 pos_hint: {"center_x":0.5, "top":0.5}
@@ -95,7 +95,7 @@
                     radius: [25]
             Button:
                 text: "LOGIN"
-                font_name: "fonts/Poppins-SemiBold.ttf"
+                font_name: "app_design/fonts/Poppins-SemiBold.ttf"
                 font_size: "36sp"
                 size_hint: 1, 1
                 pos_hint: {"center_x": .5, "center_y":.5}
