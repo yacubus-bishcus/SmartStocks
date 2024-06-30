@@ -38,15 +38,12 @@
     processes: slider3
 
     include_research: include_research_id
-    data_source: data_source_id
-    default_data: default_data_id
     min_price: min_price_id
     max_price: max_price_id
     num_research: slider4
 
     output: output_id
     email: email_id
-    same_as_user: same_as_user_id
 
     BoxLayout:
         orientation: 'vertical'
@@ -412,10 +409,6 @@
                         fill_color_normal: "grey"
                         fill_color_focus: "white"
 
-                    MDDropDownItem:
-                        text: 'Model'
-                        pos_hint: {'center_x': .5, 'center_y': .5}
-
                     GridLayout:
                         cols: 1
                         spacing: "16dp"
@@ -459,7 +452,7 @@
                             height: dp(80)
 
                             MDLabel:
-                                text: "Processes"
+                                text: "Processors"
                                 pos_hint: {"center_x": 0.25, "center_y": 0.5}
 
                             MDSlider:
@@ -515,53 +508,9 @@
                         icon_inactive_color: "grey"
                         pos_hint: {"center_y": 0.5}
 
-                GridLayout:
-                    cols: 1
-                    size_hint_x: .35
-                    pos_hint: {"center_x": .5, 'center_y': .5}
-                    spacing: dp(16)
-
-                    MDTextField:
-                        id: data_source_id
-                        mode: "rectangle"
-                        hint_text: 'Data'
-                        helper_text: "Custom Data List of Stocks"
-                        pos_hint: {'center_x': .5, 'center_y': .5}
-                        size_hint_x: .35
-                        theme_text_color: "Custom"
-                        text_color_normal: "black"
-                        text_color_focus: "black"
-                        line_color_normal: "orange"
-                        line_color_focus: "white"
-                        fill_color_normal: "grey"
-                        fill_color_focus: "white"
-
                 Widget:
                     size_hint_y: None
                     height: dp(20)
-
-                GridLayout:
-                    cols: 2
-                    size_hint_y: None
-                    height: self.minimum_height
-                    pos_hint: {"center_x": 0.5}
-                    padding: "24dp"
-                    spacing: "48dp"
-
-                    MDLabel:
-                        text: "Use Default"
-                        size_hint_x: None
-                        width: "120dp"
-                        pos_hint: {"center_x": 0.5, "center_y": 0.5}
-
-                    MDSwitch:
-                        id: default_data_id
-                        active: False
-                        icon_active: "check"
-                        icon_inactive: "close"
-                        icon_active_color: "white"
-                        icon_inactive_color: "grey"
-                        pos_hint: {"center_y": 0.5}
 
                 MDTextField:
                     id: min_price_id
@@ -672,23 +621,6 @@
                         line_color_focus: "white"
                         fill_color_normal: "grey"
                         fill_color_focus: "white"
-
-                    GridLayout:
-                        cols: 2
-                        size_hint_x: None
-                        width: "240dp"
-                        pos_hint: {"center_x": 0.5, "top": 1}
-
-                        CheckItem:
-                            id: same_as_user_id
-                            group: "root"
-                            pos_hint: {"center_y": 0.5}
-
-                        MDLabel:
-                            text: "Same as User"
-                            size_hint_x: None
-                            width: "180dp"
-                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
 
                 MDSeparator:
                     height: "10dp"

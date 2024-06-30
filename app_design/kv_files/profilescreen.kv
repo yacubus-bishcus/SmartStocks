@@ -1,28 +1,83 @@
 <ProfileScreen>:
-    
+    username: ''
+
     MDBoxLayout:
+        id: main_layout
         orientation: 'vertical'
+        padding: 10
+        spacing: 10
 
-        MDTopAppBar:
-            title: "Smart Stocks by Jacob E Bickus"
-            left_action_items: [["menu", lambda x: app.menu_bar.open_menu(x)]]
-            right_action_items: [["account-circle", lambda x: app.menu_bar.callback_right()]]
-            elevation: 5
-            pos_hint: {"top": 1}
+        MDBoxLayout:
+            orientation: 'vertical'
+            size_hint_y: None
+            height: dp(200)
+            padding: 10
+            spacing: 10
 
-        ScrollView:
-            MDGridLayout:
-                id: main_layout 
-                cols: 1
-                padding: dp(10)
-                spacing: dp(20)
+            Image:
+                id: profile_pic
+                source: 'app_design/assets/logo.png'
+                size_hint: None, None
+                size: dp(150), dp(150)
+                pos_hint: {'center_x': 0.5}
+                allow_stretch: True
+                keep_ratio: True
+                canvas.before:
+                    PushMatrix
+                    Rotate:
+                        angle: 45
+                        origin: self.center
+                    PopMatrix
+                    StencilPush
+                    Ellipse:
+                        pos: self.pos
+                        size: self.size
+                    StencilUse
+                    Ellipse:
+                        pos: self.pos
+                        size: self.size
+                    StencilUnUse
+                    Color:
+                        rgba: 1, 1, 1, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+                    StencilPop
+            MDLabel:
+                id: username_label
+                text: root.username 
+                font_size: '20sp'
                 size_hint_y: None
-                height: self.minimum_height
-                pos_hint: {"center_x": 0.5}
-                
-                MDLabel:
-                    text: "Your Profile"
-                    font_size: "36sp"
-                    adaptive_size: True
-                    color: "grey"
-                    pos_hint: {"center_x": 0.5}
+                height: self.texture_size[1]
+
+        Button:
+            text: 'Change Email'
+            size_hint_y: None
+            height: dp(50)
+            on_press: root.change_email()
+
+        Button:
+            text: 'Change Password'
+            size_hint_y: None
+            height: dp(50)
+            on_press: root.change_password()
+
+        Button:
+            text: 'Change Theme Color'
+            size_hint_y: None
+            height: dp(50)
+            on_press: root.change_theme_color()
+
+        MDBoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: dp(50)
+            Label:
+                text: 'Share with a friend:'
+            TextInput:
+                id: friend_email
+                hint_text: 'Enter email address'
+                multiline: False
+            Button:
+                text: 'Share'
+                on_press: root.share_with_friend()

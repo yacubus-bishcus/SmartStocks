@@ -19,3 +19,4 @@ pyrate_limiter
 requests_ratelimiter
 odfpy
 psutil 
+python-dotenv 

@@ -87,8 +87,29 @@ class Email:
         logger.info(Fore.GREEN + f"Text message sent to {to_email}!" + Style.RESET_ALL)
         server.quit()
 
+    @staticmethod
+    def email(email_to, smtp_username, smtp_password, email_subject, email_body, smtp_server="smtp.gmail.com", smtp_port=587):
+        msg = MIMEMultipart()
+        msg['From'] = smtp_username 
+        msg['To'] = email_to 
+        msg['Subject'] = email_subject
+        msg.attach(MIMEText(email_body, 'plain'))
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2 
+        try:
+            # Connect to SMTP server and send email
+            with smtplib.SMTP(smtp_server, smtp_port) as server:
+                server.ehlo()
+                server.starttls()
+                server.ehlo()
+                server.login(smtp_username, smtp_password)
+                server.sendmail(smtp_username, email_to, msg.as_string())
+                logger.info(f"Email Sent to {email_to}!")
+        except Exception as e:
+            logger.exception(f"Error sending email: {e}")
 
-    def email(self, email_to, smtp_username, smtp_password, email_subject, email_body, filename=None, smtp_server="smtp.gmail.com", smtp_port=587):
+
+    def email_w_attachment(self, email_to, smtp_username, smtp_password, email_subject, email_body, filename=None, smtp_server="smtp.gmail.com", smtp_port=587):
         # Create a multipart message
         if filename is None:
             filename = self.filepath

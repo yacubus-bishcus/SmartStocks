@@ -21,6 +21,7 @@ class LoginPage(MDScreen):
     def on_success(self, req, result):
         # Handle successful login
         logger.info("Login successful!")
+        self.manager.get_screen('profile').username = self.ids.username_input.text
         # Navigate to next screen or perform desired action
 
     def on_failure(self, req, result):

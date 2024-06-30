@@ -2,6 +2,8 @@
 import threading
 import logging
 from datetime import datetime
+import os 
+from dotenv import load_dotenv 
 
 # Kivy Imported Modules
 from kivymd.uix.screen import MDScreen
@@ -16,6 +18,7 @@ from kivymd.uix.pickers.datepicker import MDDatePicker
 # My Imported Modules
 from SmartStocksInputManager import SmartStocksInputManager
 from ArgsParser import ArgsParser
+from OutputManager import Email 
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -47,14 +50,11 @@ class CreateReportScreen(MDScreen):
     jump_param = ObjectProperty(None)
     processes = ObjectProperty(None)
     include_research = ObjectProperty(None)
-    data_source = ObjectProperty(None)
-    default_data = ObjectProperty(None)
     min_price = ObjectProperty(None)
     max_price = ObjectProperty(None)
     num_research = ObjectProperty(None)
     output = ObjectProperty(None)
     email = ObjectProperty(None)
-    same_as_user = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super(CreateReportScreen, self).__init__(**kwargs)
@@ -64,7 +64,8 @@ class CreateReportScreen(MDScreen):
         self.index = ""
         self.the_sim_date = datetime.today().date()
         self.model_time = ""
-        
+        self.email_value = False 
+    
     def show_date_picker(self, focus):
         if not focus:
             return
@@ -202,20 +203,20 @@ class CreateReportScreen(MDScreen):
     def get_include_list_value(self):
         logger.info(f"Include List Value {self.include_list.active}")
         if self.include_list.active:
-            return "--input MyStock.txt"
+            return "--input Stocks.txt"
         else:
             return ""
 
     def get_index_value(self, index=""):
         logger.info(f"Index Value {index}")
         if index == "S&P500":
-            self.index = "--index s&p"
+            self.index = "--index ^GSPC"
             return self.index
         elif index == "NASDAQ":
-            self.index = "--index nas"
+            self.index = "--index ^IXIC"
             return self.index
         elif index == "DOW JONES":
-            self.index = "--index dow"
+            self.index = "--index ^DJI"
             return self.index
         else:
             return ""
@@ -269,7 +270,7 @@ class CreateReportScreen(MDScreen):
     def get_process_factor_value(self):
         logger.info(f"Process Factor Value {self.process_factor.active}")
         if self.process_factor.active:
-            return "--price_processing_model high_low"
+            return "--price_model high_low"
         else:
             return ""
 
@@ -331,7 +332,7 @@ class CreateReportScreen(MDScreen):
         if self.processes.value == 0:
             return ""
         else:
-            return f"--processes {self.processes.value}"
+            return f"--proc {self.processes.value}"
 
     def get_include_research_value(self):
         logger.info(f"Include Research Value {self.include_research.active}")
@@ -339,28 +340,6 @@ class CreateReportScreen(MDScreen):
             return "--research"
         else:
             return ""
-
-    def get_data_source_value(self):
-        data_source = self.data_source.text
-        logger.info(f"Data Source: {data_source}")
-        if self.data_source.text == "":
-            return ""
-        else:
-            if "[" or "]" not in data_source:
-                data_source = data_source.replace("[","")
-                data_source = data_source.replace("]","")
-                data_source_string = "--data " +"[" + data_source + "]"
-            else:
-                data_source_string = "--data " + data_source
-
-            return data_source_string
-
-    def get_default_data_value(self):
-        logger.info(f"Use Default Data: {self.default_data.active}")
-        #if self.default_data.active:
-        return ""
-        # else:
-        ## going have to think about this one and how to handle user not wanting default data
 
     def get_min_price_value(self):
         logger.info(f"Min Price: {self.min_price.text}")
@@ -391,13 +370,9 @@ class CreateReportScreen(MDScreen):
 
     def get_email_value(self):
         logger.info(f"Email: {self.email.text}")
-        #if self.email.text == "":
-        return ""
-        # else:
-        ## function currently not enabled
-
-    def get_same_as_user_value(self):
-        pass # function currently not enabled
+        self.email_value = False 
+        if self.email.text != "":
+            self.email_value = True 
 
     def start_calculation_thread(self, instance):
         # Start a new thread for the calculation
@@ -427,32 +402,26 @@ class CreateReportScreen(MDScreen):
         processes = self.get_processes_value()
         # Set the Research Args
         include_research = self.get_include_research_value()
-        data_source = self.get_data_source_value()
-        default_data = self.get_default_data_value()
         min_price = self.get_min_price_value()
         max_price = self.get_max_price_value()
         num_research = self.get_num_research_value()
         # Set the Output Args
         output = self.get_output_value()
         email = self.get_email_value()
-        same_as_user = self.get_same_as_user_value()
-
-        if same_as_user:
-            email = "" # add functionality to copy username/email here from loginscreen
 
         # Make the Argument
         if len(ticker_list) >= 1:
             argument = f"--ticker {','.join(ticker_list)} {use_dow} {include_list} \
             {self.index} {models} {self.model_time} {process_factor} {weights} {number_to_sim} \
             {number_trials} {sim_date} {seed} {sim_model} {j_param} {processes} {include_research} \
-            {data_source} {default_data} {min_price} {max_price} {num_research} \
-            {output} {email} "
+            {min_price} {max_price} {num_research} \
+            {output} "
         else:
             argument = f" {use_dow} {include_list} \
             {self.index} {models} {self.model_time} {process_factor} {weights} {number_to_sim} \
             {number_trials} {sim_date} {seed} {sim_model} {j_param} {processes} {include_research} \
-            {data_source} {default_data} {min_price} {max_price} {num_research} \
-            {output} {email} "
+            {min_price} {max_price} {num_research} \
+            {output} "
 
         #args = parser.parse_args(argument)
         #input_instance.set_args(args)
@@ -463,4 +432,13 @@ class CreateReportScreen(MDScreen):
 
     def calculation_complete(self, ticker_value):
         print(f"Calculations for {ticker_value} are complete!")
-        # Update the UI to reflect that the calculations are complete
+        if self.email_value and self.output.text != "":
+            load_dotenv()
+            google_api_key = os.getenv('GOOGLE_EMAIL_PASSWORD')
+            logger.info(google_api_key)
+            email_obj = Email(self.output.text)
+            email_obj.email_w_attachment(email_to=self.email.text, 
+                                     smtp_username="j.bickus2019@gmail.com", 
+                                     smtp_password=google_api_key, 
+                                     email_subject="Smart Stocks Report", 
+                                     email_body="Please find your Smart Stocks Report Attached.")

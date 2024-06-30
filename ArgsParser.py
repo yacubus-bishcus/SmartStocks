@@ -55,7 +55,7 @@ class ArgsParser:
         self.parser.add_argument('--output',              type=str, help='Writes data to an output file .txt and as a word document report. Do not include file extension. Apply --as_pdf to output a PDF instead.', required=False, default=None)
         self.parser.add_argument('-p',                    action='store_true', help='Display individual ticker price', required=False, default=False)
         self.parser.add_argument('--price_model',         type=str, choices=['high_low','close_open'], help='Choose between high_low and close_open price processing models for the simulations. Default is close_open', required=False, default='close_open')
-        self.parser.add_argument('--processes',           type=int, help='Number of CPUs to use on simulations.', required=False, default = 1)
+        self.parser.add_argument('--proc',                type=int, help='Number of CPUs to use on simulations.', required=False, default = 1)
         self.parser.add_argument('-r',                    action='store_true', help='Display Recommendations for a given stock', required=False, default=False)
         self.parser.add_argument('--report',              action='store_true', help='Create Montly Report', required=False, default=False)
         self.parser.add_argument('--research',            action='store_true', help='Use in conjunction with --report if you want randomly selected stocks to be included in the report. Otherwise --research will execute any of the other provided functions E.g. --compare.', required=False, default=None)
