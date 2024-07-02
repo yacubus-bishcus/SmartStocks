@@ -44,7 +44,8 @@ from app_design.smartstocksbuilder import SmartStocksBuilder
 from app_design.screens.aboutscreen import AboutScreen 
 from app_design.screens.feedbackscreen import FeedbackScreen
 from app_design.screens.profilescreen import ProfileScreen
-
+from app_design.screens.comparestockscreen import CompareStocksScreen
+from app_design.screens.comparestocksoutputscreen import CompareStocksOutputScreen
 ##################################################################################################
 ## MAIN CLASS 
 ##################################################################################################
@@ -84,10 +85,9 @@ class SmartStocksApp(MDApp):
         self.sm.add_widget(CreateReportScreen(name='create_report'))
         self.sm.add_widget(FutureScreen(name='future'))
         self.sm.add_widget(FutureResultScreen(name='future_result'))
-        from app_design.screens.comparestockscreen import CompareStocksScreen, CompareStocksOutputScreen
-        self.sm.add_widget(CompareStocksScreen(name='compare_stocks'))
         self.sm.add_widget(LuckyScreen(name='lucky'))
         self.sm.add_widget(LuckyResultScreen(name='lucky_result'))
+        self.sm.add_widget(CompareStocksScreen(name='compare_stocks'))
         self.sm.add_widget(CompareStocksOutputScreen(name='compare_stocks_output'))
         self.sm.add_widget(BetaScreen(name='betascreen'))
         self.sm.add_widget(AboutScreen(name='about'))

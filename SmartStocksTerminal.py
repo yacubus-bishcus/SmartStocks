@@ -63,7 +63,7 @@ def SmartStocksTerminal():
     input_manager.stocks = (input_manager.tickers)
 
     # Determine ETC 
-    SmartStocksClock.guess_etc(args.processes, len(input_manager.stocks), args.number_to_highlight, args.simulations, args.sim_time, args.model_interval, args.report)
+    SmartStocksClock.guess_etc(args.proc, len(input_manager.stocks), args.number_to_highlight, args.simulations, args.sim_time, args.model_interval, args.report)
 
     if len(input_manager.tickers) > 0: 
         result = input_manager.apply_input_conditions(output=output, args=args)

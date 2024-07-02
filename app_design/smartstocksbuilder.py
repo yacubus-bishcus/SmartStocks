@@ -34,3 +34,7 @@ class SmartStocksBuilder:
         logger.info("feedbackscreen.kv loaded.")
         Builder.load_file("app_design/kv_files/profilescreen.kv")
         logger.info("profilescreen.kv loaded.")
+        Builder.load_file("app_design/kv_files/comparestockscreen.kv")
+        logger.info("comparestockscreen.kv loaded.")
+        Builder.load_file("app_design/kv_files/comparestocksoutputscreen.kv")
+        logger.info("comparestocksoutputscreen.kv loaded.")

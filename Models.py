@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 """
 ALL Models must have the following properties/methods at minimum
-name, caption, execute_model(), plot(ax)
+name, caption, execute_model(), plot()
 """
 class Models(ABC):
 
@@ -30,7 +30,7 @@ class Models(ABC):
         pass
     
     @abstractmethod
-    def plot(self, ax):
+    def plot(self):
         return
 
 class BaseModel(Models):
@@ -269,7 +269,7 @@ class RSI(BaseModel):
         smoothed_rsi = rsi.ewm(span=3).mean()
         return smoothed_rsi
 
-    def plot(self, stock_name=None, log_scale=False, subplot=True, show=False, ax=None):
+    def plot(self, stock_name=None, log_scale=False, subplot=True, show=False):
         if stock_name is not None:
             title_string = stock_name + " RSI vs Price"
         else:
@@ -305,7 +305,7 @@ class RSI(BaseModel):
         if show:
             plt.plot()
 
-        return fig
+        return fig, ax1
 
 ## ---------------------------------------------------------------------------##
 ## ----------------------------- CAPM CLASS ----------- ----------------------##
@@ -391,22 +391,18 @@ class CAPM(BaseModel):
     def calculate_expected_return(self, beta, mrp):
         return self.risk_free_rate + beta * mrp
 
-    def plot(self, stock_name, ax=None):
+    def plot(self, stock_name):
         plt.ioff()
         fig, ax1 = plt.subplots(figsize=(10, 6))
         ax1.plot(self.beta, self.expected_returns, color='red',label=' Beta vs Expected Returns')
         ax1.set_xlabel('Volatility Beta')
         ax1.set_ylabel('Expected Returns', color='red')
-        #ax2 = ax1.twinx()
-        #ax2.plot(history, color='blue', label='Price History')
-        #ax2.set_ylabel('PRICE', color='blue')
         ax1.legend(loc='upper left')
-        #ax2.legend(loc='upper right')
         title_string = stock_name + " CAPM Model"
         ax1.set_title(title_string)
         ax1.legend()
 
-        return ax1.figure
+        return fig
 
 ## ---------------------------------------------------------------------------##
 ## -------------------------- FIBONACCI CLASS --------------------------------##
@@ -482,8 +478,12 @@ class FIBONACCI(BaseModel):
             fig, ax = plt.subplots(figsize=(10, 6))
         else:
             fig = ax.figure
-        #fig, ax = plt.subplots(figsize=(10, 6))
-        title_string = " Fibonacci"
+
+        if stock_name is not None: 
+            title_string = f"{stock_name} Fibonacci" 
+        else: 
+            title_string = "Fibonacci"
+
         ax.plot(self.history.index, self.history.values, label='Stock Price', color='green')
         for i, level in enumerate(self.fib_levels):
             retracement_level = self.retracement_levels[i]
@@ -494,7 +494,7 @@ class FIBONACCI(BaseModel):
         ax.set_title(title_string)
         ax.legend()
 
-        return fig
+        return fig, ax
 
 ## ---------------------------------------------------------------------------##
 ## -------------------- STOCHASTIC_OCSILLATOR CLASS --------------------------##
@@ -574,7 +574,7 @@ class STOCHASTIC(BaseModel):
         result_df = pd.DataFrame({'Average_Percent':avg_percent})
         return result_df
 
-    def plot(self, stock_name=None, ax=None):
+    def plot(self, stock_name=None):
         plt.ioff()
         if stock_name is not None:
             string_title = stock_name + " Stochastic"
@@ -591,8 +591,8 @@ class STOCHASTIC(BaseModel):
         ax1.legend(loc='upper left')
         ax2.legend(loc='upper right')
         plt.title(string_title)
-        #plt.show()
-        return fig
+  
+        return fig, ax1
 
 ## ---------------------------------------------------------------------------##
 ## ------------------------------- MACD CLASS --------------------------------##
@@ -665,7 +665,7 @@ class MACD(BaseModel):
         return output
 
     @staticmethod 
-    def calculate_model(prices, short_window=12, long_window=26, signal_window=9):
+    def calculate_model(prices):
 
         short_ema = prices.ewm(span=12, min_periods=1, adjust=False).mean()
         long_ema = prices.ewm(span=26, min_periods=1, adjust=False).mean()
@@ -688,8 +688,8 @@ class MACD(BaseModel):
                 performance_score -= 1
         return performance_score
     
-    def calculate_historical_adjustments(self, prices, short_window=12, long_window=26, signal_window=9):
-        macd_line, signal_line, _ = self.calculate_model(prices, short_window, long_window, signal_window)
+    def calculate_historical_adjustments(self, prices):
+        macd_line, signal_line, _ = self.calculate_model(prices)
         bullish_adjustments = []
         bearish_adjustments = []
         
@@ -718,7 +718,7 @@ class MACD(BaseModel):
         else:
             return 1
 
-    def plot(self, stock_name=None, show=False, ax=None, bin_size=None, show_histogram=False):
+    def plot(self, stock_name=None, show=False, bin_size=None, show_histogram=False):
         if stock_name is not None:
             string_title = stock_name + " MACD"
         else:
@@ -776,4 +776,4 @@ class MACD(BaseModel):
         if show:
             plt.show()
 
-        return fig
+        return fig, ax1

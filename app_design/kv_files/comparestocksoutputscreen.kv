@@ -1,8 +1,11 @@
-<LuckyResultScreen>:
-    output_label: output_label_id 
-
+<CompareStocksOutputScreen>:
+    stock_label: stock_label_id
+    output_label: output_label_id
+    
     MDBoxLayout:
         orientation: 'vertical'
+        padding: dp(30)
+        spacing: dp(30)
 
         MDTopAppBar:
             title: "Smart Stocks by Jacob E Bickus"
@@ -13,7 +16,7 @@
 
         MDScrollView:
             MDGridLayout:
-                id: main_layout 
+                id: main_layout
                 cols: 1
                 padding: dp(10)
                 spacing: dp(20)
@@ -21,22 +24,32 @@
                 height: self.minimum_height
                 pos_hint: {"center_x": 0.5}
 
+                # Title at the top left
                 MDLabel:
-                    text: "Lucky Results"
+                    text: "Compare Stocks Results"
                     font_size: "36sp"
                     adaptive_size: True
                     color: "grey"
-                    pos_hint: {"center_x": 0.5}
+                    halign: 'left'
+
+                # Stock information centered below the title
+                MDLabel:
+                    id: stock_label_id
+                    text: "Stock Information will be displayed here."
+                    font_size: '36sp'
+                    halign: 'center'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 1, 1, 1, 1
 
                 # Graph layout
                 MDBoxLayout:
-                    orientation: 'vertical'
                     id: graph_layout
+                    orientation: 'vertical'
                     size_hint_x: 1
                     size_hint_y: None
                     height: dp(500)
-                    pos_hint: {"center_x": 0.5}
-                    padding: dp(10)
+                    pos_hint: {"center_x":0.5}
 
                 # Buttons for zoom, pan, and reset
                 MDBoxLayout:
@@ -74,26 +87,26 @@
                     font_size: '24sp'
                     halign: 'center'
                     size_hint_y: None
-                    height: dp(50)
+                    height: self.texture_size[1]
                     color: 0, 0, 0, 1
 
-                # Table layout 
+                # Recommendations table below the output label
                 MDBoxLayout:
                     id: table_layout
                     orientation: 'vertical'
-                    size_hint_x: 1
-                    size_hint_y: None
-                    height: dp(500)
-                    pos_hint: {"center_x": 0.5}
+                    size_hint_x: 1 
+                    size_hint_y: None 
+                    height: dp(300)
+                    pos_hint: {"center_x":0.5}
                     padding: dp(10)
-
+                    
                 # Back button below everything
                 MDRaisedButton:
                     id: back_button
-                    text: "Back to Lucky Input Screen"
+                    text: "Back to Compare Stocks"
                     size_hint_y: None
                     height: dp(50)
                     pos_hint: {"center_x": 0.5}
-                    on_press: root.back_to_lucky()
-                    padding: dp(10)
+                    on_press: root.back_to_compare(self)
+
 

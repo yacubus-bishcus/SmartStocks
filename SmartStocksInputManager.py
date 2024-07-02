@@ -6,7 +6,7 @@ import logging
 # My Modules
 from SmartStocksAnalysis import Analysis
 from SmartStocksReport import Report
-from SmartStocksStock import IndexStock
+from SmartStocksLucky import FeelingLucky
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class SmartStocksInputManager:
             self._tickers = ticker.split(',')
         # Check if there is an input file to read for tickers
         if _input is not None:
-            self._tickers += self.read_txt_file(input)
+            self._tickers += self.read_txt_file(_input)
 
         if use_dow:
             # add the dow 30
@@ -91,14 +91,13 @@ class SmartStocksInputManager:
                 logger.info(f"Sending Email to {email_to}")
                 output.email(email_to=email_to, smtp_username=username, smtp_password=password, email_subject="Smart Stocks Report", email_body="See attached.", filename=args.output)
                 logger.info("Email sent.")
-
+        elif args.research and args.simulations == 0 and not args.report: # conduct feeling lucky page 
+            lucky_instance = FeelingLucky(args)
+            results = lucky_instance.chase_greatness(self.stocks, self.analysis)
+            return results 
         else:
-            return self.analysis.execute_stock_program()
-
-    def grab_market_data(self, index, period, interval):
-        index_stock = IndexStock(period, interval)
-        index_stock.index = index 
-        return index_stock.index.history
+            results = self.analysis.execute_stock_program()
+            return results
 
     def grab_recommendations(self):
         return self.analysis.recommendations

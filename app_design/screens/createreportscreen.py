@@ -28,7 +28,7 @@ class CheckItem(MDBoxLayout):
     group = StringProperty()
     active = BooleanProperty(False)
 
-    def on_checkbox_active(self, instance, value):
+    def on_checkbox_active(self, value):
         self.active = value
         print(f'{self.text} is {value}')
 
@@ -78,7 +78,7 @@ class CreateReportScreen(MDScreen):
         date_dialog.bind(on_save=self.on_save_date)
         date_dialog.open()
 
-    def on_save_date(self, instance, value, date_range):
+    def on_save_date(self, value, date_range):
         # Handle the selected date
         self.the_sim_date = value
         print(f"Selected date: {self.the_sim_date}")
@@ -162,7 +162,7 @@ class CreateReportScreen(MDScreen):
         ]
         MDDropdownMenu(caller=item, items=menu_items).open()
 
-    def back_to_menu(self, instance):
+    def back_to_menu(self):
         self.manager.current = "menu"
 
     def add_back_to_menu_button(self):

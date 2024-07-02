@@ -79,8 +79,6 @@ AEZS|Aeterna Zentaris Inc. - Common Stock|S|N|N|100.0|N|N
 AFBI|Affinity Bancshares, Inc. - Common Stock|S|N|N|100.0|N|N
 AFCG|AFC Gamma, Inc. - Common Stock|G|N|N|100.0|N|N
 AFJK|Aimei Health Technology Co., Ltd - Ordinary Share|G|N|N|100.0|N|N
-AFJKR|Aimei Health Technology Co., Ltd - Right|G|N|N|100.0|N|N
-AFJKU|Aimei Health Technology Co., Ltd - Unit|G|N|N|100.0|N|N
 AFMD|Affimed N.V. - Common Stock|G|N|N|100.0|N|N
 AFRI|Forafric Global PLC - Ordinary Shares|S|N|N|100.0|N|N
 AFRM|Affirm Holdings, Inc. - Class A Common Stock|Q|N|N|100.0|N|N
@@ -89,11 +87,6 @@ AGBA|AGBA Group Holding Limited - Ordinary Share|S|N|N|100.0|N|N
 AGEN|Agenus Inc. - Common Stock|S|N|N|100.0|N|N
 AGIO|Agios Pharmaceuticals, Inc. - Common Stock|Q|N|N|100.0|N|N
 AGNC|AGNC Investment Corp. - Common Stock|Q|N|N|100.0|N|N
-AGNCL|AGNC Investment Corp. - Depositary Shares Each Representing a 1/1,000th Interest in a Share of 7.75% Series G Fixed-Rate Reset Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
-AGNCM|AGNC Investment Corp. - Depositary Shares rep 6.875% Series D Fixed-to-Floating Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
-AGNCN|AGNC Investment Corp. - Depositary Shares Each Representing a 1/1,000th Interest in a Share of 7.00% Series C Fixed-To-Floating Rate Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
-AGNCO|AGNC Investment Corp. - Depositary Shares, each representing a 1/1,000th interest in a share of Series E Fixed-to-Floating Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
-AGNCP|AGNC Investment Corp. - Depositary Shares Each Representing a 1/1,000th Interest in a Share of 6.125% Series F Fixed-to-Floating Rate Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
 AGYS|Agilysys, Inc. - Common Stock|Q|N|N|100.0|N|N
 AHCO|AdaptHealth Corp.  - Common Stock|S|N|N|100.0|N|N
 AHG|Akso Health Group - American Depositary Shares|S|N|N|100.0|N|N
@@ -111,8 +104,6 @@ AIRT|Air T, Inc. - Common Stock|S|N|N|100.0|N|N
 AIRTP|Air T, Inc. - Trust Preferred Securities|G|N|N|100.0|N|N
 AISP|Airship AI Holdings, Inc - Class A Common Stock|G|N|N|100.0|N|N
 AITR|AI TRANSPORTATION ACQUISITION CORP - Ordinary shares|S|N|N|100.0|N|N
-AITRR|AI TRANSPORTATION ACQUISITION CORP - Right|S|N|N|100.0|N|N
-AITRU|AI TRANSPORTATION ACQUISITION CORP - Unit|S|N|N|100.0|N|N
 AIXI|XIAO-I Corporation - American Depositary Shares|G|N|N|100.0|N|N
 AKAM|Akamai Technologies, Inc. - Common Stock|Q|N|N|100.0|N|N
 AKBA|Akebia Therapeutics, Inc. - Common Stock|S|N|N|100.0|N|N
@@ -211,7 +202,6 @@ ARAY|Accuray Incorporated - Common Stock|Q|N|N|100.0|N|N
 ARBB|ARB IOT Group Limited - Ordinary Shares|S|N|N|100.0|N|N
 ARBE|Arbe Robotics Ltd. - Ordinary Shares|S|N|N|100.0|N|N
 ARBK|Argo Blockchain plc - American Depositary Shares|Q|N|N|100.0|N|N
-ARBKL|Argo Blockchain plc - 8.75% Senior Notes due 2026|G|N|N|100.0|N|N
 ARCB|ArcBest Corporation - Common Stock|Q|N|N|100.0|N|N
 ARCC|Ares Capital Corporation - Closed End Fund|Q|N|N|100.0|N|N
 ARCT|Arcturus Therapeutics Holdings Inc. - Common Stock|G|N|N|100.0|N|N
@@ -424,12 +414,7 @@ BOTJ|Bank of the James Financial Group, Inc. - Common Stock|S|N|N|100.0|N|N
 BOWN|Bowen Acquisition Corp - Ordinary Shares|G|N|N|100.0|N|N
 BPMC|Blueprint Medicines Corporation - Common Stock|Q|N|N|100.0|N|N
 BPOP|Popular, Inc. - Common Stock|Q|N|N|100.0|N|N
-BPOPM|Popular, Inc. - Popular Capital Trust II - 6.125% Cumulative Monthly Income Trust Preferred Securities|Q|N|N|100.0|N|N
 BPRN|Princeton Bancorp, Inc. - Common Stock|Q|N|N|100.0|N|N
-BPYPM|Brookfield Property Partners L.P. - 6.25% Class A Cumulative Redeemable Preferred Units, Series 1|Q|N|N|100.0|N|N
-BPYPN|Brookfield Property Partners L.P. - 5.750% Class A Cumulative Redeemable Perpetual Preferred Units, Series 3|Q|N|N|100.0|N|N
-BPYPO|Brookfield Property Partners L.P. - 6.375% Class A Cumulative Redeemable Perpetual Preferred Units, Series 2|Q|N|N|100.0|N|N
-BPYPP|Brookfield Property Partners L.P. - 6.50% Class A Cumulative Redeemable Perpetual Preferred Units|Q|N|N|100.0|N|N
 BRAC|Broad Capital Acquisition Corp - Common Stock|G|N|N|100.0|N|N
 BRACU|Broad Capital Acquisition Corp - Units|G|N|N|100.0|N|N
 BRAG|Bragg Gaming Group Inc. - Common Shares|Q|N|N|100.0|N|N
@@ -625,8 +610,6 @@ CLNE|Clean Energy Fuels Corp. - Common Stock|Q|N|N|100.0|N|N
 CLPS|CLPS Incorporation - Common Stock|G|N|N|100.0|N|N
 CLPT|ClearPoint Neuro Inc. - Common Stock|S|N|N|100.0|N|N
 CLRB|Cellectar Biosciences, Inc. - Common Stock|S|N|N|100.0|N|N
-CLRCR|ClimateRock - Right|G|N|N|100.0|N|N
-CLRCU|ClimateRock - Unit|G|N|N|100.0|N|N
 CLRO|ClearOne, Inc. - Common Stock|S|N|N|100.0|N|N
 CLSD|Clearside Biomedical, Inc. - Common Stock|G|N|N|100.0|N|N
 CLSK|CleanSpark, Inc. - Common Stock|S|N|N|100.0|N|N
@@ -650,7 +633,6 @@ CNDT|Conduent Incorporated - Common Stock|Q|N|N|100.0|N|N
 CNFR|Conifer Holdings, Inc. - Common Stock|S|N|N|100.0|N|N
 CNFRZ|Conifer Holdings, Inc. - 9.75% Senior Unsecured Notes due 2028|G|N|N|100.0|N|N
 CNOB|ConnectOne Bancorp, Inc. - Common Stock|Q|N|N|100.0|N|N
-CNOBP|ConnectOne Bancorp, Inc. - Depositary Shares (each representing a 1/40th interest in a share of 5.25% Fixed-Rate Reset Non-Cumulative Perpetual Preferred Stock, Series A, par value $0.00 per share)|Q|N|N|100.0|N|N
 CNSL|Consolidated Communications Holdings, Inc. - Common Stock|Q|N|N|100.0|N|N
 CNTA|Centessa Pharmaceuticals plc - American Depositary Shares|Q|N|N|100.0|N|N
 CNTB|Connect Biopharma Holdings Limited - American Depositary Shares|G|N|N|100.0|N|N
@@ -1211,8 +1193,6 @@ GOEV|Canoo Inc.  - Class A Common Stock|S|N|N|100.0|N|N
 GOGL|Golden Ocean Group Limited - Common Stock|Q|N|N|100.0|N|N
 GOGO|Gogo Inc. - Common Stock|Q|N|N|100.0|N|N
 GOOD|Gladstone Commercial Corporation - Real Estate Investment Trust|Q|N|N|100.0|N|N
-GOODN|Gladstone Commercial Corporation - 6.625% Series E Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
-GOODO|Gladstone Commercial Corporation - 6.00% Series G Cumulative Redeemable Preferred Stock, par value $0.001 per share|Q|N|N|100.0|N|N
 GOOG|Alphabet Inc. - Class C Capital Stock|Q|N|N|100.0|N|N
 GOOGL|Alphabet Inc. - Class A Common Stock|Q|N|N|100.0|N|N
 GORV|Lazydays Holdings, Inc. - Common Stock|S|N|N|100.0|N|N
@@ -1334,8 +1314,6 @@ HQI|HireQuest, Inc. - Common Stock|S|N|N|100.0|N|N
 HQY|HealthEquity, Inc. - Common Stock|Q|N|N|100.0|N|N
 HRMY|Harmony Biosciences Holdings, Inc. - Common Stock|G|N|N|100.0|N|N
 HROW|Harrow, Inc. - Common Stock|G|N|N|100.0|N|N
-HROWL|Harrow, Inc. - 8.625% senior notes due 2026|G|N|N|100.0|N|N
-HROWM|Harrow, Inc. - 11.875% Senior Notes due 2027|G|N|N|100.0|N|N
 HRTX|Heron Therapeutics, Inc.   - Common Stock|S|N|N|100.0|N|N
 HRZN|Horizon Technology Finance Corporation - Common Stock|Q|N|N|100.0|N|N
 HSAI|Hesai Group - American Depositary Share, each ADS represents one Class B ordinary share|Q|N|N|100.0|N|N
@@ -2033,10 +2011,6 @@ NXT|Nextracker Inc. - Class A Common Stock|Q|N|N|100.0|N|N
 NXTC|NextCure, Inc. - Common Stock|Q|N|N|100.0|N|N
 NYAX|Nayax Ltd. - Ordinary Shares|Q|N|N|100.0|N|N
 NYMT|New York Mortgage Trust, Inc. - Common Stock|Q|N|N|100.0|N|N
-NYMTL|New York Mortgage Trust, Inc. - 6.875% Series F Fixed-to-Floating Rate Cumulative Redeemable Preferred Stock, $0.01 par value per share|Q|N|N|100.0|N|N
-NYMTM|New York Mortgage Trust, Inc. - 7.875% Series E Fixed-to-Floating Rate Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
-NYMTN|New York Mortgage Trust, Inc. - 8.00% Series D Fixed-to-Floating Rate Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
-NYMTZ|New York Mortgage Trust, Inc. - 7.000% Series G Cumulative Redeemable Preferred Stock, $0.01 par value per share|Q|N|N|100.0|N|N
 NYXH|Nyxoah SA - Ordinary Shares|G|N|N|100.0|N|N
 OABI|OmniAb, Inc. - Common Stock|G|N|N|100.0|N|N
 OAKU|Oak Woods Acquisition Corporation - Class A Ordinary Shares|S|N|N|100.0|N|N
@@ -2047,8 +2021,6 @@ OBIO|Orchestra BioMed Holdings, Inc. - Ordinary Shares|G|N|N|100.0|N|N
 OBT|Orange County Bancorp, Inc. - Common Stock|S|N|N|100.0|N|N
 OCC|Optical Cable Corporation - Common Stock|G|N|N|100.0|N|N
 OCCI|OFS Credit Company, Inc. - Closed End Fund|S|N|N|100.0|N|N
-OCCIN|OFS Credit Company, Inc. - 5.25% Series E Term Preferred Stock Due 2026|S|N|N|100.0|N|N
-OCCIO|OFS Credit Company, Inc. - 6.125% Series C Term Preferred Stock|S|N|N|100.0|N|N
 OCFC|OceanFirst Financial Corp. - Common Stock|Q|N|N|100.0|N|N
 OCFCP|OceanFirst Financial Corp. - Depositary Shares|Q|N|N|100.0|N|N
 OCG|Oriental Culture Holding LTD - Ordinary Shares|S|N|N|100.0|N|N
@@ -2127,16 +2099,6 @@ OVBC|Ohio Valley Banc Corp. - Common Stock|G|N|N|100.0|N|N
 OVID|Ovid Therapeutics Inc. - Common Stock|Q|N|N|100.0|N|N
 OVLY|Oak Valley Bancorp (CA) - Common Stock|S|N|N|100.0|N|N
 OXBR|Oxbridge Re Holdings Limited - Ordinary Shares|S|N|N|100.0|N|N
-OXLC|Oxford Lane Capital Corp. - Closed End Fund|Q|N|N|100.0|N|N
-OXLCL|Oxford Lane Capital Corp. - 6.75% Notes due 2031|Q|N|N|100.0|N|N
-OXLCM|Oxford Lane Capital Corp. - 6.75% Series 2024 Term Preferred Stock|Q|N|N|100.0|N|N
-OXLCN|Oxford Lane Capital Corp. - 7.125% Series 2029 Term Preferred Stock|Q|N|N|100.0|N|N
-OXLCO|Oxford Lane Capital Corp. - Preferred Stock Shares, 6.00% Series 2029|Q|N|N|100.0|N|N
-OXLCP|Oxford Lane Capital Corp. - 6.25% Series 2027 Term Preferred Shares|Q|N|N|100.0|N|N
-OXLCZ|Oxford Lane Capital Corp. - 5.00% Notes due 2027|Q|N|N|100.0|N|N
-OXSQ|Oxford Square Capital Corp. - Closed End Fund|Q|N|N|100.0|N|N
-OXSQG|Oxford Square Capital Corp. - 5.50% Notes due 2028|Q|N|N|100.0|N|N
-OXSQZ|Oxford Square Capital Corp. - 6.25% Notes due 2026|Q|N|N|100.0|N|N
 OZK|Bank OZK - Common Stock|Q|N|N|100.0|N|N
 OZKAP|Bank OZK - 4.625% Series A Non-Cumulative Perpetual Preferred Stock|Q|N|N|100.0|N|N
 PAA|Plains All American Pipeline, L.P. - Common Units representing Limited Partner Interests|Q|N|N|100.0|N|N
@@ -2200,7 +2162,6 @@ PFIE|Profire Energy, Inc. - Common Stock|S|N|N|100.0|N|N
 PFIS|Peoples Financial Services Corp.  - Common Stock|Q|N|N|100.0|N|N
 PFMT|Performant Financial Corporation - Common Stock|Q|N|N|100.0|N|N
 PFX|PhenixFIN Corporation  - Common Stock|G|N|N|100.0|N|N
-PFXNZ|PhenixFIN Corporation  - 5.25% Notes due 2028|G|N|N|100.0|N|N
 PGC|Peapack-Gladstone Financial Corporation - Common Stock|Q|N|N|100.0|N|N
 PGEN|Precigen, Inc. - Common Stock|Q|N|N|100.0|N|N
 PGNY|Progyny, Inc. - Common Stock|Q|N|N|100.0|N|N
@@ -2238,7 +2199,6 @@ PMTS|CPI Card Group Inc. - Common Stock|G|N|N|100.0|N|N
 PMVP|PMV Pharmaceuticals, Inc. - Common Stock|Q|N|N|100.0|N|N
 PNBK|Patriot National Bancorp Inc. - Common Stock|G|N|N|100.0|N|N
 PNFP|Pinnacle Financial Partners, Inc. - Common Stock|Q|N|N|100.0|N|N
-PNFPP|Pinnacle Financial Partners, Inc. - Depositary shares of Pinnacle Financial Partners, Inc., each representing a 1/40th Interest in a share of its 6.75% Fixed-Rate Non-Cumulative Perpetual Preferred Stock, Series B|Q|N|N|100.0|N|N
 PNRG|PrimeEnergy Resources Corporation - Common Stock|S|N|N|100.0|N|N
 PNTG|The Pennant Group, Inc. - Common Stock|Q|N|N|100.0|N|N
 POAI|Predictive Oncology Inc. - Common Stock|S|N|N|100.0|N|N
@@ -2250,7 +2210,6 @@ POOL|Pool Corporation - Common Stock|Q|N|N|100.0|N|N
 POWI|Power Integrations, Inc. - Common Stock|Q|N|N|100.0|N|N
 POWL|Powell Industries, Inc. - Common Stock|Q|N|N|100.0|N|N
 POWW|AMMO, Inc. - Common Stock|S|N|N|100.0|N|N
-POWWP|AMMO, Inc. - 8.75% Series A Cumulative Redeemable Perpetual Preferred Stock|S|N|N|100.0|N|N
 PPBI|Pacific Premier Bancorp Inc - Common Stock|Q|N|N|100.0|N|N
 PPC|Pilgrim's Pride Corporation - Common Stock|Q|N|N|100.0|N|N
 PPIH|Perma-Pipe International Holdings, Inc. - Common Stock|G|N|N|100.0|N|N
@@ -2307,7 +2266,6 @@ PWP|Perella Weinberg Partners - Class A Common Stock|Q|N|N|100.0|N|N
 PXDT|Pixie Dust Technologies, Inc. - ADS, each representing one common share|S|N|N|100.0|N|N
 PXLW|Pixelworks, Inc. - Common Stock|G|N|N|100.0|N|N
 PXS|Pyxis Tankers Inc. - Common Stock|S|N|N|100.0|N|N
-PXSAP|Pyxis Tankers Inc. - 7.75% Series A Cumulative Convertible Preferred Shares|S|N|N|100.0|N|N
 PYCR|Paycor HCM, Inc. - Common Stock|Q|N|N|100.0|N|N
 PYPD|PolyPid Ltd. - Ordinary Shares|S|N|N|100.0|N|N
 PYPL|PayPal Holdings, Inc. - Common Stock|Q|N|N|100.0|N|N
@@ -2324,9 +2282,6 @@ QNCX|Quince Therapeutics, Inc. - Common Stock|Q|N|N|100.0|N|N
 QNST|QuinStreet, Inc. - Common Stock|Q|N|N|100.0|N|N
 QQQX|Nuveen NASDAQ 100 Dynamic Overwrite Fund - Closed End Fund|Q|N|N|100.0|N|N
 QRHC|Quest Resource Holding Corporation - Common Stock|S|N|N|100.0|N|N
-QRTEA|Qurate Retail, Inc. - Series A Common Stock|Q|N|N|100.0|N|N
-QRTEB|Qurate Retail, Inc. - Series B Common Stock|Q|N|N|100.0|N|N
-QRTEP|Qurate Retail, Inc. - 8.0% Fixed Rate Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
 QRVO|Qorvo, Inc. - Common Stock|Q|N|N|100.0|N|N
 QSG|QuantaSing Group Limited - American Depositary Shares|G|N|N|100.0|N|N
 QSI|Quantum-Si Incorporated - Class A Common Stock|G|N|N|100.0|N|N
@@ -2369,8 +2324,6 @@ REE|REE Automotive Ltd. - Class A Ordinary Shares|S|N|N|100.0|N|N
 REFI|Chicago Atlantic Real Estate Finance, Inc. - Common Stock|G|N|N|100.0|N|N
 REFR|Research Frontiers Incorporated - Common Stock|S|N|N|100.0|N|N
 REG|Regency Centers Corporation - Common Stock|Q|N|N|100.0|N|N
-REGCO|Regency Centers Corporation - 5.875% Series B Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
-REGCP|Regency Centers Corporation - 6.25% Series A Cumulative Redeemable Preferred Stock|Q|N|N|100.0|N|N
 REGN|Regeneron Pharmaceuticals, Inc. - Common Stock|Q|N|N|100.0|N|N
 REKR|Rekor Systems, Inc. - Common Stock|S|N|N|100.0|N|N
 RELL|Richardson Electronics, Ltd. - Common Stock|Q|N|N|100.0|N|N
@@ -2398,14 +2351,6 @@ RGTI|Rigetti Computing, Inc.  - Common stock|S|N|N|100.0|N|N
 RICK|RCI Hospitality Holdings, Inc. - Common Stock|G|N|N|100.0|N|N
 RIGL|Rigel Pharmaceuticals, Inc. - Common Stock|Q|N|N|100.0|N|N
 RILY|B. Riley Financial, Inc. - Common Stock|G|N|N|100.0|N|N
-RILYG|B. Riley Financial, Inc. - 5.00% Senior Notes due 2026|G|N|N|100.0|N|N
-RILYK|B. Riley Financial, Inc. - 5.50% Senior Notes Due 2026|G|N|N|100.0|N|N
-RILYL|B. Riley Financial, Inc. - Depositary Shares, each representing a 1/1000th fractional interest in a share of Series B Cumulative Perpetual Preferred Stock|G|N|N|100.0|N|N
-RILYM|B. Riley Financial, Inc. - 6.375% Senior Notes due 2025|G|N|N|100.0|N|N
-RILYN|B. Riley Financial, Inc. - 6.50% Senior Notes Due 2026|G|N|N|100.0|N|N
-RILYP|B. Riley Financial, Inc. - Depositary Shares, each representing a 1/1000th fractional interest in a share of Series A Cumulative Perpetual Preferred Stock|G|N|N|100.0|N|N
-RILYT|B. Riley Financial, Inc. - 6.00% Senior Notes Due 2028|G|N|N|100.0|N|N
-RILYZ|B. Riley Financial, Inc. - 5.25% Senior Notes due 2028|G|N|N|100.0|N|N
 RIOT|Riot Platforms, Inc. - Common Stock|S|N|N|100.0|N|N
 RIVN|Rivian Automotive, Inc. - Class A Common Stock|Q|N|N|100.0|N|N
 RKDA|Arcadia Biosciences, Inc. - Common Stock|S|N|N|100.0|N|N
@@ -2458,8 +2403,6 @@ RVSB|Riverview Bancorp Inc - Common Stock|Q|N|N|100.0|N|N
 RVSN|Rail Vision Ltd. - Ordinary Shares|S|N|N|100.0|N|N
 RVYL|Ryvyl Inc. - Common Stock|S|N|N|100.0|N|N
 RWAY|Runway Growth Finance Corp. - Common Stock|Q|N|N|100.0|N|N
-RWAYL|Runway Growth Finance Corp. - 7.50% Notes due 2027|Q|N|N|100.0|N|N
-RWAYZ|Runway Growth Finance Corp. - 8.00% Notes due 2027|Q|N|N|100.0|N|N
 RWOD|Redwoods Acquisition Corp. - Common Stock|G|N|N|100.0|N|N
 RWODU|Redwoods Acquisition Corp. - Unit|G|N|N|100.0|N|N
 RXRX|Recursion Pharmaceuticals, Inc. - Class A Common Stock|Q|N|N|100.0|N|N
@@ -2553,7 +2496,6 @@ SIEB|Siebert Financial Corp. - Common Stock|S|N|N|100.0|N|N
 SIFY|Sify Technologies Limited - American Depository Shares, each represented by one Equity Share|S|N|N|100.0|N|N
 SIGA|SIGA Technologies Inc. - Common Stock|G|N|N|100.0|N|N
 SIGI|Selective Insurance Group, Inc. - Common Stock|Q|N|N|100.0|N|N
-SIGIP|Selective Insurance Group, Inc. - Depositary Shares, each representing a 1/1,000th interest in a share of 4.60% Non-Cumulative Preferred Stock, Series B|Q|N|N|100.0|N|N
 SILC|Silicom Ltd - Ordinary Shares|Q|N|N|100.0|N|N
 SILK|Silk Road Medical, Inc. - Common Stock|Q|N|N|100.0|N|N
 SILO|Silo Pharma, Inc. - Common Stock|S|N|N|100.0|N|N
@@ -2576,11 +2518,9 @@ SLDB|Solid Biosciences Inc. - Common Stock|Q|N|N|100.0|N|N
 SLDP|Solid Power, Inc. - Class A Common Stock|Q|N|N|100.0|N|N
 SLE|Super League Enterprise, Inc. - Common Stock|S|N|N|100.0|N|N
 SLM|SLM Corporation - Common Stock|Q|N|N|100.0|N|N
-SLMBP|SLM Corporation - Floating Rate Non-Cumulative Preferred Stock, Series B|Q|N|N|100.0|N|N
 SLN|Silence Therapeutics Plc - American Depository Share|G|N|N|100.0|N|N
 SLNG|Stabilis Solutions, Inc. - Common Stock|S|N|N|100.0|N|N
 SLNH|Soluna Holdings, Inc. - Common Stock|S|N|N|100.0|N|N
-SLNHP|Soluna Holdings, Inc. - 9.0% Series A Cumulative Perpetual Preferred Stock|S|N|N|100.0|N|N
 SLNO|Soleno Therapeutics, Inc. - Common Stock|S|N|N|100.0|N|N
 SLP|Simulations Plus, Inc. - Common Stock|Q|N|N|100.0|N|N
 SLRC|SLR Investment Corp. - Closed End Fund|Q|N|N|100.0|N|N
@@ -2601,7 +2541,6 @@ SMXT|Solarmax Technology Inc. - Common Stock|G|N|N|100.0|N|N
 SNAL|Snail, Inc. - Class A Common Stock|S|N|N|100.0|N|N
 SNBR|Sleep Number Corporation - Common Stock|Q|N|N|100.0|N|N
 SNCR|Synchronoss Technologies, Inc. - Common Stock|S|N|N|100.0|N|N
-SNCRL|Synchronoss Technologies, Inc. - 8.375% Senior Notes due 2026|G|N|N|100.0|N|N
 SNCY|Sun Country Airlines Holdings, Inc. - Common Stock|Q|N|N|100.0|N|N
 SND|Smart Sand, Inc. - Common Stock|Q|N|N|100.0|N|N
 SNDL|SNDL Inc. - Common Shares|S|N|N|100.0|N|N
@@ -2636,7 +2575,6 @@ SPSC|SPS Commerce, Inc. - Common Stock|Q|N|N|100.0|N|N
 SPT|Sprout Social, Inc - Class A Common Stock|S|N|N|100.0|N|N
 SPTN|SpartanNash Company - Common Stock|Q|N|N|100.0|N|N
 SPWH|Sportsman's Warehouse Holdings, Inc. - Common Stock|Q|N|N|100.0|N|N
-SQFTP|Presidio Property Trust, Inc. - 9.375% Series D Cumulative Redeemable Perpetual Preferred Stock, $0.01 par value per share|S|N|N|100.0|N|N
 SRAD|Sportradar Group AG - Class A Ordinary Shares|Q|N|N|100.0|N|N
 SRBK|SR Bancorp, Inc. - Common stock|S|N|N|100.0|N|N
 SRCE|1st Source Corporation - Common Stock|Q|N|N|100.0|N|N
@@ -2654,7 +2592,6 @@ SSNC|SS&C Technologies Holdings, Inc. - Common Stock|Q|N|N|100.0|N|N
 SSP|E.W. Scripps Company (The) - Class A Common Stock|Q|N|N|100.0|N|N
 SSRM|SSR Mining Inc. - Common Stock|Q|N|N|100.0|N|N
 SSSS|SuRo Capital Corp. - Closed End Fund|Q|N|N|100.0|N|N
-SSSSL|SuRo Capital Corp. - 6.00% Notes due 2026|G|N|N|100.0|N|N
 SSTI|SoundThinking, Inc. - Common Stock|S|N|N|100.0|N|N
 SSYS|Stratasys, Ltd. - Common Stock|Q|N|N|100.0|N|N
 STAA|STAAR Surgical Company - Common Stock|G|N|N|100.0|N|N
@@ -2729,7 +2666,6 @@ TBRG|TruBridge, Inc. - Common Stock|Q|N|N|100.0|N|N
 TC|TuanChe Limited - American Depositary Shares|S|N|N|100.0|N|N
 TCBC|TC Bancshares, Inc. - Common Stock|S|N|N|100.0|N|N
 TCBI|Texas Capital Bancshares, Inc. - Common Stock|Q|N|N|100.0|N|N
-TCBIO|Texas Capital Bancshares, Inc. - Depositary Shares 5.75% Fixed Rate Non-Cumulative Perpetual Preferred Stock Series B|Q|N|N|100.0|N|N
 TCBK|TriCo Bancshares - Common Stock|Q|N|N|100.0|N|N
 TCBS|Texas Community Bancshares, Inc. - Common Stock|S|N|N|100.0|N|N
 TCBX|Third Coast Bancshares, Inc. - Common Stock|Q|N|N|100.0|N|N
@@ -2743,7 +2679,6 @@ TCX|Tucows Inc. - Common Stock|S|N|N|100.0|N|N
 TDUP|ThredUp Inc. - Class A Common Stock|Q|N|N|100.0|N|N
 TEAM|Atlassian Corporation  - Class A Common Stock|Q|N|N|100.0|N|N
 TECH|Bio-Techne Corp - Common Stock|Q|N|N|100.0|N|N
-TECTP|Tectonic Financial, Inc. - 9.00% Fixed-to-Floating Rate Series B Non-Cumulative Perpetual Preferred Stock|S|N|N|100.0|N|N
 TELA|TELA Bio, Inc. - Common stock|G|N|N|100.0|N|N
 TELO|Telomir Pharmaceuticals, Inc. - Common Stock|S|N|N|100.0|N|N
 TEM|Tempus AI, Inc. - Class A Common Stock|Q|N|N|100.0|N|N
@@ -2757,7 +2692,6 @@ TERN|Terns Pharmaceuticals, Inc. - Common Stock|Q|N|N|100.0|N|N
 TETEU|Technology & Telecommunication Acquisition Corporation - Unit|G|N|N|100.0|N|N
 TFFP|TFF Pharmaceuticals, Inc. - Common Stock|S|N|N|100.0|N|N
 TFIN|Triumph Financial, Inc. - Common Stock|Q|N|N|100.0|N|N
-TFINP|Triumph Financial, Inc. - Depositary Shares, Each Representing a 1/40th Interest in a Share of Series C Fixed-Rate Non-Cumulative Perpetual Preferred Stock|Q|N|N|100.0|N|N
 TFSL|TFS Financial Corporation - Common Stock|Q|N|N|100.0|N|N
 TGAA|Target Global Acquisition I Corp. - Class A Ordinary Share|G|N|N|100.0|N|N
 TGAAU|Target Global Acquisition I Corp. - Unit|G|N|N|100.0|N|N
@@ -2776,7 +2710,6 @@ THRM|Gentherm Inc - Common Stock|Q|N|N|100.0|N|N
 THRY|Thryv Holdings, Inc. - Common Stock|S|N|N|100.0|N|N
 THTX|Theratechnologies Inc. - Common Shares|S|N|N|100.0|N|N
 TIGO|Millicom International Cellular S.A. - Common Stock|Q|N|N|100.0|N|N
-TIGR|UP Fintech Holding Limited - American Depositary Shares representing fifteen Class A Ordinary Shares|Q|N|N|100.0|N|N
 TIL|Instil Bio, Inc. - Common Stock|S|N|N|100.0|N|N
 TILE|Interface, Inc. - Common Stock|Q|N|N|100.0|N|N
 TIPT|Tiptree Inc. - Common Stock|S|N|N|100.0|N|N
@@ -2807,14 +2740,11 @@ TOUR|Tuniu Corporation - American Depositary Shares|G|N|N|100.0|N|N
 TOWN|Towne Bank - Common Stock|Q|N|N|100.0|N|N
 TPCS|TechPrecision Corporation - Common stock|S|N|N|100.0|N|N
 TPG|TPG Inc. - Class A Common Stock|Q|N|N|100.0|N|N
-TPGXL|TPG Inc. - 6.950% Fixed-Rate Junior Subordinated Notes due 2064|G|N|N|100.0|N|N
 TPIC|TPI Composites, Inc. - Common Stock|G|N|N|100.0|N|N
 TPST|Tempest Therapeutics, Inc. - Common Stock|S|N|N|100.0|N|N
 TRDA|Entrada Therapeutics, Inc. - Common Stock|G|N|N|100.0|N|N
 TREE|LendingTree, Inc. - Common Stock|Q|N|N|100.0|N|N
 TRIN|Trinity Capital Inc. - Common Stock|Q|N|N|100.0|N|N
-TRINL|Trinity Capital Inc. - 7.00% Notes Due 2025|G|N|N|100.0|N|N
-TRINZ|Trinity Capital Inc. - 7.875% Notes due 2029|Q|N|N|100.0|N|N
 TRIP|TripAdvisor, Inc. - Common Stock|Q|N|N|100.0|N|N
 TRMD|TORM plc - Class A Common Stock|Q|N|N|100.0|N|N
 TRMK|Trustmark Corporation - Common Stock|Q|N|N|100.0|N|N
@@ -2873,7 +2803,6 @@ UBX|Unity Biotechnology, Inc. - Common Stock|Q|N|N|100.0|N|N
 UBXG|U-BX Technology Ltd. - Ordinary Shares|S|N|N|100.0|N|N
 UCAR|U Power Limited - Ordinary Shares|S|N|N|100.0|N|N
 UCBI|United Community Banks, Inc. - Common Stock|Q|N|N|100.0|N|N
-UCBIO|United Community Banks, Inc. - Depositary Shares each representing 1/1,000th interest in a share of Series I Non-Cumulative Preferred Stock|Q|N|N|100.0|N|N
 UCL|uCloudlink Group Inc. - American Depositary Shares|G|N|N|100.0|N|N
 UCTT|Ultra Clean Holdings, Inc. - Common Stock|Q|N|N|100.0|N|N
 UDMY|Udemy, Inc. - Common Stock|Q|N|N|100.0|N|N
@@ -3037,8 +2966,6 @@ WINA|Winmark Corporation - Common Stock|G|N|N|100.0|N|N
 WING|Wingstop Inc. - Common Stock|Q|N|N|100.0|N|N
 WINT|Windtree Therapeutics, Inc. - Common Stock|S|N|N|100.0|N|N
 WINV|WinVest Acquisition Corp. - Common Stock|S|N|N|100.0|N|N
-WINVR|WinVest Acquisition Corp. - Right|S|N|N|100.0|N|N
-WINVU|WinVest Acquisition Corp. - Unit|S|N|N|100.0|N|N
 WIRE|Encore Wire Corporation - Common Stock|Q|N|N|100.0|N|N
 WIX|Wix.com Ltd. - Ordinary Shares|Q|N|N|100.0|N|N
 WKEY|WISeKey International Holding Ltd - American Depositary Shares|G|N|N|100.0|N|N
@@ -3052,14 +2979,11 @@ WOOF|Petco Health and Wellness Company, Inc. - Class A Common Stock|Q|N|N|100.0|
 WPRT|Westport Fuel Systems Inc - Common Shares|Q|N|N|100.0|N|N
 WRLD|World Acceptance Corporation - Common Stock|Q|N|N|100.0|N|N
 WSBC|WesBanco, Inc. - Common Stock|Q|N|N|100.0|N|N
-WSBCP|WesBanco, Inc. - Depositary Shares, Each Representing a 1/40th Interest in a Share of 6.75% Fixed-Rate Reset Non-Cumulative Perpetual Preferred Stock, Series A|Q|N|N|100.0|N|N
 WSBF|Waterstone Financial, Inc. - Common Stock|Q|N|N|100.0|N|N
 WSC|WillScot Mobile Mini Holdings Corp. - Class A Common Stock|S|N|N|100.0|N|N
 WSFS|WSFS Financial Corporation - Common Stock|Q|N|N|100.0|N|N
 WTBA|West Bancorporation - Common Stock|Q|N|N|100.0|N|N
 WTFC|Wintrust Financial Corporation - Common Stock|Q|N|N|100.0|N|N
-WTFCM|Wintrust Financial Corporation - Fixed-to-Floating Rate Non-Cumulative Perpetual Preferred Stock, Series D|Q|N|N|100.0|N|N
-WTFCP|Wintrust Financial Corporation - Depositary Shares, Each Representing a 1/1,000th Interest in a Share of 6.875% Fixed-Rate Reset Non-Cumulative Perpetual Preferred Stock, Series E|Q|N|N|100.0|N|N
 WTW|Willis Towers Watson Public Limited Company - Ordinary Shares|Q|N|N|100.0|N|N
 WULF|TeraWulf Inc. - Common Stock|S|N|N|100.0|N|N
 WVE|Wave Life Sciences Ltd. - Ordinary Shares|G|N|N|100.0|N|N
@@ -3082,8 +3006,6 @@ XMTR|Xometry, Inc. - Class A Common Stock|Q|N|N|100.0|N|N
 XNCR|Xencor, Inc. - Common Stock|G|N|N|100.0|N|N
 XNET|Xunlei Limited - American Depositary Shares|Q|N|N|100.0|N|N
 XOMA|XOMA Corporation - Common Stock|G|N|N|100.0|N|N
-XOMAO|XOMA Corporation - Depositary Shares Rep Series B 8.375% Cumulative Preferred Stock|G|N|N|100.0|N|N
-XOMAP|XOMA Corporation - 8.625% Series A Cumulative Perpetual Preferred Stock|G|N|N|100.0|N|N
 XOS|Xos, Inc. - Common Stock|S|N|N|100.0|N|N
 XP|XP Inc. - Class A Common Stock|Q|N|N|100.0|N|N
 XPEL|XPEL, Inc. - Common Stock|S|N|N|100.0|N|N
@@ -3116,9 +3038,6 @@ ZG|Zillow Group, Inc. - Class A Common Stock|Q|N|N|100.0|N|N
 ZI|ZoomInfo Technologies Inc. - Common Stock|Q|N|N|100.0|N|N
 ZIMV|ZimVie Inc. - Common Stock|Q|N|N|100.0|N|N
 ZION|Zions Bancorporation N.A. - Common Stock|Q|N|N|100.0|N|N
-ZIONL|Zions Bancorporation N.A. - 6.95% Fixed-to-Floating Rate Subordinated Notes due September 15, 2028|G|N|N|100.0|N|N
-ZIONO|Zions Bancorporation N.A. - Depositary Shares each representing a 1/40th ownership interest in a share of Series G Fixed/Floating-Rate Non-Cumulative Perpetual Preferred Stock|G|N|N|100.0|N|N
-ZIONP|Zions Bancorporation N.A. - Depositary Shares each representing a 1/40th ownership interest in a share of Series A Floating-Rate Non-Cumulative Perpetual Preferred Stock|G|N|N|100.0|N|N
 ZJYL|JIN MEDICAL INTERNATIONAL LTD. - Ordinary Shares|S|N|N|100.0|N|N
 ZLAB|Zai Lab Limited - American Depositary Shares|G|N|N|100.0|N|N
 ZM|Zoom Video Communications, Inc. - Class A Common Stock|Q|N|N|100.0|N|N

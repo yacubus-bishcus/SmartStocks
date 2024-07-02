@@ -4,12 +4,13 @@ import pandas_datareader.data as web
 import numpy as np
 from tqdm import tqdm
 import pandas as pd
-from sklearn.preprocessing import RobustScaler, StandardScaler, PowerTransformer
+from sklearn.preprocessing import PowerTransformer
 import os
 import sys
 import pkg_resources
 import requests
 import logging
+import json 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
@@ -92,9 +93,11 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
     stock. Input includes a list of Stock objects, market data, chosen_models
     to perform, and the output object.
     """
-    def determine_top_performers(self, Stock_list, market_data, chosen_models, output):
+    def determine_top_performers(self, Stock_list, market_data, chosen_models, output=None):
         tickers = []
         prices = []
+        mse = 0.
+        r_squared = 0.
         # iterating over ticker object in a list of ticker objects
         # making a list of ticker symbols
         for stock in Stock_list:
@@ -157,7 +160,12 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
 
         # Apply weights if provided
         if self.args.weights:
-            for col, weight in self.args.weights.items():
+            if not isinstance(self.args.weights, dict):
+                weights = json.loads(self.args.weights) 
+            else:
+                weights = self.args.weights 
+
+            for col, weight in weights.items():
                 perf_df[col] *= weight
 
         # Calculate the WAM column
@@ -189,8 +197,10 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             y_pred_test = regression_model.predict(X_test)
             mse = mean_squared_error(y_test, y_pred_test)
             r_squared = regression_model.score(X_test, y_test)
-            output.mse = mse
-            output.r_squared = r_squared
+            if output is not None:
+                output.mse = mse
+                output.r_squared = r_squared
+
             logger.info(f"Mean Squared Error: {mse}")
             logger.info(f"R-squared: {r_squared}")
 
@@ -211,8 +221,11 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         else:
             norm_df = perf_df 
             norm_df['SAM'] = norm_df['WAM']
-
-        return norm_df.round(3)
+            
+        if output is not None:
+            return norm_df.round(3)
+        else:
+            return norm_df.round(3), mse, r_squared
 
     def calculate_futures(self, stock_list, output=None):
         logger.info("Grabbing Market Data...")
@@ -307,7 +320,12 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                     model_handler.pass_futures_data(future_prices, future_stds)
 
             model = model_handler.get_futures_instance()
-            figure = model.plot(stock_name="Stocks", current_prices=filtered_prices, show_every_nth_errorbar=self.args.show_every_nth_errorbar)
+            result = model.plot(stock_name="Stocks", current_prices=filtered_prices, show_every_nth_errorbar=self.args.show_every_nth_errorbar)
+            try:
+                figure, _ = result 
+            except:
+                figure = result 
+                
             caption = model.caption 
             if figure is not None:
                 figure.text(0.5,-0.2, caption, ha='center', fontsize=8)
@@ -351,9 +369,9 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             model_period = 30 
 
         if self.args.price_model == "high_low":
-            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_high_low)
+            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.proc, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_high_low)
         elif self.args.price_model == "close_open":
-            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_close_open)
+            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.proc, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_close_open)
 
         monte.calculate_initial_condition(['avg_prices', 'historical_returns'])
         average_reduction = sim_analysis.calculate_average_reduction(prices=history['Close'], window_size=self.args.h_s_window)
@@ -379,7 +397,7 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             logger.error(f"Interval Minutes could not be set by Model Interval {self.args.model_interval}. Applying interval of 1m.")
             interval_minutes = 1
 
-        if self.args.processes > 1:
+        if self.args.proc > 1:
             #if self.args.simulation_model == "gaussian":
             interval_means, interval_stds = monte.execute_normal_simulation_with_mp(drift=drift, 
                                                                                     volatility=volatility, 
@@ -412,10 +430,10 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         std_df = pd.Series(interval_stds) # returned as series 
         return sim_df, std_df # returns just one price per interval
 
-    def pull_top_performers(self, df, tickers, filter=3):
-        if len(tickers) >= filter:
+    def pull_top_performers(self, df, tickers, _filter=3):
+        if len(tickers) >= _filter:
             try:
-                top_performers = df.nlargest(filter, 'WAM') # finds the stock with the largest WAM
+                top_performers = df.nlargest(_filter, 'WAM') # finds the stock with the largest WAM
                 logger.debug("Top Performers Pulled.")
             except Exception as e:
                 logger.info(df)
@@ -435,10 +453,10 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
 
         return top_df, top_df_tickers
 
-    def pull_worst_performers(self, df, tickers, filter=3):
+    def pull_worst_performers(self, df, tickers, _filter=3):
         if len(tickers) > filter:
             try:
-                low_performers = df.nsmallest(filter, 'WAM') # finds the stock with the smallest WAM
+                low_performers = df.nsmallest(_filter, 'WAM') # finds the stock with the smallest WAM
             except Exception as e:
                 logger.info(df)
                 logger.exception(Fore.RED + f"FATAL ERROR {e}" + Style.RESET_ALL)
@@ -650,12 +668,22 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
        
 
         if all([stock_compare, stock_compare2, stock_compare3]):
-            return stock_compare.return_string_difference(), stock_compare2.return_string_difference(), stock_compare3.return_string_difference()
+            string = stock_compare.return_string_difference()
+            string2 = stock_compare2.return_string_difference() 
+            string3 = stock_compare3.return_string_difference() 
+            market_history = self.index_stock1.index.history
+            market_history2 = self.index_stock2.index.history
+            market_history3 = self.index_stock3.index.history  
+
+            return string, string2, string3, stock, market_history, market_history2, market_history3
+        
         elif any([args.c, args.c_50, args.c_200]):
             return None 
         else:
             if stock_compare is not None:
-                return stock_compare.return_string_difference()
+                return_string = stock_compare.return_string_difference()
+                return_market_history = self.index_stock.index.history
+                return return_string, stock, return_market_history
             else:
                 return None 
 
@@ -692,9 +720,9 @@ class CompareStocks:
 
     def return_string_difference(self):
         if self.difference > 0:
-            string = self.stock1.name + " is outperforming " + self.stock2.name + " by " + str(self.difference) + " percent."
+            string = f"{self.stock1.name} is outperforming {self.stock2.name} by {self.difference} percent."
         else:
-            string = self.stock1.name + " is underperforming " + self.stock2.name, " by " + str(self.difference) + " percent."
+            string = f"{self.stock1.name} is underperforming {self.stock2.name} by {self.difference} percent."
 
         return string
 

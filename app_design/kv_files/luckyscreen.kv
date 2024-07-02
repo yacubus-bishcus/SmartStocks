@@ -1,5 +1,11 @@
 <LuckyScreen>:
-    
+    num_research: slider 
+    num_highlight: slider2 
+    min_price: min_price_id 
+    max_price: max_price_id
+    clear_plots_switch: clear_plot_id
+    calculation_label: calculation_label_id
+
     MDBoxLayout:
         orientation: 'vertical'
 
@@ -44,9 +50,9 @@
 
                     MDSlider:
                         id: slider 
-                        min: 1
-                        max: 200
-                        step: 1
+                        min: 10 # change to 50 once complete with debugging 
+                        max: 500
+                        step: 10
                         orientation: 'horizontal'
                         size_hint_x: 0.85
                         pos_hint: {"center_x": 0.75}
@@ -83,7 +89,7 @@
                 
                 MDTextField:
                     id: min_price_id
-                    mode: "rectangle"
+                    mode: "fill"
                     hint_text: 'Minimum Price'
                     helper_text: "Minimum Price of Research Stocks"
                     pos_hint: {"center_x": .5, 'center_y': .5}
@@ -98,7 +104,7 @@
 
                 MDTextField:
                     id: max_price_id
-                    mode: "rectangle"
+                    mode: "fill"
                     hint_text: 'Maximum Price'
                     helper_text: "Maximum Price of Research Stocks"
                     pos_hint: {"center_x": .5, 'center_y': .5}
@@ -111,7 +117,10 @@
                     fill_color_normal: "grey"
                     fill_color_focus: "white"
 
-                
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
                 MDGridLayout:
                     cols: 2
                     size_hint_y: None
@@ -121,20 +130,46 @@
                     spacing: "48dp"
 
                     MDLabel:
-                        text: "Plot SAM"
+                        text: "Clear Plots"
                         size_hint_x: None
                         width: "120dp"
                         pos_hint: {"center_x": 0.5, "center_y": 0.5}
 
                     MDSwitch:
-                        id: plot_sam_id
+                        id: clear_plot_id
                         active: False
                         icon_active: "check"
                         icon_inactive: "close"
                         icon_active_color: "white"
                         icon_inactive_color: "grey"
                         pos_hint: {"center_y": 0.5}
+                        on_active: root.on_clear_plots_switch_active()
+
+                # Spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                # Please Wait Label
+                MDLabel:
+                    id: calculation_label_id
+                    text: "Please Wait Calculating..."
+                    font_size: '24sp'
+                    halign: 'center'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0, 0, 0, 1
+                    opacity: 0  # Initially invisible
 
                 Widget:
                     size_hint_y: None
                     height: dp(20)
+
+                # Back button below everything
+                MDRaisedButton:
+                    id: back_button
+                    text: "Back to Menu"
+                    size_hint_y: None
+                    height: dp(50)
+                    pos_hint: {"center_x": 0.5}
+                    on_press: root.back_to_menu()

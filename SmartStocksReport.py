@@ -19,7 +19,7 @@ class Report:
         # Save file
         if self.output is not None:
             self.output.smartstock_explanation_statement()
-            self.output.write(f"Ran {self.args.simulations} trials simulating {self.args.sim_time} days of future prices for each stock using seed {self.args.seed} with {self.args.processes} processors.")
+            self.output.write(f"Ran {self.args.simulations} trials simulating {self.args.sim_time} days of future prices for each stock using seed {self.args.seed} with {self.args.proc} processors.")
             self.output.write("Weights Used for Weighted Aggregate Merit: " + str(self.args.weights))
             self.output.save()
 

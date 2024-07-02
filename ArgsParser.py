@@ -82,7 +82,8 @@ class ArgsParser:
         args_list = arg_string.split()  # Split the string into list of arguments
         args_dict = vars(self.parser.parse_args(args_list))
         self.args = ArgsNamespace(**args_dict)  # Assuming ArgsNamespace accepts kwargs
-        
+        return self.args 
+    
     def to_lowercase(self, value):
         return value.lower()
     
@@ -118,9 +119,9 @@ class ArgsParser:
             logger.error(Fore.RED + f"USER ERROR: Minimum Price {self.args.min_price} Set Higher than Maximum Price {self.args.max_price}." + Style.RESET_ALL)
             return False 
         
-        if self.args.processes > mp.cpu_count():
+        if self.args.proc > mp.cpu_count():
             logger.warning(Fore.YELLOW + "Requested more processors than you have, defaulting to all processors." + Style.RESET_ALL)
-            self.args.processes = mp.cpu_count()
+            self.args.proc = mp.cpu_count()
 
         if self.args.model_period in ['3mo','6mo','1y','2y','5y','10y','ytd']:
             if self.args.model_interval in ['1m','2m','5m','15m','30m']:

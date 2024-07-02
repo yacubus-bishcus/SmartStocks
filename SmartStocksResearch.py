@@ -10,7 +10,6 @@ import random
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import pkg_resources
 import time 
 import psutil
@@ -21,9 +20,13 @@ logger = logging.getLogger(__name__)
 ## Research Class 
 #############################################################################################################################################
 class Research:
-    def __init__(self, filenames, number_to_research):
+    def __init__(self, filenames=None, number_to_research=0):
         logger.debug("--> Grabbing All Tickers...")
-        self.filenames = filenames
+        if filenames is not None:
+            self.filenames = filenames
+        else:
+            self.filenames = ["nasdaqlisted.txt", "otherlisted.txt"]
+
         self._get_ticker_symbols()
         for filename in self.filenames:
             self.clean_data(filename, filename)
@@ -85,6 +88,7 @@ class Research:
         combined_df = combined_df.drop_duplicates(subset=['Symbol'])
         tickers = combined_df['Symbol'].to_list()
         filtered_tickers = [value for value in tickers if isinstance(value, str) and not value.startswith("File")]
+        logger.info(f"Total Number of Research Tickers List to Choose From: {len(filtered_tickers)}")
         return filtered_tickers
 
     def compare_files(self, file1, file2):
@@ -106,14 +110,14 @@ class Research:
         return random_tickers
 
     def read_data(self, input_filename):
-        input_filename = pkg_resources.resource_filename('data', input_filename)
+        input_filepath = pkg_resources.resource_filename('data', input_filename)
         try:
-            df = pd.read_csv(input_filename, delimiter='|')
+            df = pd.read_csv(input_filepath, delimiter='|')
         except FileNotFoundError:
-            logger.error(f"read_txt_file --> Error: File '{input_filename}' not found.")
+            logger.error(f"read_txt_file --> Error: File '{input_filepath}' not found.")
             exit(1)
         except pd.errors.EmptyDataError:
-            logger.error(f"read_txt_file --> Error: File '{input_filename}' is empty or cannot be read as CSV.")
+            logger.error(f"read_txt_file --> Error: File '{input_filepath}' is empty or cannot be read as CSV.")
             exit(1)
 
         return df
@@ -130,6 +134,9 @@ class Research:
                      (df['Market Category'] != 'N')]
         elif input_filename == "otherlisted.txt":
             filtered_df = df[(df['ETF'] != 'Y') & (df['Test Issue'] != 'Y')]
+            contains_dollar = filtered_df['ACT Symbol'].str.contains(r'\$')
+            filtered_df = filtered_df[~contains_dollar]
+
 
         # Remove rows with "Warrant" in the 'Security Name' column
         filtered_df = filtered_df[~filtered_df['Security Name'].str.contains("Warrant", case=False, na=False)]

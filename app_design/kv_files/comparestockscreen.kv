@@ -1,0 +1,307 @@
+<CompareStocksScreen>:
+    ticker_input: stock1_input_id
+    dow_jones_checkbox: dow_jones_checkbox_id 
+    nasdaq_checkbox: nasdaq_checkbox_id 
+    sp500_checkbox: sp500_checkbox_id 
+    model_spinner: model_spinner_id 
+    clear_plots_switch: clear_plots_switch_id
+    calculation_label: calculation_label_id 
+
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: dp(20)
+        spacing: dp(20)
+
+        MDTopAppBar:
+            title: "Smart Stocks by Jacob E Bickus"
+            left_action_items: [["menu", lambda x: app.menu_bar.open_menu(x)]]
+            right_action_items: [["account-circle", lambda x: app.menu_bar.callback_right()]]
+            elevation: 5
+            pos_hint: {"top": 1}
+
+        MDScrollView:
+            MDGridLayout:
+                id: main_layout
+                cols: 1
+                padding: dp(20)
+                spacing: dp(20)
+                size_hint_y: None
+                height: self.minimum_height
+                pos_hint: {"center_x": 0.5}
+
+                # Title
+                MDLabel:
+                    text: "Compare Stocks"
+                    font_size: '64sp'
+                    halign: 'left'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0, 0, 0, 1
+
+                # Spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                # Stock Ticker Input
+                MDGridLayout:
+                    cols: 1
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    padding: dp(10)
+                    pos_hint: {"left": 1}
+
+                    MDLabel:
+                        text: "Stock Ticker"
+                        font_size: '36sp'
+                        halign: 'left'
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        color: 0, 0, 0, 1
+
+                    MDTextField:
+                        id: stock1_input_id
+                        mode: "fill"
+                        hint_text: "Stock Ticker"
+                        helper_text: "Input Tickers Separate with Comma"
+                        icon_right: "information"
+                        theme_text_color: "Custom"
+                        text_color_normal: "red"
+                        text_color_focus: "black"
+                        line_color_normal: "orange"
+                        line_color_focus: "white"
+                        fill_color_normal: "grey"
+                        fill_color_focus: "white"
+                        size_hint: None, None
+                        size: dp(300), dp(50)
+                        halign: 'center'
+                        
+                # Spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                # Model Dropdown Menu
+                MDGridLayout:
+                    cols: 1
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    padding: dp(10)
+                    pos_hint: {"center_x": 0.5}
+
+                    MDLabel:
+                        text: "Choose Model to Plot"
+                        font_size: '24sp'
+                        halign: 'left'
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        color: 0, 0, 0, 1
+
+                    Spinner:
+                        id: model_spinner_id
+                        text: 'Select Model'
+                        values: ["Fibonacci Retracement", "Index Comparison", "MACD", "RSI", "Stochastic"]
+                        size_hint: None, None
+                        size: dp(300), dp(50)
+                        pos_hint: {"center_x": 0.5}
+                        color: 0, 0, 0, 1
+
+                # Spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                # Index Checkboxes with Label
+                MDGridLayout:
+                    cols: 1
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    padding: dp(10)
+                    pos_hint: {"center_x": 0.5}
+
+                    MDLabel:
+                        text: "Choose Index to Compare as Market Data"
+                        font_size: '24sp'
+                        halign: 'left'
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        color: 0, 0, 0, 1
+
+                    MDGridLayout:
+                        cols: 3
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(20)
+                        padding: dp(10)
+                        pos_hint: {"center_x": 0.5}
+
+                        MDBoxLayout:
+                            orientation: 'horizontal'
+                            size_hint: None, None
+                            size: dp(150), dp(30)
+                            spacing: dp(2)
+
+                            MDCheckbox:
+                                id: sp500_checkbox_id
+                                size_hint: None, None
+                                size: dp(30), dp(30)
+
+                            MDLabel:
+                                text: "S&P500"
+                                size_hint: None, None
+                                size: dp(120), dp(30)
+                                color: 0, 0, 0, 1
+
+                        MDBoxLayout:
+                            orientation: 'horizontal'
+                            size_hint: None, None
+                            size: dp(150), dp(30)
+                            spacing: dp(2)
+
+                            MDCheckbox:
+                                id: nasdaq_checkbox_id
+                                size_hint: None, None
+                                size: dp(30), dp(30)
+
+                            MDLabel:
+                                text: "Nasdaq"
+                                size_hint: None, None
+                                size: dp(120), dp(30)
+                                color: 0, 0, 0, 1
+
+                        MDBoxLayout:
+                            orientation: 'horizontal'
+                            size_hint: None, None
+                            size: dp(150), dp(30)
+                            spacing: dp(2)
+
+                            MDCheckbox:
+                                id: dow_jones_checkbox_id
+                                size_hint: None, None
+                                size: dp(30), dp(30)
+
+                            MDLabel:
+                                text: "Dow Jones"
+                                size_hint: None, None
+                                size: dp(120), dp(30)
+                                color: 0, 0, 0, 1
+
+                # Spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                # Compare Buttons with Label
+                MDGridLayout:
+                    cols: 1
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    padding: dp(10)
+                    pos_hint: {"center_x": 0.5}
+
+                    MDGridLayout:
+                        cols: 3
+                        size_hint_y: None
+                        height: self.minimum_height
+                        spacing: dp(20)
+                        pos_hint: {"center_x": 0.5}
+
+                        MDRaisedButton:
+                            text: "Compare Daily"
+                            font_size: "20sp"
+                            size_hint: None, None
+                            size: dp(300), dp(100)
+                            pos_hint: {"center_x": 0.5}
+                            color: 0, 0, 0, 1
+                            on_press: root.compare_daily()
+
+                        MDRaisedButton:
+                            text: "Compare 50 Day Average"
+                            font_size: "20sp"
+                            size_hint: None, None
+                            size: dp(300), dp(100)
+                            pos_hint: {"center_x": 0.5}
+                            color: 0, 0, 0, 1
+                            on_press: root.compare_50day()
+
+                        MDRaisedButton:
+                            text: "Compare 200 Day Average"
+                            font_size: "20sp"
+                            size_hint: None, None
+                            size: dp(300), dp(100)
+                            pos_hint: {"center_x": 0.5}
+                            color: 0, 0, 0, 1
+                            on_press: root.compare_200day()
+
+                # Spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                # Switch for Clear Plots
+                MDGridLayout:
+                    cols: 2
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(5)
+                    padding: dp(5)
+                    pos_hint: {"center_x": 0.5}
+
+                    MDLabel:
+                        text: "Clear Plots"
+                        font_size: '24sp'
+                        halign: 'left'
+                        size_hint_y: None
+                        height: self.texture_size[1]
+                        color: 0, 0, 0, 1
+
+                    MDSwitch:
+                        id: clear_plots_switch_id
+                        active: False
+                        icon_active: "check"
+                        icon_inactive: "close"
+                        icon_active_color: "white"
+                        icon_inactive_color: "grey"
+                        pos_hint: {"center_y": 0.5}
+                        on_active: root.on_clear_plots_switch_active()
+
+                # Spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                # Please Wait Label
+                MDLabel:
+                    id: calculation_label_id
+                    text: "Please Wait Calculating..."
+                    font_size: '24sp'
+                    halign: 'center'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0, 0, 0, 1
+                    opacity: 0  # Initially invisible
+
+                # Spacer
+                Widget:
+                    size_hint_y: None
+                    height: dp(20)
+
+                # Back Button
+                MDGridLayout:
+                    cols: 1
+                    size_hint_y: None
+                    height: self.minimum_height
+                    spacing: dp(10)
+                    padding: dp(10)
+
+                    Button:
+                        text: "Back to Menu"
+                        size_hint: None, None
+                        size: dp(200), dp(50)
+                        pos_hint: {"center_x": 0.5}
+                        color: 0, 0, 0, 1
+                        on_press: root.back_to_menu()
