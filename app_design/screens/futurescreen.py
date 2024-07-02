@@ -23,18 +23,13 @@ class FutureScreen(MDScreen):
     sim_time = ObjectProperty(None)
     log_returns = ObjectProperty(None)
     include_history = ObjectProperty(None)
+    calculation_label = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.md_bg_color = self.theme_cls.bg_normal 
-        self.add_back_to_menu_button()
         self.add_calculate_button()
-        self._index = ""
-
-    @property 
-    def index(self):
-        return self._index 
-
+        self.index = ""
 
     def init_dropdown_menu_index(self):
         menu_items = [
@@ -61,20 +56,8 @@ class FutureScreen(MDScreen):
         ]
         MDDropdownMenu(caller=item, items=menu_items).open()
 
-    def back_to_menu(self, instance):
+    def back_to_menu(self):
         self.manager.current = "menu"
-
-    def add_back_to_menu_button(self):
-        back_to_menu_button = MDRaisedButton(
-            text="Back to Menu",
-            size_hint=(None, None),
-            size=(200,50),
-            pos_hint= {"center_x":0.5},
-            on_release=self.back_to_menu
-        )
-        
-        # Add the menu button to the main layout 
-        self.ids.main_layout.add_widget(back_to_menu_button)
 
     def add_calculate_button(self):
         # Create a new button
@@ -89,19 +72,17 @@ class FutureScreen(MDScreen):
         # Add the button to the main layout
         self.ids.main_layout.add_widget(calculate_button)
     
-    @index.setter 
-    def index(self, index):
+    def get_index_value(self, index):
         logger.info(f"Index Value {index}")
         if index == "S&P500":
-            self._index = "--index s&p"
+            self.index = "--index ^GSPC"
         elif index == "NASDAQ":
-            self._index = "--index nas"
+            self.index = "--index ^IXIC"
         elif index == "DOW JONES":
-            self._index = "--index dow"
+            self.index = "--index ^DJI"
         else:
-            self._index = ""
+            self.index = ""
 
-        
     def get_number_trials_value(self):
         return f"--simulations {int(self.num_trials.value)}"
         
@@ -129,23 +110,48 @@ class FutureScreen(MDScreen):
     
     def calculate(self):
         logger.info("Calculate button pressed")
+        Clock.schedule_once(self.show_calculation_label)
         ticker_value = self.ticker_input.text 
         input_instance = SmartStocksInputManager()
         parser = ArgsParser()
-        args = None
         ticker_list = [ticker.strip() for ticker in ticker_value.split(',')]  # Assuming tickers are comma-separated
         # Set the Futures args
         number_trials = self.get_number_trials_value()
         days_to_sim = self.get_days_to_sim_value()
         log_value = self.get_use_log_value() 
         include_history = self.get_include_history_value() 
+        if self.index == "":
+            self.index = "--index ^GSPC"
 
         # Make the Argument 
         if 1 <= len(ticker_list) <= 5:
+            # still need to optimize jump parameter could need to be user input? 
             argument = f"--ticker {','.join(ticker_list)} {number_trials} {days_to_sim} \
-                {log_value} {include_history}" 
+                {log_value} {include_history} {self.index} --model_period 1mo --model_interval 15m --jump_parameter 0.5"
+             
         
-        Clock.schedule_once(self.change_screen)
+        args = parser.parse_args(argument)
+        if parser.conduct_smartstock_input_checks():
+            input_instance.tickers = (self.ticker_input.text, None, None, None)
+            input_instance.stocks = (input_instance.tickers) 
+            results = input_instance.apply_input_conditions(output=None, args=args, app=True) # results here is a model object and filtered_stocks  
+            output_screen = self.manager.get_screen('future_result')
+            Clock.schedule_once(lambda dt: output_screen.update_output(results=results, args=args))
+            Clock.schedule_once(lambda dt: self.hide_calculation_label())
+            Clock.schedule_once(lambda dt: setattr(self.manager, 'current', 'future_result'))
+        else:
+            self.calculation_label.text = "User Input Error: See Documentation."
+            self.show_calculation_label() 
 
-    def change_screen(self, dt):
+
+    def update_ui(self, results):
+        output_screen = self.manager.get_screen('future_result')
+        output_screen.update_output(results=results)
+        self.hide_calculation_label()
         self.manager.current = 'future_result'
+
+    def show_calculation_label(self, *args):
+        self.calculation_label.opacity = 1
+
+    def hide_calculation_label(self, *args):
+        self.calculation_label.opacity = 0

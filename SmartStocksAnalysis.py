@@ -227,7 +227,7 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         else:
             return norm_df.round(3), mse, r_squared
 
-    def calculate_futures(self, stock_list, output=None):
+    def calculate_futures(self, stock_list, output=None, app=False):
         logger.info("Grabbing Market Data...")
         market_index = IndexStock(period=self.args.model_period, interval=self.args.model_interval)
         market_index.index = self.args.index # for history its just market_index.index.history 
@@ -320,18 +320,22 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
                     model_handler.pass_futures_data(future_prices, future_stds)
 
             model = model_handler.get_futures_instance()
-            result = model.plot(stock_name="Stocks", current_prices=filtered_prices, show_every_nth_errorbar=self.args.show_every_nth_errorbar)
-            try:
-                figure, _ = result 
-            except:
-                figure = result 
-                
-            caption = model.caption 
-            if figure is not None:
-                figure.text(0.5,-0.2, caption, ha='center', fontsize=8)
-                figure.tight_layout(pad=2.0)
 
-                return figure
+            if not app:
+                result = model.plot(stock_name="Stocks", current_prices=filtered_prices, show_every_nth_errorbar=self.args.show_every_nth_errorbar)
+                try:
+                    figure, _ = result 
+                except:
+                    figure = result 
+                    
+                caption = model.caption 
+                if figure is not None:
+                    figure.text(0.5,-0.2, caption, ha='center', fontsize=8)
+                    figure.tight_layout(pad=2.0)
+
+                    return figure
+            else:
+                return model, filtered_prices # cannot plot outside of app 
     
     def conduct_simulations(self, history):
         sim_analysis = Simulation_Analysis()

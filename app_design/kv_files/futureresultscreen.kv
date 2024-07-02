@@ -1,4 +1,6 @@
 <FutureResultScreen>:
+    output_label: output_label_id 
+    
     MDBoxLayout:
         orientation: 'vertical'
 
@@ -25,3 +27,60 @@
                     adaptive_size: True
                     color: "grey"
                     pos_hint: {"center_x": 0.5}
+
+                # Graph layout
+                MDBoxLayout:
+                    id: graph_layout
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: dp(500)
+                    pos_hint: {"center_x": 0.5}
+
+                # Buttons for zoom, pan, and reset
+                MDBoxLayout:
+                    orientation: 'horizontal'
+                    size_hint_y: None
+                    height: dp(56)
+                    padding: dp(10)
+                    spacing: dp(10)
+                    pos_hint: {"center_x": 0.5}
+
+                    MDRaisedButton:
+                        text: "Zoom In"
+                        on_press: root.zoom_in()
+
+                    MDRaisedButton:
+                        text: "Zoom Out"
+                        on_press: root.zoom_out()
+
+                    MDRaisedButton:
+                        text: "Pan Left"
+                        on_press: root.pan_left()
+
+                    MDRaisedButton:
+                        text: "Pan Right"
+                        on_press: root.pan_right()
+
+                    MDRaisedButton:
+                        text: "Reset"
+                        on_press: root.reset_view()
+
+                # Output label below the graph
+                MDLabel:
+                    id: output_label_id
+                    text: "Output will be displayed here."
+                    font_size: '24sp'
+                    halign: 'center'
+                    size_hint_y: None
+                    height: dp(50)
+                    color: 0, 0, 0, 1
+
+                # Back button below everything
+                MDRaisedButton:
+                    id: back_button
+                    text: "Back to Lucky Input Screen"
+                    size_hint_y: None
+                    height: dp(50)
+                    pos_hint: {"center_x": 0.5}
+                    on_press: root.back_to_menu()
+                    padding: dp(10)

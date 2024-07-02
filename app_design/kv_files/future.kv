@@ -4,7 +4,8 @@
     sim_time: slider2 
     log_returns: log_returns_id
     include_history: include_history_id
-    
+    calculation_label: calculation_label_id 
+
     MDBoxLayout:
         orientation: 'vertical'
 
@@ -158,3 +159,23 @@
                 Widget:
                     size_hint_y: None
                     height: dp(20)
+
+                # Please Wait Label
+                MDLabel:
+                    id: calculation_label_id
+                    text: "Please Wait Calculating..."
+                    font_size: '24sp'
+                    halign: 'center'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    color: 0, 0, 0, 1
+                    opacity: 0  # Initially invisible
+
+                # Back button below everything
+                MDRaisedButton:
+                    id: back_button
+                    text: "Back to Menu"
+                    size_hint_y: None
+                    height: dp(50)
+                    pos_hint: {"center_x": 0.5}
+                    on_press: root.back_to_menu()

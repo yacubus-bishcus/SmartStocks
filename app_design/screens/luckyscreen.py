@@ -71,12 +71,12 @@ class LuckyScreen(MDScreen):
             max_price = self.max_price.text 
 
         args = parser.parse_args(f"--research --number_to_research {int(self.num_research.value)} --number_to_highlight {int(self.num_highlight.value)} --min_price {min_price} --max_price {max_price}")
-        output = None 
+    
         if parser.conduct_smartstock_input_checks():
             research = Research(number_to_research=args.number_to_research)
             input_instance.tickers = (None, None, None, research)
             input_instance.stocks = (input_instance.tickers)
-            results = input_instance.apply_input_conditions(output=output, args=args) #this is a dataframe with the top performers 
+            results = input_instance.apply_input_conditions(output=None, args=args) #this is a dataframe with the top performers 
             
             output_screen = self.manager.get_screen('lucky_result')
             Clock.schedule_once(lambda dt: output_screen.update_output(results=results))

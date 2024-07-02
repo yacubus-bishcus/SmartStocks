@@ -58,7 +58,7 @@ class SmartStocksInputManager:
         else:
             logger.error("Ticker List Empty.")
 
-    def apply_input_conditions(self, output=None, args=None):
+    def apply_input_conditions(self, output=None, args=None, app=False):
         logger.info(f"apply input conditions tickers {self.tickers}")
         
         if self.tickers is None:
@@ -80,8 +80,8 @@ class SmartStocksInputManager:
 
         elif args.simulations > 0 and not args.report:
             # user is requesting a simulation only 
-            figure = self.analysis.calculate_futures(self.stocks, output)
-            return figure 
+            result = self.analysis.calculate_futures(self.stocks, output, app)
+            return result 
         
             if args.e and output is not None:
                 # email the output file to given email
