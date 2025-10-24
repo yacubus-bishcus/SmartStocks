@@ -9,7 +9,14 @@ class Simulation_Analysis:
         pass
 
     def _compute_volatility_features(self, prices, window=20):
-        price_series = prices if isinstance(prices, pd.Series) else pd.Series(prices)
+        if isinstance(prices, pd.Series):
+            price_series = prices
+        else:
+            price_array = np.asarray(prices)
+            price_array = price_array.squeeze()
+            if price_array.ndim != 1:
+                price_array = price_array.reshape(-1)
+            price_series = pd.Series(price_array)
         log_returns = np.log(price_series).diff().dropna()
         realized_vol = log_returns.rolling(window=window, min_periods=1).std()
         realized_vol = realized_vol.reindex(price_series.index)
