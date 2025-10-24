@@ -20,7 +20,7 @@ class Simulation_Analysis:
         log_returns = np.log(price_series).diff().dropna()
         realized_vol = log_returns.rolling(window=window, min_periods=1).std()
         realized_vol = realized_vol.reindex(price_series.index)
-        realized_vol = realized_vol.fillna(method='bfill').fillna(method='ffill')
+        realized_vol = realized_vol.bfill().ffill()
         if realized_vol.isna().all():
             realized_vol = pd.Series(np.zeros(len(price_series)), index=price_series.index)
         threshold = realized_vol.median()
@@ -58,7 +58,7 @@ class Simulation_Analysis:
         mean_return = returns.mean()
         variance = returns.var()
         drift = mean_return - (0.5 * variance)
-        volatility = returns.std()
+        volatility = returns.std(axis=0)
         return drift, volatility      
     
     @staticmethod
