@@ -1,10 +1,16 @@
+import json
+import os
+import subprocess
+import tempfile
+from pathlib import Path
+
 import numpy as np
 from scipy.stats import poisson, gamma
 from scipy.optimize import minimize
 from scipy.special import gammaln
 import multiprocessing as mp
 import logging
-import pandas as pd 
+import pandas as pd
 from tqdm import tqdm
 
 # MY Modules
@@ -12,6 +18,9 @@ from Simulation_Analysis import Simulation_Analysis
 from Models import MACD 
 
 logger = logging.getLogger(__name__)
+
+CPP_EXECUTABLE_ENV = "SMARTSTOCKS_CPP_EXEC"
+DEFAULT_CPP_EXECUTABLE = Path(__file__).resolve().parent / "cpp" / "build" / "smartstocks_sim"
 
 class MonteCarlo(Simulation_Analysis):
     def __init__(self, data, num_simulations, sim_time, history_time, processes=1, jump_param=1., apply_function=None):
@@ -56,157 +65,179 @@ class MonteCarlo(Simulation_Analysis):
             logger.exception(f"Error occuring while applying function: {e}")
             return None
 
-    def execute_normal_simulation_with_mp(self, 
-                                          drift, 
-                                          volatility, 
-                                          interval_minutes, 
-                                          average_reduction, 
-                                          bull, 
-                                          bear, 
-                                          min_cap, 
+    def execute_normal_simulation_with_mp(self,
+                                          drift,
+                                          volatility,
+                                          interval_minutes,
+                                          average_reduction,
+                                          bull,
+                                          bear,
+                                          min_cap,
                                           max_cap,
                                           incremental_adjustment_steps):
-        # Multiprocessing only works with static methods/properties 
-        initial_condition = self.initial_condition
-        sim_time = self.sim_time
-        num_simulations = self.num_simulations
-        processes = self.processes
-        jumps = self.jumps 
-        jump_intensity = self.jump_intensity
-        # Define the number of intervals per day
-        intervals_per_day = int(24 * 60 / interval_minutes)
-        total_intervals = sim_time * intervals_per_day
-        logger.info(f"Total Intervals to Simulate: {total_intervals}")
-        logger.info(f"Jump Intensity: {jump_intensity}")
-        # assign the small time difference 
-        dt = 1 / intervals_per_day
-        # Calculate jump mean and std
-        jump_mean = np.mean(jumps) if len(jumps) > 0 else 0.
-        jump_std = np.std(jumps) if len(jumps) > 0 else 0.
-        
-        # Initialize the simulations array
-        simulations_chunk = np.zeros((self.num_simulations, total_intervals))
-        pool = mp.Pool(processes=processes)
-        chunk_size = (num_simulations + processes - 1) // processes  # Ensure all chunks are the same size
-        # Create a list of arguments for each chunk
-        chunks = [(min(chunk_size, num_simulations - i * chunk_size), jump_intensity, dt, total_intervals, initial_condition, drift, volatility, jump_mean, jump_std, average_reduction, bull, bear, min_cap, max_cap, incremental_adjustment_steps)
-                  for i in range(processes)]
-        results = pool.starmap(self.normal_simulation_worker, chunks)
-        pool.close()
-        pool.join()
+        try:
+            config = self._build_cpp_config(drift=drift,
+                                            volatility=volatility,
+                                            interval_minutes=interval_minutes,
+                                            average_reduction=average_reduction,
+                                            bull=bull,
+                                            bear=bear,
+                                            min_cap=min_cap,
+                                            max_cap=max_cap,
+                                            incremental_adjustment_steps=incremental_adjustment_steps)
+            cpp_result = self._run_cpp_simulation(config)
+            interval_means = np.array(cpp_result["interval_means"])
+            interval_stds = np.array(cpp_result["interval_stds"])
+            return interval_means, interval_stds
+        except Exception:
+            logger.exception("Falling back to Python implementation due to C++ backend error.")
+            return self._execute_normal_simulation_python(drift=drift,
+                                                          volatility=volatility,
+                                                          interval_minutes=interval_minutes,
+                                                          average_reduction=average_reduction,
+                                                          bull=bull,
+                                                          bear=bear,
+                                                          min_cap=min_cap,
+                                                          max_cap=max_cap,
+                                                          incremental_adjustment_steps=incremental_adjustment_steps)
 
-        # Assemble results into the simulations array
-        start_index = 0
-        for result in results:
-            end_index = start_index + result.shape[0]
-            simulations_chunk[start_index:end_index, :] = result
-            start_index = end_index
-
-        # Calculate mean and standard deviation for each interval
-        interval_means = np.mean(simulations_chunk, axis=0)
-        interval_stds = np.std(simulations_chunk, axis=0)
-
-        return interval_means, interval_stds
-
+    def _resolve_cpp_executable(self):
+        override = os.environ.get(CPP_EXECUTABLE_ENV)
+        if override:
+            return Path(override)
+        return DEFAULT_CPP_EXECUTABLE
 
     @staticmethod
-    def normal_simulation_worker(chunk_size, 
-                                 jump_intensity, 
-                                 dt, 
-                                 total_intervals, 
-                                 initial_condition, 
-                                 drift, volatility, 
-                                 jump_mean, 
-                                 jump_std, 
-                                 average_reduction, 
-                                 bull, 
-                                 bear, 
-                                 min_cap, 
-                                 max_cap,
-                                 incremental_adjustment_steps):
-        # incremental adjustment steps is the Number of intervals over which to spread the adjustment
-        bull_increment = bull / incremental_adjustment_steps
-        bear_increment = bear / incremental_adjustment_steps
-        average_reduction_increment = average_reduction / incremental_adjustment_steps
-        simulations_chunk = np.zeros((chunk_size, total_intervals))
+    def _format_cpp_value(value):
+        if isinstance(value, float):
+            return f"{value:.15g}"
+        return str(int(value)) if isinstance(value, (np.integer, int)) else str(value)
 
-        for sim in tqdm(range(chunk_size), desc="Trials",mininterval=120, maxinterval=3600):
-            data = [initial_condition]
-            pending_bull_adjustments = 0
-            pending_bear_adjustments = 0
-            pending_reduction_adjustments = 0
-            for _ in range(total_intervals):
-                # Standard GBM component
-                normal_shock = np.random.normal(drift * dt, volatility * np.sqrt(dt))
-                
-                # Jump component
-                num_jumps = np.random.poisson(jump_intensity * dt)
-                jump_shock = np.sum(np.random.normal(jump_mean, jump_std, num_jumps))
-                
-                # Combine both components
-                shock = normal_shock + jump_shock
-                next_result = data[-1] * np.exp(shock)
-                next_result = max(min(next_result, max_cap), min_cap)
-                data.append(next_result)
-            # HEAD AND SHOULDERS ADJUSTMENT     
-            # Detect Head and Shoulders pattern in the simulated data
-            patterns, _ = Simulation_Analysis.detect_head_and_shoulders(data)
-            # Adjust prices based on detected patterns
-            for i in range(1, len(data)):
-                if pending_reduction_adjustments > 0:
-                    data[i] *= (1 - average_reduction_increment)
-                    pending_reduction_adjustments -= 1
-                if patterns[i] == 1:
-                    pending_reduction_adjustments = incremental_adjustment_steps
-            # MACD ADJUSTMENT 
-            # Convert data to pandas Series for MACD calculation
-            data_series = pd.Series(data)
-            macd_line, signal_line, _ = MACD.calculate_model(data_series)
+    def _run_cpp_simulation(self, config):
+        executable_path = self._resolve_cpp_executable()
+        if not executable_path.exists():
+            raise FileNotFoundError(
+                f"C++ simulation executable not found at {executable_path}. Build it with CMake before running simulations.")
 
-            for i in range(1, len(data)):
-                if pending_bull_adjustments > 0:
-                    data[i] *= (1 + bull_increment)
-                    pending_bull_adjustments -= 1
-                if pending_bear_adjustments > 0:
-                    data[i] *= (1 - bear_increment)
-                    pending_bear_adjustments -= 1
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "simulation.cfg"
+            output_path = Path(tmpdir) / "results.json"
+            with config_path.open("w", encoding="utf-8") as cfg:
+                for key, value in config.items():
+                    cfg.write(f"{key}={self._format_cpp_value(value)}\n")
 
-                if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
-                    pending_bull_adjustments = incremental_adjustment_steps
-                elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
-                    pending_bear_adjustments = incremental_adjustment_steps
+            try:
+                completed = subprocess.run([str(executable_path),
+                                            str(config_path),
+                                            str(output_path)],
+                                           capture_output=True,
+                                           check=True,
+                                           text=True)
+            except subprocess.CalledProcessError as error:
+                logger.error("C++ backend failed with stderr: %s", error.stderr.strip())
+                raise
 
-            simulations_chunk[sim, :] = data[1:]
+            logger.debug("C++ backend stdout: %s", completed.stdout.strip())
 
+            with output_path.open("r", encoding="utf-8") as result_file:
+                return json.load(result_file)
 
-        return simulations_chunk
+    def _build_cpp_config(self,
+                          drift,
+                          volatility,
+                          interval_minutes,
+                          average_reduction,
+                          bull,
+                          bear,
+                          min_cap,
+                          max_cap,
+                          incremental_adjustment_steps):
+        if self.initial_condition is None:
+            raise ValueError("Initial condition has not been calculated. Call calculate_initial_condition first.")
 
-    def execute_normal_simulation(self, 
-                                  drift, 
-                                  volatility, 
-                                  interval_minutes, 
-                                  average_reduction, 
-                                  bull, 
-                                  bear, 
-                                  min_cap, 
+        if self.jumps is None or self.jump_intensity is None:
+            raise ValueError("Jump statistics have not been initialised. Ensure calculate_initial_condition is executed.")
+
+        intervals_per_day = int(24 * 60 / interval_minutes)
+        total_intervals = self.sim_time * intervals_per_day
+        logger.info("Total Intervals to Simulate: %s", total_intervals)
+        logger.info("Jump Intensity: %s", self.jump_intensity)
+
+        jump_mean = float(np.mean(self.jumps)) if len(self.jumps) > 0 else 0.0
+        jump_std = float(np.std(self.jumps)) if len(self.jumps) > 0 else 0.0
+
+        threads = self.processes if self.processes and self.processes > 0 else os.cpu_count() or 1
+        window_size = getattr(self, "head_shoulders_window", 20)
+
+        config = {
+            "num_simulations": int(self.num_simulations),
+            "sim_time": int(self.sim_time),
+            "interval_minutes": int(interval_minutes),
+            "initial_condition": float(self.initial_condition),
+            "drift": float(drift),
+            "volatility": float(volatility),
+            "average_reduction": float(average_reduction),
+            "bull": float(bull),
+            "bear": float(bear),
+            "min_cap": float(min_cap),
+            "max_cap": float(max_cap),
+            "incremental_adjustment_steps": int(max(1, incremental_adjustment_steps)),
+            "jump_mean": float(jump_mean),
+            "jump_std": float(jump_std),
+            "jump_intensity": float(self.jump_intensity),
+            "threads": int(max(1, threads)),
+            "window_size": int(max(1, window_size)),
+            "macd_short_window": 12,
+            "macd_long_window": 26,
+            "macd_signal_window": 9,
+        }
+
+        seed = getattr(self, "seed", None)
+        if seed is not None:
+            config["seed"] = int(seed)
+
+        return config
+
+    def execute_normal_simulation(self,
+                                  drift,
+                                  volatility,
+                                  interval_minutes,
+                                  average_reduction,
+                                  bull,
+                                  bear,
+                                  min_cap,
                                   max_cap,
                                   incremental_adjustment_steps):
-        # Define the number of intervals per day
+        return self.execute_normal_simulation_with_mp(drift=drift,
+                                                      volatility=volatility,
+                                                      interval_minutes=interval_minutes,
+                                                      average_reduction=average_reduction,
+                                                      bull=bull,
+                                                      bear=bear,
+                                                      min_cap=min_cap,
+                                                      max_cap=max_cap,
+                                                      incremental_adjustment_steps=incremental_adjustment_steps)
+
+    def _execute_normal_simulation_python(self,
+                                          drift,
+                                          volatility,
+                                          interval_minutes,
+                                          average_reduction,
+                                          bull,
+                                          bear,
+                                          min_cap,
+                                          max_cap,
+                                          incremental_adjustment_steps):
         intervals_per_day = int(24 * 60 / interval_minutes)
         total_intervals = self.sim_time * intervals_per_day
         logger.info(f"Total Intervals to Simulate: {total_intervals}")
-        # assign the small time difference 
         dt = 1 / intervals_per_day
-        # Calculate jump mean and std
         jump_mean = np.mean(self.jumps) if len(self.jumps) > 0 else 0.
         jump_std = np.std(self.jumps) if len(self.jumps) > 0 else 0.
-        # Initialize the simulations array
         simulations = np.zeros((self.num_simulations, total_intervals))
-        # for debugging easier to work with local variables 
-        initial_condition = self.initial_condition 
+        initial_condition = self.initial_condition
         jump_intensity = self.jump_intensity
         logger.info(f"Jump Intensity: {jump_intensity}")
-        # incremental adjustment steps is the Number of intervals over which to spread the adjustment
         bull_increment = bull / incremental_adjustment_steps
         bear_increment = bear / incremental_adjustment_steps
         average_reduction_increment = average_reduction / incremental_adjustment_steps
@@ -217,31 +248,22 @@ class MonteCarlo(Simulation_Analysis):
             pending_bear_adjustments = 0
             pending_reduction_adjustments = 0
             for _ in range(total_intervals):
-                # Standard GBM component
                 normal_shock = np.random.normal(drift * dt, volatility * np.sqrt(dt))
-                
-                # Jump component
                 num_jumps = np.random.poisson(jump_intensity * dt)
                 jump_shock = np.sum(np.random.normal(jump_mean, jump_std, num_jumps))
-                
-                # Combine both components
                 shock = normal_shock + jump_shock
                 next_result = data[-1] * np.exp(shock)
-                # Apply min and max cap
                 next_result = max(min(next_result, max_cap), min_cap)
                 data.append(next_result)
-            # HEAD AND SHOULDERS ADJUSTMENT     
-            # Detect Head and Shoulders pattern in the simulated data
+
             patterns, _ = Simulation_Analysis.detect_head_and_shoulders(data)
-            # Adjust prices based on detected patterns
             for i in range(1, len(data)):
                 if pending_reduction_adjustments > 0:
                     data[i] *= (1 - average_reduction_increment)
                     pending_reduction_adjustments -= 1
                 if patterns[i] == 1:
                     pending_reduction_adjustments = incremental_adjustment_steps
-            # MACD ADJUSTMENT 
-            # Convert data to pandas Series for MACD calculation
+
             data_series = pd.Series(data)
             macd_line, signal_line, _ = MACD.calculate_model(data_series)
 
@@ -258,12 +280,11 @@ class MonteCarlo(Simulation_Analysis):
                 elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
                     pending_bear_adjustments = incremental_adjustment_steps
 
-            
             simulations[sim, :] = data[1:]
-        # Calculate mean and standard deviation for each interval
+
         interval_means = np.mean(simulations, axis=0)
         interval_stds = np.std(simulations, axis=0)
-            
+
         return interval_means, interval_stds
 
     def execute_poisson_gamma_simulation_with_mp(self):

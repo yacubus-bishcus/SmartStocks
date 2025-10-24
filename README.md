@@ -1,40 +1,82 @@
-# Smart Stocks: Your Ultimate Financial Analysis Tool
+# SmartStocks Computational Toolkit
 
-## Description 
-Smart Stocks is a comprehensive financial analysis application designed for both Windows and Linux operating systems. It offers an intuitive and user-friendly graphical interface that empowers users to analyze stock performance, compare different stocks, and run sophisticated financial models. 
+SmartStocks is now a headless analytics toolkit focused on high performance Monte Carlo simulations for equities. The Python
+interface orchestrates data collection and reporting, while the heavy numerical lifting is delegated to a multithreaded C++
+backend. Results can be delivered automatically via email so the entire workflow can run unattended.
 
-## Features 
-- Graphical Interface: An easy-to-navigate interface designed for both novice and experienced investors, ensuring a seamless user experience.
-- Financial Modeling: Run various financial models to evaluate stock performance, identify trends, and make informed investment decisions.
-- Stock Comparison: Compare the performance of different stocks side-by-side, allowing for better investment choices.
-- Monte Carlo Simulations: Predict future stock prices using Monte Carlo simulations, providing a probabilistic approach to future stock performance.
-- Tested Cross-Platform Compatibility: Available for both Windows and Linux, making it accessible to a wide range of users.
+## Highlights
 
-Benefits 
-==
-- Ease of Use: Simplifies complex financial analysis, making it accessible to users with varying levels of financial expertise.
-- Comprehensive Analysis: Provides a holistic view of stock performance through advanced financial models and simulations.
-- Data-Driven Decisions: Empowers users to make informed investment decisions based on robust data and analysis.
-- Flexibility: Offers a versatile tool for both casual investors and professional traders.
+- **C++ simulation engine** – Monte Carlo simulations, head-and-shoulders pattern detection, and MACD adjustments are executed in
+  native code (`cpp/smartstocks_sim.cpp`) for consistent performance across platforms.
+- **Python orchestration** – High-level logic for fetching market data, estimating parameters, and preparing reports remains in
+  Python for readability and extensibility.
+- **Email-ready reports** – Run `generate_email_report.py` to simulate a ticker, build a CSV forecast, and email the results with a
+  single command.
+- **No GUI dependencies** – All graphical application code has been removed so the project can run in batch or server
+  environments.
 
-Financial Disclaimer
-==
-The creator referenced shall be known as Jacob E Bickus.
-The Content is for informational purposes only, you should not construe any such
-information or other material as legal, tax, investment, financial, or other
-advice. Nothing contained on the StockApp Program constitutes a solicitation, recommendation, endorsement, or offer by the creator or any third party service provider to buy or sell any securities or other financial instruments in this or in in any other jurisdiction in which such solicitation or offer would be unlawful under the securities laws of such jurisdiction.
+## Project layout
 
-All Content on this site is information of a general nature and does not address the circumstances of any particular individual or entity. Nothing in the Site constitutes professional and/or financial advice, nor does any information on the Site constitute a comprehensive or complete statement of the matters discussed or the law relating thereto. The creator is not a fiduciary by virtue of any person’s use of or access to the Site or Content. You alone assume the sole responsibility of evaluating the merits and risks associated with
-the use of any information or other Content on the Site before making any decisions based on such information or other Content. In exchange for using the Site, you agree not to hold the creator, its affiliates or any third party service provider liable for any possible claim for damages arising from any decision you make based on information or other Content made available to you through the Site.
+```
+SmartStocks/
+├── cpp/                    # C++ backend source and CMake build files
+├── generate_email_report.py # CLI wrapper that runs simulations and emails the report
+├── email_reporter.py        # SMTP helper utilities
+├── MonteCarlo.py            # Python Monte Carlo wrapper that calls the C++ backend
+├── SmartStocksAnalysis.py   # Existing analysis logic updated to use the C++ engine
+└── ...                      # Other supporting modules
+```
 
-*** IMPORTANT LEGAL DISCLAIMER ***
-==
-This application incorporates yfinance package curtesy of @ranaroussi who can be reached at ran@aroussi.com
-Yahoo!, Y!Finance, and Yahoo! finance are registered trademarks of Yahoo, Inc.
+## Building the C++ backend
 
-yfinance is not affiliated, endorsed, or vetted by Yahoo, Inc. It's an open-source tool that uses Yahoo's publicly available APIs, and is intended for research and educational purposes.
-You should refer to Yahoo!'s terms of use (here, here, and here) for details on your rights to use the actual data downloaded. Remember - the Yahoo! finance API is intended for personal use only.
+The Python code expects the simulator executable at `cpp/build/smartstocks_sim`. Build it once before running simulations:
 
-Smart Stocks Usage
-==
-To experience the power of advanced financial analysis with Smart Stocks, learn more at my wiki page.
+```bash
+cd cpp
+cmake -S . -B build
+cmake --build build --config Release
+```
+
+You can override the executable location at runtime with the environment variable `SMARTSTOCKS_CPP_EXEC`.
+
+## Generating and emailing a report
+
+1. Install dependencies. The project only relies on Python libraries now that the GUI has been removed:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Build the C++ executable as shown above.
+
+3. Run the report generator:
+
+   ```bash
+   python generate_email_report.py \
+     --ticker AAPL \
+     --period 6mo \
+     --interval 1d \
+     --simulations 500 \
+     --sim-time 30 \
+     --recipient you@example.com \
+     --sender reports@example.com \
+     --smtp-server smtp.example.com \
+     --smtp-port 587 \
+     --smtp-username reports@example.com \
+     --smtp-password yourpassword
+   ```
+
+   A CSV file containing the expected price path and standard deviation will be written to `output/`, and the summary email will be
+   sent with the CSV attached. Use `--no-email` to skip the SMTP step (useful for local testing).
+
+## Configuration notes
+
+- Set `--processes` to the number of hardware threads you want the C++ engine to use.
+- Provide `--jump-parameter`, `--h-s-window`, and `--incremental-steps` to tune jump detection and technical adjustments.
+- To reproducibly rerun simulations, pass `--seed <int>`.
+- SMTP credentials can also be provided via the `SMARTSTOCKS_SMTP_PASSWORD` environment variable.
+
+## Legal notice
+
+The data collection utilities rely on `yfinance`. Yahoo!, Y!Finance, and Yahoo! finance are registered trademarks of Yahoo Inc.
+Market data usage is subject to Yahoo!'s terms of service and is intended for personal and educational purposes only.
