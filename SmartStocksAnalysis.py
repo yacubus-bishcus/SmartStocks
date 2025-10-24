@@ -356,6 +356,8 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_close_open)
 
         monte.calculate_initial_condition(['avg_prices', 'historical_returns'])
+        monte.head_shoulders_window = self.args.h_s_window
+        monte.seed = self.args.seed
         average_reduction = sim_analysis.calculate_average_reduction(prices=history['Close'], window_size=self.args.h_s_window)
         if self.args.model_interval == "1m":
             interval_minutes = 1
@@ -379,34 +381,15 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             logger.error(f"Interval Minutes could not be set by Model Interval {self.args.model_interval}. Applying interval of 1m.")
             interval_minutes = 1
 
-        if self.args.processes > 1:
-            #if self.args.simulation_model == "gaussian":
-            interval_means, interval_stds = monte.execute_normal_simulation_with_mp(drift=drift, 
-                                                                                    volatility=volatility, 
-                                                                                    interval_minutes=interval_minutes,
-                                                                                    average_reduction=average_reduction,
-                                                                                    bull=avg_bull_adj,
-                                                                                    bear=avg_bear_adj,
-                                                                                    min_cap=min_cap,
-                                                                                    max_cap=max_cap,
-                                                                                    incremental_adjustment_steps=self.args.incremental_steps)
-            # elif self.args.simulation_model == "poisson-gamma":
-            #     simulated_price = monte.execute_poisson_gamma_simulation_with_mp()
-        else:
-            #if self.args.simulation_model == "gaussian":
-            interval_means, interval_stds = monte.execute_normal_simulation(drift=drift, 
-                                                                            volatility=volatility, 
-                                                                            interval_minutes=interval_minutes, 
-                                                                            average_reduction=average_reduction, 
-                                                                            bull=avg_bull_adj, 
-                                                                            bear=avg_bear_adj,
-                                                                            min_cap=min_cap,
-                                                                            max_cap=max_cap,
-                                                                            incremental_adjustment_steps=self.args.incremental_steps) 
-            # elif self.args.simulation_model == "poisson-gamma":
-            #     beta_guess = np.var(history['Close']) / np.mean(history['Close'])
-            #     alpha_guess = (np.mean(history['Close']) / np.var(history['Close'])) **2.
-            #     simulated_price = monte.execute_poisson_gamma_simulation(alpha_guess, beta_guess)
+        interval_means, interval_stds = monte.execute_normal_simulation_with_mp(drift=drift,
+                                                                                volatility=volatility,
+                                                                                interval_minutes=interval_minutes,
+                                                                                average_reduction=average_reduction,
+                                                                                bull=avg_bull_adj,
+                                                                                bear=avg_bear_adj,
+                                                                                min_cap=min_cap,
+                                                                                max_cap=max_cap,
+                                                                                incremental_adjustment_steps=self.args.incremental_steps)
         
         sim_df = pd.Series(interval_means) # returned as series 
         std_df = pd.Series(interval_stds) # returned as series 
