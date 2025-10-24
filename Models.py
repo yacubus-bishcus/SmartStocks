@@ -680,27 +680,31 @@ class MACD(BaseModel):
         performance_score = 0.
         # Iterate over the MACD and signal line data to identify crossovers
         for i in range(1, len(self.macd_line)):
-            if self.macd_line[i] > self.signal_line[i] and self.macd_line[i-1] <= self.signal_line[i-1]:
+            if (self.macd_line.iloc[i] > self.signal_line.iloc[i]
+                    and self.macd_line.iloc[i-1] <= self.signal_line.iloc[i-1]):
                 # Bullish crossover: MACD Line crosses above the signal line
                 performance_score += 1
-            elif self.macd_line[i] < self.signal_line[i] and self.macd_line[i-1] >= self.signal_line[i-1]:
+            elif (self.macd_line.iloc[i] < self.signal_line.iloc[i]
+                    and self.macd_line.iloc[i-1] >= self.signal_line.iloc[i-1]):
                 # Bearish crossover: MACD line crosses below the signal line
                 performance_score -= 1
         return performance_score
-    
+
     def calculate_historical_adjustments(self, prices, short_window=12, long_window=26, signal_window=9):
         macd_line, signal_line, _ = self.calculate_model(prices, short_window, long_window, signal_window)
         bullish_adjustments = []
         bearish_adjustments = []
         
         for i in range(1, len(prices)):
-            if macd_line[i] > signal_line[i] and macd_line[i-1] <= signal_line[i-1]:
+            if (macd_line.iloc[i] > signal_line.iloc[i]
+                    and macd_line.iloc[i-1] <= signal_line.iloc[i-1]):
                 # Bullish MACD crossover
-                adjustment = (prices[i] - prices[i-1]) / prices[i-1]
+                adjustment = (prices.iloc[i] - prices.iloc[i-1]) / prices.iloc[i-1]
                 bullish_adjustments.append(adjustment)
-            elif macd_line[i] < signal_line[i] and macd_line[i-1] >= signal_line[i-1]:
+            elif (macd_line.iloc[i] < signal_line.iloc[i]
+                    and macd_line.iloc[i-1] >= signal_line.iloc[i-1]):
                 # Bearish MACD crossover
-                adjustment = (prices[i-1] - prices[i]) / prices[i-1]
+                adjustment = (prices.iloc[i-1] - prices.iloc[i]) / prices.iloc[i-1]
                 bearish_adjustments.append(adjustment)
         
         avg_bullish_adjustment = np.mean(bullish_adjustments) if bullish_adjustments else 0.01  # Default to 1% increase
