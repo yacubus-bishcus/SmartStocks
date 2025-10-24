@@ -37,6 +37,7 @@ cd cpp
 cmake -S . -B build
 cmake --build build --config Release
 ```
+Force a clean rebuild when needed. If you suspect stale objects (for example, after switching compilers or changing build flags), either delete the cpp/build/ directory before repeating the steps above or run cmake --build build --config Release --target clean followed by another build invocation. This ensures the executable is regenerated from scratch with the latest sources and configuration.
 
 You can override the executable location at runtime with the environment variable `SMARTSTOCKS_CPP_EXEC`.
 
@@ -60,7 +61,6 @@ You can override the executable location at runtime with the environment variabl
      --simulations 500 \
      --sim-time 30 \
      --recipient you@example.com \
-     --sender reports@example.com \
      --smtp-server smtp.example.com \
      --smtp-port 587 \
      --smtp-username reports@example.com \
@@ -91,7 +91,26 @@ Both CLIs share the same simulation parameters and rely exclusively on the C++ b
 - Set `--processes` to the number of hardware threads you want the C++ engine to use.
 - Provide `--jump-parameter`, `--h-s-window`, and `--incremental-steps` to tune jump detection and technical adjustments.
 - To reproducibly rerun simulations, pass `--seed <int>`.
-- SMTP credentials can also be provided via the `SMARTSTOCKS_SMTP_PASSWORD` environment variable.
+- SMTP credentials can also be provided via the `MAIL_PASSWORD`, `MAIL_USE_TLS`, `MAIL_USERNAME`, `MAIL_SERVER`, and `MAIL_PORT`environment variables.
+
+## How the stock prediction pipeline works
+
+1. **Market data ingestion and preprocessing** – `SmartStocksAnalysis.calculate_futures` hydrates each requested ticker with
+   historical candles pulled through `yfinance`. The data is passed to helper routines in
+   `Simulation_Analysis` which build features such as an averaged OHLC price series, intraday return series, and a rolling
+   volatility regime classifier that distinguishes calm and turbulent periods.
+2. **Model calibration** – For every stock the `MonteCarlo` wrapper derives the initial price, drift, and volatility from the
+   processed features, while also estimating jump statistics by counting return outliers over the chosen lookback window. This
+   step caches the jump frequency, jump size distribution, and recent volatility cluster so the downstream simulator uses
+   parameters that reflect the market’s latest state.
+3. **C++ simulation engine** – The calibrated inputs are written to a temporary config file and executed by the
+   multithreaded `smartstocks_sim` binary. The engine evolves each path with a geometric Brownian motion plus Poisson jump
+   component, applies head-and-shoulders pattern reductions and MACD-derived bull/bear adjustments over multiple incremental
+   steps, and clamps prices inside user-defined caps before aggregating interval means and standard deviations across all
+   simulations.
+4. **Post-processing and reporting** – The resulting interval averages and error bands are reassembled into `pandas`
+   structures, aligned with the future date grid, and can be rendered to charts or CSV/Excel outputs. Optional market index
+   simulations go through the same pipeline so forecasts can be plotted alongside the benchmark.
 
 ## Legal notice
 

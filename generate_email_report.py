@@ -29,10 +29,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path, default=Path("output"), help="Directory to store generated report files.")
     parser.add_argument("--output-file", type=Path, help="Explicit CSV output path. Overrides --output-dir.")
     parser.add_argument("--recipient", action="append", help="Email recipient. Specify multiple times for more recipients.")
-    parser.add_argument("--sender", help="Email address used as the sender.")
     parser.add_argument("--smtp-server", help="SMTP server hostname.")
     parser.add_argument("--smtp-port", type=int, help="SMTP server port. Defaults to MAIL_PORT environment variable")
-    parser.add_argument("--smtp-username", help="SMTP username. Defaults to the sender address.")
+    parser.add_argument("--smtp-username", help="SMTP username and sender")
     parser.add_argument("--smtp-password", help="SMTP password. Defaults to MAIL_PASSWORD environment variable.")
     parser.add_argument("--disable-tls", action="store_true", help="Disable STARTTLS when connecting to SMTP. Defaults to MAIL_USE_TLS environment variable.")
     parser.add_argument("--email-subject", default="SmartStocks Monte Carlo Report", help="Custom email subject.")
@@ -78,15 +77,17 @@ def main() -> None:
         return
 
     recipients = _normalise_recipients(args.recipient)
-    password = args.smtp_password or os.getenv("MAIL_PASSWORD")
+    host = args.smtp_server or os.getenv("MAIL_SERVER")
     smtp_port = args.smtp_port or os.getenv("MAIL_PORT")
+    username = args.smtp_username or os.getenv("MAIL_USERNAME")
+    password = args.smtp_password or os.getenv("MAIL_PASSWORD")
     use_tls = args.disable_tls or os.getenv("MAIL_USE_TLS")
-    smtp_settings = SMTPSettings(host=args.smtp_server,
-                                 port=args.smtp_port,
-                                 username=args.smtp_username or args.sender,
+
+    smtp_settings = SMTPSettings(host=host,
+                                 port=smtp_port,
+                                 username=username,
                                  password=password,
-                                 use_tls=not args.disable_tls,
-                                 sender=args.sender)
+                                 use_tls=use_tls)
 
     if smtp_settings.use_tls and not password:
         logger.warning("No SMTP password supplied; attempting to send without authentication.")

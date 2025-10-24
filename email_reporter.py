@@ -21,7 +21,6 @@ class SMTPSettings:
     username: Optional[str] = None
     password: Optional[str] = None
     use_tls: bool = True
-    sender: Optional[str] = None
 
 
 def _attach_files(message: EmailMessage, attachments: Iterable[Path]) -> None:
@@ -58,7 +57,7 @@ def send_email_report(
     if not recipients:
         raise ValueError("At least one recipient email address must be provided.")
 
-    sender = settings.sender or settings.username
+    sender = settings.username
     if not sender:
         raise ValueError("An email sender must be provided via SMTP settings.")
 
