@@ -1,4 +1,5 @@
-import numpy as np 
+import numpy as np
+import pandas as pd
 
 class Simulation_Analysis:
     def __init__(self, **kwargs):
@@ -7,15 +8,39 @@ class Simulation_Analysis:
     def __del__(self):
         pass
 
+    def _compute_volatility_features(self, prices, window=20):
+        price_series = prices if isinstance(prices, pd.Series) else pd.Series(prices)
+        log_returns = np.log(price_series).diff().dropna()
+        realized_vol = log_returns.rolling(window=window, min_periods=1).std()
+        realized_vol = realized_vol.reindex(price_series.index)
+        realized_vol = realized_vol.fillna(method='bfill').fillna(method='ffill')
+        if realized_vol.isna().all():
+            realized_vol = pd.Series(np.zeros(len(price_series)), index=price_series.index)
+        threshold = realized_vol.median()
+        volatility_regime = (realized_vol > threshold).astype(int)
+        return realized_vol, volatility_regime
+
     def stock_price_processing_close_open(self, data):
         avg_prices = data[['Open', 'High', 'Close', 'Low']].mean(axis=1)
         historical_returns = data['Close'] - data['Open'] # some thought to making this high and low to have more variation
-        return {'avg_prices':avg_prices, 'historical_returns':historical_returns}
+        rolling_volatility, volatility_regime = self._compute_volatility_features(data['Close'])
+        return {
+            'avg_prices': avg_prices,
+            'historical_returns': historical_returns,
+            'rolling_volatility': rolling_volatility,
+            'volatility_regime': volatility_regime,
+        }
 
     def stock_price_processing_high_low(self, data):
         avg_prices = data[['Open','High','Close','Low']].mean(axis=1)
         historical_returns = data['High'] - data['Low']
-        return {'avg_prices':avg_prices, 'historical_returns':historical_returns}
+        rolling_volatility, volatility_regime = self._compute_volatility_features(data['Close'])
+        return {
+            'avg_prices': avg_prices,
+            'historical_returns': historical_returns,
+            'rolling_volatility': rolling_volatility,
+            'volatility_regime': volatility_regime,
+        }
 
     def calculate_drift_and_volatility(self, stock_prices, use_log_returns):
         if use_log_returns:

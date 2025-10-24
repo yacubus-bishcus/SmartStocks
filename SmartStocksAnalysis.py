@@ -319,10 +319,9 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         sim_analysis = Simulation_Analysis()
         macd = MACD()
         avg_bull_adj, avg_bear_adj = macd.calculate_historical_adjustments(history['Close'])
-        drift, volatility = sim_analysis.calculate_drift_and_volatility(history['Close'], self.args.use_log_returns) # takes series of the closed prices
         stds_6 = 6*np.std(history['Close'])
-        min_cap = history['Close'][-1] - stds_6 
-        max_cap = history['Close'][-1] + stds_6 
+        min_cap = history['Close'][-1] - stds_6
+        max_cap = history['Close'][-1] + stds_6
         logger.info(f"Minimum Cap set to: {min_cap}")
         logger.info(f"Maximum Cap set to: {max_cap}")
         
@@ -351,9 +350,23 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             model_period = 30 
 
         if self.args.price_model == "high_low":
-            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_high_low)
+            monte = MonteCarlo(data=history,
+                               num_simulations=self.args.simulations,
+                               sim_time=self.args.sim_time,
+                               history_time=model_period,
+                               processes=self.args.processes,
+                               jump_param=self.args.jump_parameter,
+                               apply_function=sim_analysis.stock_price_processing_high_low,
+                               use_log_returns=self.args.use_log_returns)
         elif self.args.price_model == "close_open":
-            monte = MonteCarlo(data=history, num_simulations=self.args.simulations, sim_time=self.args.sim_time, history_time=model_period, processes=self.args.processes, jump_param=self.args.jump_parameter, apply_function=sim_analysis.stock_price_processing_close_open)
+            monte = MonteCarlo(data=history,
+                               num_simulations=self.args.simulations,
+                               sim_time=self.args.sim_time,
+                               history_time=model_period,
+                               processes=self.args.processes,
+                               jump_param=self.args.jump_parameter,
+                               apply_function=sim_analysis.stock_price_processing_close_open,
+                               use_log_returns=self.args.use_log_returns)
 
         monte.calculate_initial_condition(['avg_prices', 'historical_returns'])
         monte.head_shoulders_window = self.args.h_s_window
@@ -381,9 +394,7 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             logger.error(f"Interval Minutes could not be set by Model Interval {self.args.model_interval}. Applying interval of 1m.")
             interval_minutes = 1
 
-        interval_means, interval_stds = monte.execute_normal_simulation_with_mp(drift=drift,
-                                                                                volatility=volatility,
-                                                                                interval_minutes=interval_minutes,
+        interval_means, interval_stds = monte.execute_normal_simulation_with_mp(interval_minutes=interval_minutes,
                                                                                 average_reduction=average_reduction,
                                                                                 bull=avg_bull_adj,
                                                                                 bear=avg_bear_adj,

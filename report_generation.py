@@ -109,7 +109,8 @@ def _prepare_monte_carlo(history: pd.DataFrame, config: ForecastConfig) -> Monte
                        history_time=_resolve_history_days(config.period),
                        processes=processes,
                        jump_param=config.jump_parameter,
-                       apply_function=sim_analysis.stock_price_processing_close_open)
+                       apply_function=sim_analysis.stock_price_processing_close_open,
+                       use_log_returns=config.use_log_returns)
     monte.calculate_initial_condition(['avg_prices', 'historical_returns'])
     monte.head_shoulders_window = config.h_s_window
     monte.seed = config.seed
@@ -150,8 +151,6 @@ def generate_forecast(config: ForecastConfig) -> ForecastResult:
     sim_analysis = Simulation_Analysis()
     macd = MACD()
     avg_bull_adj, avg_bear_adj = macd.calculate_historical_adjustments(history['Close'])
-    drift, volatility = sim_analysis.calculate_drift_and_volatility(history['Close'], config.use_log_returns)
-
     stds_6 = 6 * np.std(history['Close'])
     min_cap = history['Close'].iloc[-1] - stds_6
     max_cap = history['Close'].iloc[-1] + stds_6
@@ -160,9 +159,7 @@ def generate_forecast(config: ForecastConfig) -> ForecastResult:
 
     monte = _prepare_monte_carlo(history, config)
 
-    interval_means, interval_stds = monte.execute_normal_simulation_with_mp(drift=drift,
-                                                                            volatility=volatility,
-                                                                            interval_minutes=interval_minutes,
+    interval_means, interval_stds = monte.execute_normal_simulation_with_mp(interval_minutes=interval_minutes,
                                                                             average_reduction=average_reduction,
                                                                             bull=avg_bull_adj,
                                                                             bear=avg_bear_adj,
