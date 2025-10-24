@@ -327,10 +327,18 @@ void write_output(const std::string &path,
         throw std::runtime_error("Unable to open output file: " + path);
     }
 
+    const auto write_numeric = [&output](double value) {
+        if (std::isfinite(value)) {
+            output << value;
+        } else {
+            output << "null";
+        }
+    };
+
     output << "{\n";
     output << "  \"interval_means\": [";
     for (std::size_t i = 0; i < means.size(); ++i) {
-        output << means[i];
+        write_numeric(means[i]);
         if (i + 1 != means.size()) {
             output << ", ";
         }
@@ -338,7 +346,7 @@ void write_output(const std::string &path,
     output << "],\n";
     output << "  \"interval_stds\": [";
     for (std::size_t i = 0; i < stds.size(); ++i) {
-        output << stds[i];
+        write_numeric(stds[i]);
         if (i + 1 != stds.size()) {
             output << ", ";
         }
