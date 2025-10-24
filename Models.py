@@ -667,6 +667,18 @@ class MACD(BaseModel):
     @staticmethod 
     def calculate_model(prices, short_window=12, long_window=26, signal_window=9):
 
+        if isinstance(prices, pd.DataFrame):
+            if 'Close' in prices.columns:
+                prices = prices['Close']
+            elif prices.shape[1] == 1:
+                prices = prices.iloc[:, 0]
+            else:
+                prices = prices.squeeze()
+        if isinstance(prices, pd.DataFrame):
+            prices = prices.iloc[:, 0]
+        if not isinstance(prices, pd.Series):
+            prices = pd.Series(prices)
+
         short_ema = prices.ewm(span=12, min_periods=1, adjust=False).mean()
         long_ema = prices.ewm(span=26, min_periods=1, adjust=False).mean()
         # Calculate MACD Line
