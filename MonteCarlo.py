@@ -34,7 +34,16 @@ class SimulationConfig:
 
 
 class MonteCarlo(Simulation_Analysis):
-    def __init__(self, data, num_simulations, sim_time, history_time, processes=1, jump_param=1., apply_function=None):
+    def __init__(self,
+                 data,
+                 num_simulations,
+                 sim_time,
+                 history_time,
+                 processes=1,
+                 jump_param=1.,
+                 apply_function=None,
+                 use_log_returns=True,
+                 volatility_lookback=20):
         super().__init__()
         self.data = data
         self.num_simulations = num_simulations
@@ -45,8 +54,16 @@ class MonteCarlo(Simulation_Analysis):
         self.jump_threshold = None
         self.jump_threshold_parameter = jump_param # amount in standard deviations that the user qualifies as a "jump"
         self.jumps = None
-        self.jump_intensity = None 
-        self.num_days = history_time # this is the model_period typically ran at 30 days 
+        self.jump_intensity = None
+        self.num_days = history_time # this is the model_period typically ran at 30 days
+        self.use_log_returns = use_log_returns
+        self.volatility_lookback = max(1, int(volatility_lookback))
+        self.calibrated_drift = None
+        self.calibrated_volatility = None
+        self.volatility_features = {}
+        self.calibrated_jump_mean = 0.0
+        self.calibrated_jump_std = 0.0
+        self.jump_size_rate = 0.0
 
     def __del__(self):
         pass
@@ -59,13 +76,51 @@ class MonteCarlo(Simulation_Analysis):
     """
 
     def calculate_initial_condition(self, data_keys: Iterable[str]) -> None:
+        if self.apply_function is None:
+            raise ValueError("No preprocessing function provided for Monte Carlo data preparation.")
+
         processed_data = self.apply_function(self.data)
+        if processed_data is None:
+            raise ValueError("Preprocessing function did not return any data for calibration.")
+
+        for key in data_keys:
+            if key not in processed_data:
+                raise KeyError(f"Required key '{key}' missing from preprocessing output.")
+
         param1, param2 = processed_data[data_keys[0]], processed_data[data_keys[1]]
-        self.initial_condition = param1[-1]
-        self.jump_threshold = self.jump_threshold_parameter * np.std(param1)
-        self.jumps = np.abs(param1[param2 > self.jump_threshold])
+
+        if hasattr(param1, "iloc"):
+            last_value = param1.iloc[-1]
+        else:
+            last_value = param1[-1]
+        self.initial_condition = float(last_value)
+
+        self.jump_threshold = self.jump_threshold_parameter * np.std(param2)
+
+        jump_mask = np.abs(param2) > self.jump_threshold
+        self.jumps = np.asarray(param2[jump_mask])
         num_jumps = len(self.jumps)
-        self.jump_intensity = num_jumps / self.num_days  # lambda
+        self.jump_intensity = num_jumps / self.num_days if self.num_days else 0.0  # lambda
+
+        self.calibrated_jump_mean, self.calibrated_jump_std, self.jump_size_rate = self._calibrate_jump_distribution(self.jumps)
+        logger.info("Calibrated jump frequency: %s events/day", self.jump_intensity)
+        logger.info("Calibrated jump magnitude (mean/std): %s / %s", self.calibrated_jump_mean, self.calibrated_jump_std)
+
+        drift, volatility = self.calculate_drift_and_volatility(param1, self.use_log_returns)
+        self.calibrated_drift = float(drift)
+        self.calibrated_volatility = float(volatility)
+        logger.info("Calibrated drift: %s", self.calibrated_drift)
+        logger.info("Calibrated volatility from returns: %s", self.calibrated_volatility)
+
+        rolling_volatility = processed_data.get("rolling_volatility")
+        volatility_regime = processed_data.get("volatility_regime")
+        if rolling_volatility is not None:
+            self.calibrated_volatility = self._current_volatility_from_cluster(rolling_volatility)
+            logger.info("Adjusted volatility using recent clustering: %s", self.calibrated_volatility)
+        self.volatility_features = {
+            "rolling_volatility": rolling_volatility,
+            "volatility_regime": volatility_regime,
+        }
 
 
     def apply_function(self, func):
@@ -76,20 +131,61 @@ class MonteCarlo(Simulation_Analysis):
             logger.exception(f"Error occuring while applying function: {e}")
             return None
 
+    @staticmethod
+    def _calibrate_jump_distribution(jump_returns: np.ndarray) -> Tuple[float, float, float]:
+        if jump_returns is None or len(jump_returns) == 0:
+            return 0.0, 0.0, 0.0
+
+        jump_magnitudes = np.abs(jump_returns)
+        mean_jump_size = float(np.mean(jump_magnitudes))
+        std_jump_size = float(np.std(jump_magnitudes, ddof=1)) if len(jump_magnitudes) > 1 else 0.0
+        rate = 1.0 / mean_jump_size if mean_jump_size > 0 else 0.0
+        return mean_jump_size, std_jump_size, rate
+
+    def _current_volatility_from_cluster(self, rolling_volatility) -> float:
+        if rolling_volatility is None:
+            return self.calibrated_volatility if self.calibrated_volatility is not None else 0.0
+
+        try:
+            import pandas as pd
+            if not hasattr(rolling_volatility, "tail"):
+                rolling_volatility = pd.Series(rolling_volatility)
+        except Exception:
+            rolling_volatility = np.asarray(rolling_volatility)
+            recent_vol = float(np.nanmean(rolling_volatility[-self.volatility_lookback:]))
+            return 0.0 if np.isnan(recent_vol) else recent_vol
+
+        try:
+            recent_window = rolling_volatility.tail(self.volatility_lookback)
+            recent_vol = float(np.nanmean(recent_window))
+        except Exception:
+            recent_vol = float(np.nanmean(rolling_volatility))
+        if np.isnan(recent_vol) or recent_vol == 0:
+            recent_vol = float(np.nanstd(rolling_volatility))
+        if np.isnan(recent_vol):
+            recent_vol = 0.0
+        return recent_vol
+
     def execute_normal_simulation_with_mp(self,
-                                          drift: float,
-                                          volatility: float,
                                           interval_minutes: int,
                                           average_reduction: float,
                                           bull: float,
                                           bear: float,
                                           min_cap: float,
                                           max_cap: float,
-                                          incremental_adjustment_steps: int) -> Tuple[np.ndarray, np.ndarray]:
+                                          incremental_adjustment_steps: int,
+                                          drift: float = None,
+                                          volatility: float = None) -> Tuple[np.ndarray, np.ndarray]:
         """Execute the Monte Carlo simulation through the C++ backend."""
 
-        config = SimulationConfig(drift=float(drift),
-                                  volatility=float(volatility),
+        if interval_minutes is None:
+            raise ValueError("interval_minutes must be provided for simulation execution.")
+
+        calibrated_drift = self.calibrated_drift if drift is None else drift
+        calibrated_volatility = self.calibrated_volatility if volatility is None else volatility
+
+        config = SimulationConfig(drift=float(calibrated_drift),
+                                  volatility=float(calibrated_volatility),
                                   interval_minutes=int(interval_minutes),
                                   average_reduction=float(average_reduction),
                                   bull=float(bull),
@@ -151,13 +247,16 @@ class MonteCarlo(Simulation_Analysis):
         if self.jumps is None or self.jump_intensity is None:
             raise ValueError("Jump statistics have not been initialised. Ensure calculate_initial_condition is executed.")
 
+        if self.calibrated_drift is None or self.calibrated_volatility is None:
+            raise ValueError("Drift and volatility have not been calibrated. Run calculate_initial_condition first.")
+
         intervals_per_day = int(24 * 60 / config.interval_minutes)
         total_intervals = self.sim_time * intervals_per_day
         logger.info("Total Intervals to Simulate: %s", total_intervals)
         logger.info("Jump Intensity: %s", self.jump_intensity)
 
-        jump_mean = float(np.mean(self.jumps)) if len(self.jumps) > 0 else 0.0
-        jump_std = float(np.std(self.jumps)) if len(self.jumps) > 0 else 0.0
+        jump_mean = float(self.calibrated_jump_mean)
+        jump_std = float(self.calibrated_jump_std)
 
         threads = self.processes if self.processes and self.processes > 0 else os.cpu_count() or 1
         window_size = getattr(self, "head_shoulders_window", 20)
@@ -192,15 +291,15 @@ class MonteCarlo(Simulation_Analysis):
         return config
 
     def execute_normal_simulation(self,
-                                  drift,
-                                  volatility,
-                                  interval_minutes,
-                                  average_reduction,
-                                  bull,
-                                  bear,
-                                  min_cap,
-                                  max_cap,
-                                  incremental_adjustment_steps):
+                                  drift=None,
+                                  volatility=None,
+                                  interval_minutes=None,
+                                  average_reduction=None,
+                                  bull=None,
+                                  bear=None,
+                                  min_cap=None,
+                                  max_cap=None,
+                                  incremental_adjustment_steps=None):
         return self.execute_normal_simulation_with_mp(drift=drift,
                                                       volatility=volatility,
                                                       interval_minutes=interval_minutes,
