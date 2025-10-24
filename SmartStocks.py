@@ -28,7 +28,7 @@ session = CachedLimiterSession(
 logging.basicConfig(level=logging.INFO)  # Set the logging level to INFO or DEBUG as needed
 logger = logging.getLogger(__name__)    # Create a logger for your module
 
-def SmartStocksTerminal():
+def run():
 
     # Run Input Parser and Check for Input Errors
     input_manager = SmartStocksInputManager()
@@ -77,7 +77,7 @@ def SmartStocksTerminal():
 if __name__ == "__main__":
     start_time = time.time()
     logger.info("Starting StockApp Program...")
-    SmartStocksTerminal()
+    run()
     end_time = time.time()
     elapsed_time = end_time - start_time
     # Print the elapsed time
