@@ -31,10 +31,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--recipient", action="append", help="Email recipient. Specify multiple times for more recipients.")
     parser.add_argument("--sender", help="Email address used as the sender.")
     parser.add_argument("--smtp-server", help="SMTP server hostname.")
-    parser.add_argument("--smtp-port", type=int, default=587, help="SMTP server port.")
+    parser.add_argument("--smtp-port", type=int, help="SMTP server port. Defaults to MAIL_PORT environment variable")
     parser.add_argument("--smtp-username", help="SMTP username. Defaults to the sender address.")
-    parser.add_argument("--smtp-password", help="SMTP password. Defaults to SMARTSTOCKS_SMTP_PASSWORD environment variable.")
-    parser.add_argument("--disable-tls", action="store_true", help="Disable STARTTLS when connecting to SMTP.")
+    parser.add_argument("--smtp-password", help="SMTP password. Defaults to MAIL_PASSWORD environment variable.")
+    parser.add_argument("--disable-tls", action="store_true", help="Disable STARTTLS when connecting to SMTP. Defaults to MAIL_USE_TLS environment variable.")
     parser.add_argument("--email-subject", default="SmartStocks Monte Carlo Report", help="Custom email subject.")
     parser.add_argument("--no-email", action="store_true", help="Generate report files without sending an email.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging.")
@@ -47,22 +47,8 @@ def _determine_output_path(args: argparse.Namespace) -> Path:
         return args.output_file
     return args.output_dir / f"{args.ticker}_forecast.csv"
 
-
-def _validate_email_args(args: argparse.Namespace) -> None:
-    missing: list[str] = []
-    if not args.recipient:
-        missing.append("--recipient")
-    if not args.sender:
-        missing.append("--sender")
-    if not args.smtp_server:
-        missing.append("--smtp-server")
-    if missing:
-        raise SystemExit("Email delivery requested but missing arguments: " + ", ".join(missing))
-
-
 def _normalise_recipients(recipients: Optional[Iterable[str]]) -> list[str]:
     return list(recipients or [])
-
 
 def main() -> None:
     args = parse_args()
@@ -91,10 +77,10 @@ def main() -> None:
         logger.info("Email sending skipped (--no-email provided).");
         return
 
-    _validate_email_args(args)
-
     recipients = _normalise_recipients(args.recipient)
-    password = args.smtp_password or os.getenv("SMARTSTOCKS_SMTP_PASSWORD")
+    password = args.smtp_password or os.getenv("MAIL_PASSWORD")
+    smtp_port = args.smtp_port or os.getenv("MAIL_PORT")
+    use_tls = args.disable_tls or os.getenv("MAIL_USE_TLS")
     smtp_settings = SMTPSettings(host=args.smtp_server,
                                  port=args.smtp_port,
                                  username=args.smtp_username or args.sender,

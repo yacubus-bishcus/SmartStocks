@@ -6,3 +6,4 @@ output/
 user_input/
 SmartStocks.code-workspace
 .env
+cpp/build/*
