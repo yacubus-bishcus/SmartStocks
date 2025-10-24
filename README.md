@@ -10,8 +10,8 @@ backend. Results can be delivered automatically via email so the entire workflow
   native code (`cpp/smartstocks_sim.cpp`) for consistent performance across platforms.
 - **Python orchestration** – High-level logic for fetching market data, estimating parameters, and preparing reports remains in
   Python for readability and extensibility.
-- **Email-ready reports** – Run `generate_email_report.py` to simulate a ticker, build a CSV forecast, and email the results with a
-  single command.
+- **Email-ready or CSV-only workflows** – Use `generate_email_report.py` to email forecasts or
+  `generate_forecast_csv.py` to simply save the prediction data locally.
 - **No GUI dependencies** – All graphical application code has been removed so the project can run in batch or server
   environments.
 
@@ -20,7 +20,8 @@ backend. Results can be delivered automatically via email so the entire workflow
 ```
 SmartStocks/
 ├── cpp/                    # C++ backend source and CMake build files
-├── generate_email_report.py # CLI wrapper that runs simulations and emails the report
+├── generate_email_report.py # CLI wrapper that runs simulations and optionally emails the report
+├── generate_forecast_csv.py # Minimal CLI to store simulations on disk
 ├── email_reporter.py        # SMTP helper utilities
 ├── MonteCarlo.py            # Python Monte Carlo wrapper that calls the C++ backend
 ├── SmartStocksAnalysis.py   # Existing analysis logic updated to use the C++ engine
@@ -67,7 +68,23 @@ You can override the executable location at runtime with the environment variabl
    ```
 
    A CSV file containing the expected price path and standard deviation will be written to `output/`, and the summary email will be
-   sent with the CSV attached. Use `--no-email` to skip the SMTP step (useful for local testing).
+   sent with the CSV attached. Provide `--no-email` (and omit the email arguments) to skip the SMTP step for local runs.
+
+## Saving forecasts without email
+
+When you only need the CSV output, the lightweight helper avoids any SMTP configuration:
+
+```bash
+python generate_forecast_csv.py \
+  --ticker AAPL \
+  --period 6mo \
+  --interval 1d \
+  --simulations 500 \
+  --sim-time 30 \
+  --output-file output/AAPL_forecast.csv
+```
+
+Both CLIs share the same simulation parameters and rely exclusively on the C++ backend for numerical work.
 
 ## Configuration notes
 
