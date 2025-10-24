@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -211,6 +212,18 @@ class MonteCarlo(Simulation_Analysis):
             return f"{value:.15g}"
         return str(int(value)) if isinstance(value, (np.integer, int)) else str(value)
 
+    @staticmethod
+    def _sanitize_backend_payload(payload: str) -> str:
+        """Replace non-standard JSON tokens with ``null`` so we can parse the payload."""
+
+        # JSON produced by the C++ backend historically contained ``NaN``/``inf`` tokens when
+        # numerical instabilities occurred. The simulator now tries to avoid this, but keep a
+        # defensive parser in Python to preserve compatibility with older binaries and partially
+        # written files. The regex matches bare tokens (i.e. not inside identifiers) so legitimate
+        # substrings are untouched.
+        non_finite_pattern = re.compile(r"(?<![0-9A-Za-z_])(?:NaN|nan|Infinity|-Infinity|Inf|-Inf|inf|-inf)(?![0-9A-Za-z_])")
+        return non_finite_pattern.sub("null", payload)
+
     def _run_cpp_simulation(self, config):
         executable_path = self._resolve_cpp_executable()
         if not executable_path.exists():
@@ -238,7 +251,18 @@ class MonteCarlo(Simulation_Analysis):
             logger.debug("C++ backend stdout: %s", completed.stdout.strip())
 
             with output_path.open("r", encoding="utf-8") as result_file:
-                return json.load(result_file)
+                raw_payload = result_file.read()
+
+            try:
+                return json.loads(raw_payload)
+            except json.JSONDecodeError as error:
+                sanitized_payload = self._sanitize_backend_payload(raw_payload)
+                if sanitized_payload == raw_payload:
+                    logger.error("Unable to parse C++ backend output even after sanitisation: %s", error)
+                    raise
+
+                logger.warning("C++ backend output contained non-finite values; replaced with null before parsing.")
+                return json.loads(sanitized_payload)
 
     def _build_cpp_config(self, config: SimulationConfig) -> Dict[str, float]:
         if self.initial_condition is None:
