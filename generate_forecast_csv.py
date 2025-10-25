@@ -18,11 +18,12 @@ from typing import List
 
 import pandas as pd
 
-from report_generation import ForecastConfig, generate_forecast, write_forecast_csv
+from report_generation import (ForecastConfig, generate_forecast,
+                               write_forecast_workbook)
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate a SmartStocks forecast and save it as CSV.")
+    parser = argparse.ArgumentParser(description="Generate a SmartStocks forecast and save it as an Excel workbook.")
     ticker_group = parser.add_mutually_exclusive_group(required=True)
     ticker_group.add_argument("--ticker", help="Ticker symbol to analyse.")
     ticker_group.add_argument("--ticker-file", type=Path,
@@ -37,7 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--incremental-steps", type=int, default=5, help="Intervals over which price adjustments are applied.")
     parser.add_argument("--use-log-returns", action="store_true", help="Use log returns when estimating drift and volatility.")
     parser.add_argument("--output-dir", type=Path, default=Path("output"), help="Directory to store generated report files.")
-    parser.add_argument("--output-file", type=Path, help="Explicit CSV output path. Overrides --output-dir.")
+    parser.add_argument("--output-file", type=Path, help="Explicit Excel output path. Overrides --output-dir.")
     parser.add_argument("--seed", type=int, help="Seed used for the Monte Carlo generator.")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging.")
     parser.add_argument("--log-file", type=Path,
@@ -52,7 +53,7 @@ def _determine_output_path(args: argparse.Namespace, ticker: str | None = None, 
         return args.output_dir / "multi_ticker_forecast.xlsx"
     if ticker is None:
         raise ValueError("Ticker must be provided when generating a single forecast output path.")
-    return args.output_dir / f"{ticker}_forecast.csv"
+    return args.output_dir / f"{ticker}_forecast.xlsx"
 
 
 def _configure_logging(args: argparse.Namespace) -> None:
@@ -127,7 +128,7 @@ def main() -> None:
         result = generate_forecast(forecast_config)
 
         output_path = _determine_output_path(args, ticker)
-        write_forecast_csv(result, output_path)
+        write_forecast_workbook(result, output_path)
         logger.info("%s", result.summary.strip())
         return
 
@@ -139,16 +140,18 @@ def main() -> None:
         logger.info("%s", result.summary.strip())
 
     output_path = _determine_output_path(args, multiple=True)
-    if output_path.suffix.lower() == ".csv":
-        logger.warning("Output file has .csv extension but multiple tickers require an Excel workbook."
-                       " Consider using an .xlsx extension.")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     used_sheet_names: set[str] = set()
+    summary_rows: list[dict[str, str]] = []
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         for ticker, result in forecast_results.items():
             sheet_name = _unique_sheet_name(ticker, used_sheet_names)
             result.forecast.to_excel(writer, sheet_name=sheet_name, index=False)
+            summary_rows.append({"Ticker": ticker, "Summary": result.summary.strip()})
+
+        if summary_rows:
+            pd.DataFrame(summary_rows).to_excel(writer, sheet_name="Summaries", index=False)
 
     logger.info("Saved multi-ticker forecast results to %s", output_path)
 

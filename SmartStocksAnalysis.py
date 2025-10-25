@@ -319,7 +319,8 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
         sim_analysis = Simulation_Analysis()
         macd = MACD()
         avg_bull_adj, avg_bear_adj = macd.calculate_historical_adjustments(history['Close'])
-        stds_6 = 6*np.std(history['Close'])
+        close_prices = history['Close'].to_numpy(copy=False)
+        stds_6 = 6*np.std(close_prices)
         min_cap = history['Close'][-1] - stds_6
         max_cap = history['Close'][-1] + stds_6
         logger.info(f"Minimum Cap set to: {min_cap}")
