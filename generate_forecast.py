@@ -122,6 +122,10 @@ def main() -> None:
     tickers = _load_tickers(args)
     logger = logging.getLogger(__name__)
     
+    if args.processes > os.cpu_count():
+        logger.warning(f"Processes requested exceeds CPU Count...defaulting to max CPU count: %s", os.cpu_count())
+        args.processes = os.cpu_count()
+        
     if args.log_file:
         # Print inputs for later reference 
         logger.info(f"Period: %s", args.period)
