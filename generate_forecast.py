@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--interval", default="1d", help="Historical data interval (yfinance format).")
     parser.add_argument("--simulations", type=int, default=500, help="Number of Monte Carlo trials to run.")
     parser.add_argument("--sim-time", type=int, default=30, help="Number of future days to simulate.")
-    parser.add_argument("--processes", type=int, default=os.cpu_count() or 1, help="Desired number of CPU processes for the C++ backend.")
+    parser.add_argument("--processes", type=int, default=1, help="Desired number of CPU processes for the C++ backend.")
     parser.add_argument("--jump-parameter", type=float, default=1.0, help="Standard deviation multiplier that defines price jumps.")
     parser.add_argument("--h-s-window", type=int, default=20, help="Head-and-shoulders detection window.")
     parser.add_argument("--incremental-steps", type=int, default=5, help="Intervals over which price adjustments are applied.")
@@ -125,7 +125,7 @@ def main() -> None:
     if args.processes > os.cpu_count():
         logger.warning(f"Processes requested exceeds CPU Count...defaulting to max CPU count: %s", os.cpu_count())
         args.processes = os.cpu_count()
-        
+
     if args.log_file:
         # Print inputs for later reference 
         logger.info(f"Period: %s", args.period)
