@@ -1,4 +1,12 @@
-"""CLI helper to generate SmartStocks forecasts without email delivery."""
+"""CLI helper to generate SmartStocks forecasts without email delivery.
+
+USAGE: 
+
+```python -m generate_forecast_csv --ticker --output-file OUTPUT```
+```python -m generate_forecast_csv --ticker-file INPUT_PATH --output-file OUTPUT```
+```python -m generate_forecast_csv -h``` for help 
+
+"""
 
 from __future__ import annotations
 

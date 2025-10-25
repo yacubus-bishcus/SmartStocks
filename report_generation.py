@@ -147,13 +147,15 @@ def generate_forecast(config: ForecastConfig) -> ForecastResult:
     """Run the Monte Carlo workflow and return the computed forecast."""
 
     history = _download_history(config.ticker, config.period, config.interval)
-
+    logging.debug(history['Close'])
     sim_analysis = Simulation_Analysis()
     macd = MACD()
     avg_bull_adj, avg_bear_adj = macd.calculate_historical_adjustments(history['Close'])
     stds_6 = 6 * np.std(history['Close'])
     min_cap = history['Close'].iloc[-1] - stds_6
+    logging.debug(f"MIN CAP: %s", min_cap)
     max_cap = history['Close'].iloc[-1] + stds_6
+    logging.debug(f"MAX CAP: %s", max_cap)
     average_reduction = sim_analysis.calculate_average_reduction(prices=history['Close'], window_size=config.h_s_window)
     interval_minutes = _resolve_interval_minutes(config.interval)
 

@@ -136,11 +136,13 @@ class MonteCarlo(Simulation_Analysis):
     def _calibrate_jump_distribution(jump_returns: np.ndarray) -> Tuple[float, float, float]:
         if jump_returns is None or len(jump_returns) == 0:
             return 0.0, 0.0, 0.0
-
-        jump_magnitudes = np.abs(jump_returns)
+            
+        jump_magnitudes = np.abs(jump_returns[~np.isnan(jump_returns)])
         mean_jump_size = float(np.mean(jump_magnitudes))
         std_jump_size = float(np.std(jump_magnitudes, ddof=1)) if len(jump_magnitudes) > 1 else 0.0
         rate = 1.0 / mean_jump_size if mean_jump_size > 0 else 0.0
+        logging.debug(f"MonteCarlo::_calibrate_jump_distribution::Mean Jump Size %s", mean_jump_size)
+        logging.debug(f"MonteCarlo::_calibrate_jump_distribution::std_jump_size %s", std_jump_size)
         return mean_jump_size, std_jump_size, rate
 
     def _current_volatility_from_cluster(self, rolling_volatility) -> float:
@@ -191,8 +193,8 @@ class MonteCarlo(Simulation_Analysis):
                                   average_reduction=float(average_reduction),
                                   bull=float(bull),
                                   bear=float(bear),
-                                  min_cap=float(min_cap),
-                                  max_cap=float(max_cap),
+                                  min_cap=float(min_cap.iloc[0]),
+                                  max_cap=float(max_cap.iloc[0]),
                                   incremental_adjustment_steps=int(max(1, incremental_adjustment_steps)))
         cpp_config = self._build_cpp_config(config)
         cpp_result = self._run_cpp_simulation(cpp_config)
