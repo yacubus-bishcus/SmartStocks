@@ -2,9 +2,9 @@
 
 USAGE: 
 
-```python -m generate_forecast_csv --ticker --output-file OUTPUT```
-```python -m generate_forecast_csv --ticker-file INPUT_PATH --output-file OUTPUT```
-```python -m generate_forecast_csv -h``` for help 
+```python -m generate_forecast --ticker --output-file OUTPUT```
+```python -m generate_forecast --ticker-file INPUT_PATH --output-file OUTPUT```
+```python -m generate_forecast -h``` for help 
 
 """
 
@@ -121,6 +121,20 @@ def main() -> None:
 
     tickers = _load_tickers(args)
     logger = logging.getLogger(__name__)
+    
+    if args.log_file:
+        # Print inputs for later reference 
+        logger.info(f"Period: %s", args.period)
+        logger.info(f"Interval: %s", args.interval)
+        logger.info(f"Simulations: %s", args.simulations)
+        logger.info(f"Sim Time: %s", args.sim_time)
+        logger.info(f"Processes: %s", args.processes)
+        logger.info(f"Jump Parameter: %s", args.jump_parameter)
+        logger.info(f"Head and Shoulders Window: %s", args.h_s_window)
+        logger.info(f"Increment Steps: %s", args.incremental_steps)
+        logger.info(f"Using Log Returns: %s", args.use_log_returns)
+        if args.seed is not None:
+            logger.info(f"Seed: %s", args.seed)
 
     if len(tickers) == 1:
         ticker = tickers[0]

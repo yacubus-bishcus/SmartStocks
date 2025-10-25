@@ -75,7 +75,7 @@ You can override the executable location at runtime with the environment variabl
 When you only need the Excel output, the lightweight helper avoids any SMTP configuration:
 
 ```bash
-python generate_forecast_csv.py \
+python -m generate_forecast \
   --ticker AAPL \
   --period 6mo \
   --interval 1d \
