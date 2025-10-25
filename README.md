@@ -10,8 +10,8 @@ backend. Results can be delivered automatically via email so the entire workflow
   native code (`cpp/smartstocks_sim.cpp`) for consistent performance across platforms.
 - **Python orchestration** – High-level logic for fetching market data, estimating parameters, and preparing reports remains in
   Python for readability and extensibility.
-- **Email-ready or CSV-only workflows** – Use `generate_email_report.py` to email forecasts or
-  `generate_forecast_csv.py` to simply save the prediction data locally.
+- **Email-ready or Excel-only workflows** – Use `generate_email_report.py` to email forecasts or
+  `generate_forecast_csv.py` to simply save the prediction data locally as a workbook.
 - **No GUI dependencies** – All graphical application code has been removed so the project can run in batch or server
   environments.
 
@@ -67,12 +67,12 @@ You can override the executable location at runtime with the environment variabl
      --smtp-password yourpassword
    ```
 
-   A CSV file containing the expected price path and standard deviation will be written to `output/`, and the summary email will be
-   sent with the CSV attached. Provide `--no-email` (and omit the email arguments) to skip the SMTP step for local runs.
+   An Excel workbook containing the expected price path and standard deviation will be written to `output/`, and the summary email will be
+   sent with the workbook attached. Provide `--no-email` (and omit the email arguments) to skip the SMTP step for local runs.
 
 ## Saving forecasts without email
 
-When you only need the CSV output, the lightweight helper avoids any SMTP configuration:
+When you only need the Excel output, the lightweight helper avoids any SMTP configuration:
 
 ```bash
 python generate_forecast_csv.py \
@@ -81,7 +81,7 @@ python generate_forecast_csv.py \
   --interval 1d \
   --simulations 500 \
   --sim-time 30 \
-  --output-file output/AAPL_forecast.csv
+  --output-file output/AAPL_forecast.xlsx
 ```
 
 Both CLIs share the same simulation parameters and rely exclusively on the C++ backend for numerical work.
@@ -109,7 +109,7 @@ Both CLIs share the same simulation parameters and rely exclusively on the C++ b
    steps, and clamps prices inside user-defined caps before aggregating interval means and standard deviations across all
    simulations.
 4. **Post-processing and reporting** – The resulting interval averages and error bands are reassembled into `pandas`
-   structures, aligned with the future date grid, and can be rendered to charts or CSV/Excel outputs. Optional market index
+   structures, aligned with the future date grid, and can be rendered to charts or Excel outputs. Optional market index
    simulations go through the same pipeline so forecasts can be plotted alongside the benchmark.
 
 ## Legal notice

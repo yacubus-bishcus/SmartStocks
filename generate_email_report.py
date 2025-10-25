@@ -9,7 +9,7 @@ from typing import Iterable, Optional
 
 from email_reporter import SMTPSettings, send_email_report
 from report_generation import (ForecastConfig, generate_forecast,
-                               write_forecast_csv)
+                               write_forecast_workbook)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--incremental-steps", type=int, default=5, help="Intervals over which price adjustments are applied.")
     parser.add_argument("--use-log-returns", action="store_true", help="Use log returns when estimating drift and volatility.")
     parser.add_argument("--output-dir", type=Path, default=Path("output"), help="Directory to store generated report files.")
-    parser.add_argument("--output-file", type=Path, help="Explicit CSV output path. Overrides --output-dir.")
+    parser.add_argument("--output-file", type=Path, help="Explicit Excel output path. Overrides --output-dir.")
     parser.add_argument("--recipient", action="append", help="Email recipient. Specify multiple times for more recipients.")
     parser.add_argument("--smtp-server", help="SMTP server hostname.")
     parser.add_argument("--smtp-port", type=int, help="SMTP server port. Defaults to MAIL_PORT environment variable")
@@ -44,7 +44,7 @@ def parse_args() -> argparse.Namespace:
 def _determine_output_path(args: argparse.Namespace) -> Path:
     if args.output_file is not None:
         return args.output_file
-    return args.output_dir / f"{args.ticker}_forecast.csv"
+    return args.output_dir / f"{args.ticker}_forecast.xlsx"
 
 def _normalise_recipients(recipients: Optional[Iterable[str]]) -> list[str]:
     return list(recipients or [])
@@ -69,7 +69,7 @@ def main() -> None:
     result = generate_forecast(forecast_config)
 
     output_path = _determine_output_path(args)
-    write_forecast_csv(result, output_path)
+    write_forecast_workbook(result, output_path)
     logger.info("%s", result.summary.strip())
 
     if args.no_email:

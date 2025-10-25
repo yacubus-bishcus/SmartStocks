@@ -151,7 +151,8 @@ def generate_forecast(config: ForecastConfig) -> ForecastResult:
     sim_analysis = Simulation_Analysis()
     macd = MACD()
     avg_bull_adj, avg_bear_adj = macd.calculate_historical_adjustments(history['Close'])
-    stds_6 = 6 * np.std(history['Close'])
+    close_prices = history['Close'].to_numpy(copy=False)
+    stds_6 = 6 * np.std(close_prices)
     min_cap = history['Close'].iloc[-1] - stds_6
     logging.debug(f"MIN CAP: %s", min_cap)
     max_cap = history['Close'].iloc[-1] + stds_6
@@ -178,10 +179,21 @@ def generate_forecast(config: ForecastConfig) -> ForecastResult:
                           summary=summary)
 
 
-def write_forecast_csv(result: ForecastResult, output_path: Path) -> Path:
-    """Persist the forecast dataframe to ``output_path`` and return the path."""
+def write_forecast_workbook(result: ForecastResult, output_path: Path) -> Path:
+    """Persist the forecast and summary to an Excel workbook at ``output_path``."""
+
+    if output_path.suffix.lower() != ".xlsx":
+        logger.warning("Forecast output changed to Excel workbooks; overriding extension to .xlsx.")
+        output_path = output_path.with_suffix(".xlsx")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    result.forecast.to_csv(output_path, index=False)
-    logger.info("Saved forecast results to %s", output_path)
+
+    summary_lines = [line for line in result.summary.strip().splitlines() if line]
+    summary_frame = pd.DataFrame({"Summary": summary_lines or [result.summary.strip()]})
+
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+        result.forecast.to_excel(writer, sheet_name="Forecast", index=False)
+        summary_frame.to_excel(writer, sheet_name="Summary", index=False)
+
+    logger.info("Saved forecast workbook to %s", output_path)
     return output_path
