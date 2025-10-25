@@ -74,6 +74,9 @@ class ForecastResult:
 
     interval_means: np.ndarray
     interval_stds: np.ndarray
+    interval_std_errors: np.ndarray
+    interval_p05: np.ndarray
+    interval_p95: np.ndarray
     forecast: pd.DataFrame
     summary: str
 
@@ -119,6 +122,9 @@ def _prepare_monte_carlo(history: pd.DataFrame, config: ForecastConfig) -> Monte
 
 def _generate_future_dataframe(interval_means: np.ndarray,
                                interval_stds: np.ndarray,
+                               interval_std_errors: np.ndarray,
+                               interval_p05: np.ndarray,
+                               interval_p95: np.ndarray,
                                interval: str,
                                sim_time: int) -> pd.DataFrame:
     date_args = SimpleNamespace(model_interval=interval, sim_time=sim_time)
@@ -127,19 +133,33 @@ def _generate_future_dataframe(interval_means: np.ndarray,
         "Date": dates[:len(interval_means)],
         "ExpectedPrice": interval_means,
         "StdDev": interval_stds,
+        "StdError": interval_std_errors,
+        "P05": interval_p05,
+        "P95": interval_p95,
     })
 
 
-def _summarise_results(ticker: str, interval_means: np.ndarray, interval_stds: np.ndarray, simulations: int) -> str:
+def _summarise_results(ticker: str,
+                       interval_means: np.ndarray,
+                       interval_stds: np.ndarray,
+                       interval_std_errors: np.ndarray,
+                       interval_p05: np.ndarray,
+                       interval_p95: np.ndarray,
+                       simulations: int) -> str:
     final_mean = interval_means[-1]
     final_std = interval_stds[-1]
+    final_std_error = interval_std_errors[-1]
     lower_bound = final_mean - final_std
     upper_bound = final_mean + final_std
+    final_p05 = interval_p05[-1]
+    final_p95 = interval_p95[-1]
     return (
         f"SmartStocks Monte Carlo summary for {ticker}\n\n"
         f"Simulations run: {simulations}\n"
         f"Expected price after horizon: {final_mean:.2f}\n"
         f"One standard deviation range: {lower_bound:.2f} - {upper_bound:.2f}\n"
+        f"Standard error of the mean: {final_std_error:.2f}\n"
+        f"5th-95th percentile range: {final_p05:.2f} - {final_p95:.2f}\n"
     )
 
 
@@ -162,19 +182,36 @@ def generate_forecast(config: ForecastConfig) -> ForecastResult:
 
     monte = _prepare_monte_carlo(history, config)
 
-    interval_means, interval_stds = monte.execute_normal_simulation_with_mp(interval_minutes=interval_minutes,
-                                                                            average_reduction=average_reduction,
-                                                                            bull=avg_bull_adj,
-                                                                            bear=avg_bear_adj,
-                                                                            min_cap=min_cap,
-                                                                            max_cap=max_cap,
-                                                                            incremental_adjustment_steps=config.incremental_steps)
+    interval_means, interval_stds, interval_p05, interval_p95 = monte.execute_normal_simulation_with_mp(interval_minutes=interval_minutes,
+                                                                                                        average_reduction=average_reduction,
+                                                                                                        bull=avg_bull_adj,
+                                                                                                        bear=avg_bear_adj,
+                                                                                                        min_cap=min_cap,
+                                                                                                        max_cap=max_cap,
+                                                                                                        incremental_adjustment_steps=config.incremental_steps)
 
-    forecast = _generate_future_dataframe(interval_means, interval_stds, config.interval, config.sim_time)
-    summary = _summarise_results(config.ticker, interval_means, interval_stds, config.simulations)
+    interval_std_errors = interval_stds / np.sqrt(float(config.simulations))
+
+    forecast = _generate_future_dataframe(interval_means,
+                                          interval_stds,
+                                          interval_std_errors,
+                                          interval_p05,
+                                          interval_p95,
+                                          config.interval,
+                                          config.sim_time)
+    summary = _summarise_results(config.ticker,
+                                 interval_means,
+                                 interval_stds,
+                                 interval_std_errors,
+                                 interval_p05,
+                                 interval_p95,
+                                 config.simulations)
 
     return ForecastResult(interval_means=interval_means,
                           interval_stds=interval_stds,
+                          interval_std_errors=interval_std_errors,
+                          interval_p05=interval_p05,
+                          interval_p95=interval_p95,
                           forecast=forecast,
                           summary=summary)
 

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <future>
 #include <iostream>
+#include <limits>
 #include <mutex>
 #include <random>
 #include <sstream>
@@ -319,9 +320,31 @@ void run_simulations(std::size_t start,
     }
 }
 
+double interpolate_percentile(const std::vector<double> &sorted_values, double percentile) {
+    if (sorted_values.empty()) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    const double scaled_index = percentile * static_cast<double>(sorted_values.size() - 1);
+    const auto lower_index = static_cast<std::size_t>(std::floor(scaled_index));
+    const auto upper_index = static_cast<std::size_t>(std::ceil(scaled_index));
+    const double fraction = scaled_index - static_cast<double>(lower_index);
+
+    const double lower_value = sorted_values[lower_index];
+    const double upper_value = sorted_values[upper_index];
+
+    if (upper_index == lower_index) {
+        return lower_value;
+    }
+
+    return lower_value + fraction * (upper_value - lower_value);
+}
+
 void write_output(const std::string &path,
                   const std::vector<double> &means,
-                  const std::vector<double> &stds) {
+                  const std::vector<double> &stds,
+                  const std::vector<double> &percentile_05,
+                  const std::vector<double> &percentile_95) {
     std::ofstream output(path);
     if (!output.is_open()) {
         throw std::runtime_error("Unable to open output file: " + path);
@@ -348,6 +371,24 @@ void write_output(const std::string &path,
     for (std::size_t i = 0; i < stds.size(); ++i) {
         write_numeric(stds[i]);
         if (i + 1 != stds.size()) {
+            output << ", ";
+        }
+    }
+    output << "],\n";
+
+    output << "  \"interval_p05\": [";
+    for (std::size_t i = 0; i < percentile_05.size(); ++i) {
+        write_numeric(percentile_05[i]);
+        if (i + 1 != percentile_05.size()) {
+            output << ", ";
+        }
+    }
+    output << "],\n";
+
+    output << "  \"interval_p95\": [";
+    for (std::size_t i = 0; i < percentile_95.size(); ++i) {
+        write_numeric(percentile_95[i]);
+        if (i + 1 != percentile_95.size()) {
             output << ", ";
         }
     }
@@ -428,7 +469,20 @@ int main(int argc, char **argv) {
             value = std::sqrt(value / static_cast<double>(config.num_simulations));
         }
 
-        write_output(output_path, means, stds);
+        std::vector<double> percentile_05(total_intervals, 0.0);
+        std::vector<double> percentile_95(total_intervals, 0.0);
+        std::vector<double> workspace(config.num_simulations, 0.0);
+
+        for (std::size_t interval = 0; interval < total_intervals; ++interval) {
+            for (std::size_t sim = 0; sim < config.num_simulations; ++sim) {
+                workspace[sim] = results[sim * total_intervals + interval];
+            }
+            std::sort(workspace.begin(), workspace.end());
+            percentile_05[interval] = interpolate_percentile(workspace, 0.05);
+            percentile_95[interval] = interpolate_percentile(workspace, 0.95);
+        }
+
+        write_output(output_path, means, stds, percentile_05, percentile_95);
     } catch (const std::exception &ex) {
         std::cerr << "Error: " << ex.what() << std::endl;
         return 1;
