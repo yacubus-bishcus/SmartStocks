@@ -178,7 +178,7 @@ class MonteCarlo(Simulation_Analysis):
                                           max_cap: float,
                                           incremental_adjustment_steps: int,
                                           drift: float = None,
-                                          volatility: float = None) -> Tuple[np.ndarray, np.ndarray]:
+                                          volatility: float = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Execute the Monte Carlo simulation through the C++ backend."""
 
         if interval_minutes is None:
@@ -200,7 +200,9 @@ class MonteCarlo(Simulation_Analysis):
         cpp_result = self._run_cpp_simulation(cpp_config)
         interval_means = np.array(cpp_result["interval_means"])
         interval_stds = np.array(cpp_result["interval_stds"])
-        return interval_means, interval_stds
+        interval_p05 = np.array(cpp_result["interval_p05"])
+        interval_p95 = np.array(cpp_result["interval_p95"])
+        return interval_means, interval_stds, interval_p05, interval_p95
 
     def _resolve_cpp_executable(self):
         override = os.environ.get(CPP_EXECUTABLE_ENV)

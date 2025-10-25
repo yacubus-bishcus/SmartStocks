@@ -395,13 +395,13 @@ class Analysis: # takes inputs of stocks (Ticker objects) and args from Argspars
             logger.error(f"Interval Minutes could not be set by Model Interval {self.args.model_interval}. Applying interval of 1m.")
             interval_minutes = 1
 
-        interval_means, interval_stds = monte.execute_normal_simulation_with_mp(interval_minutes=interval_minutes,
-                                                                                average_reduction=average_reduction,
-                                                                                bull=avg_bull_adj,
-                                                                                bear=avg_bear_adj,
-                                                                                min_cap=min_cap,
-                                                                                max_cap=max_cap,
-                                                                                incremental_adjustment_steps=self.args.incremental_steps)
+        interval_means, interval_stds, _, _ = monte.execute_normal_simulation_with_mp(interval_minutes=interval_minutes,
+                                                                                      average_reduction=average_reduction,
+                                                                                      bull=avg_bull_adj,
+                                                                                      bear=avg_bear_adj,
+                                                                                      min_cap=min_cap,
+                                                                                      max_cap=max_cap,
+                                                                                      incremental_adjustment_steps=self.args.incremental_steps)
         
         sim_df = pd.Series(interval_means) # returned as series 
         std_df = pd.Series(interval_stds) # returned as series 

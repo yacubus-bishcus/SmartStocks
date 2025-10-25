@@ -67,7 +67,7 @@ You can override the executable location at runtime with the environment variabl
      --smtp-password yourpassword
    ```
 
-   An Excel workbook containing the expected price path and standard deviation will be written to `output/`, and the summary email will be
+   An Excel workbook containing the expected price path, standard deviation, standard error of the mean, and 5th–95th percentile bands will be written to `output/`, and the summary email will be
    sent with the workbook attached. Provide `--no-email` (and omit the email arguments) to skip the SMTP step for local runs.
 
 ## Saving forecasts without email
@@ -108,9 +108,19 @@ Both CLIs share the same simulation parameters and rely exclusively on the C++ b
    component, applies head-and-shoulders pattern reductions and MACD-derived bull/bear adjustments over multiple incremental
    steps, and clamps prices inside user-defined caps before aggregating interval means and standard deviations across all
    simulations.
-4. **Post-processing and reporting** – The resulting interval averages and error bands are reassembled into `pandas`
+4. **Post-processing and reporting** – The resulting interval averages, error bands, and percentile bands are reassembled into `pandas`
    structures, aligned with the future date grid, and can be rendered to charts or Excel outputs. Optional market index
    simulations go through the same pipeline so forecasts can be plotted alongside the benchmark.
+
+## Understanding the reported statistics
+
+SmartStocks now surfaces three complementary measures of uncertainty for every simulated interval:
+
+- **Standard deviation (`StdDev`)** – The dispersion of simulated prices around the mean. This reflects the volatility implied by the model and stabilises as more simulations are run.
+- **Standard error of the mean (`StdError`)** – The uncertainty around the estimated mean price, calculated as `StdDev / sqrt(number of simulations)`. This value tightens as additional simulations are performed.
+- **5th and 95th percentiles (`P05`/`P95`)** – Non-parametric bands that capture the tails of the simulated price distribution, highlighting potential downside and upside scenarios without assuming symmetry.
+
+Use the standard deviation to gauge overall volatility, the standard error to understand the precision of the expected-price estimate, and the percentile range to communicate likely bounds to stakeholders.
 
 ## Legal notice
 
