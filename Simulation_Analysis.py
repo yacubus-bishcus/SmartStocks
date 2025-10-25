@@ -63,23 +63,35 @@ class Simulation_Analysis:
     
     @staticmethod
     def detect_head_and_shoulders(prices, window_size=20):
-        patterns = np.zeros(len(prices))
+        if isinstance(prices, pd.Series):
+            price_array = prices.to_numpy()
+        else:
+            price_array = np.asarray(prices)
+
+        price_array = np.asarray(price_array).squeeze()
+        if price_array.ndim != 1:
+            price_array = price_array.reshape(-1)
+
+        patterns = np.zeros(len(price_array))
         reductions = []
-        
-        for i in range(window_size, len(prices) - window_size):
-            window = prices[i-window_size:i+window_size]
+
+        for i in range(window_size, len(price_array) - window_size):
+            window = price_array[i-window_size:i+window_size]
             left_shoulder = window[:window_size//2]
             head = window[window_size//2:window_size]
             right_shoulder = window[window_size:]
-            
-            if (np.max(left_shoulder) < np.max(head) and 
+
+            if (np.max(left_shoulder) < np.max(head) and
                 np.max(right_shoulder) < np.max(head) and
-                np.max(left_shoulder) > np.min(head) and 
+                np.max(left_shoulder) > np.min(head) and
                 np.max(right_shoulder) > np.min(head)):
                 patterns[i] = 1
-                reduction = (prices[i] - np.min(prices[i:])) / prices[i]
+                current_price = price_array[i]
+                if current_price == 0:
+                    continue
+                reduction = (current_price - np.min(price_array[i:])) / current_price
                 reductions.append(reduction)
-        
+
         return patterns, reductions
 
 
