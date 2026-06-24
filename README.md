@@ -10,6 +10,13 @@ backend. Results can be delivered automatically via email so the entire workflow
   native code (`cpp/smartstocks_sim.cpp`) for consistent performance across platforms.
 - **Python orchestration** – High-level logic for fetching market data, estimating parameters, and preparing reports remains in
   Python for readability and extensibility.
+- **Log-return price intervals** – `generate_price_interval(...)` asks the C++ Monte Carlo backend for simulated log-return price
+  paths, then reports confidence bands, swing probabilities, volatility regime, and inflection risk.
+- **Empirical analog intervals** – The interval report also checks how similar historical volatility, trend, and drawdown setups
+  moved afterward.
+- **Inflection probability analysis** – Reports estimate bullish, bearish, and no-inflection probabilities from Monte Carlo
+  paths, then adjust them with RSI divergence, MACD histogram slope changes, moving averages, volume, Bollinger, support/resistance,
+  and return/volatility change-point signals.
 - **Email-ready or Excel-only workflows** – Use `generate_email_report.py` to email forecasts or
   `generate_forecast_csv.py` to simply save the prediction data locally as a workbook.
 - **No GUI dependencies** – All graphical application code has been removed so the project can run in batch or server
@@ -24,6 +31,8 @@ SmartStocks/
 ├── generate_forecast_csv.py # Minimal CLI to store simulations on disk
 ├── email_reporter.py        # SMTP helper utilities
 ├── MonteCarlo.py            # Python Monte Carlo wrapper that calls the C++ backend
+├── PriceInterval.py         # Log-return confidence interval and swing-risk engine
+├── Inflection.py            # Monte Carlo and technical inflection probability engine
 ├── SmartStocksAnalysis.py   # Existing analysis logic updated to use the C++ engine
 └── ...                      # Other supporting modules
 ```
@@ -86,10 +95,44 @@ python -m generate_forecast \
 
 Both CLIs share the same simulation parameters and rely exclusively on the C++ backend for numerical work.
 
+Forecast workbooks now include a `PriceIntervals` sheet. Those intervals are generated from daily log returns: Python estimates
+the log-return drift and volatility, the C++ Monte Carlo backend runs in `log_return_interval` mode to produce simulated future
+price paths, and `PriceInterval.py` summarizes each terminal distribution into confidence bands and swing probabilities.
+When enough similar historical setups exist, workbooks also include an `EmpiricalAnalogs` sheet. This supplemental view matches
+the current volatility percentile, 20-day trend, and 60-day drawdown against past states, then summarizes what usually happened
+over the same forward horizons.
+Workbooks also include `InflectionRisk` and `InflectionSignals` sheets when inflection analysis is enabled. The risk sheet
+reports `P(bullish inflection)`, `P(bearish inflection)`, and `P(no inflection)` within the configured horizon; the signal sheet
+shows which technical features tilted the Monte Carlo baseline.
+
+You can also call the interval module directly:
+
+```python
+from PriceInterval import generate_price_interval
+
+result = generate_price_interval("AAPL", horizon_days=30, confidence=0.90)
+print(result.interval_table)
+print(result.summary())
+```
+
+Inflection probabilities can also be called directly:
+
+```python
+from Inflection import predict_inflection_points
+
+result = predict_inflection_points("AAPL", horizon_days=10, move_threshold=0.05)
+print(result.inflection_table)
+print(result.feature_table)
+```
+
 ## Configuration notes
 
 - Set `--processes` to the number of hardware threads you want the C++ engine to use.
 - Provide `--jump-parameter`, `--h-s-window`, and `--incremental-steps` to tune jump detection and technical adjustments.
+- Provide `--confidence` to tune the price interval confidence level. The default is `0.90`.
+- Provide `--analog-period`, `--analog-min-matches`, or `--disable-empirical-analog` to tune the supplemental analog analysis.
+- Provide `--inflection-horizon`, `--inflection-threshold`, or `--disable-inflection-analysis` to tune bullish/bearish
+  inflection probability analysis.
 - To reproducibly rerun simulations, pass `--seed <int>`.
 - SMTP credentials can also be provided via the `MAIL_PASSWORD`, `MAIL_USE_TLS`, `MAIL_USERNAME`, `MAIL_SERVER`, and `MAIL_PORT`environment variables.
 

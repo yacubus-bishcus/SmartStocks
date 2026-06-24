@@ -1,0 +1,89 @@
+Phase 1: Confidence interval module
+Add a function like:
+generate_price_interval(ticker, horizon_days=30, confidence=0.90)
+Outputs:
+lower_bound
+median_estimate
+upper_bound
+probability_up_5_percent
+probability_down_5_percent
+expected_move
+volatility_regime
+Use historical bootstrap first. Then add GARCH and jump diffusion.
+Phase 2: Swing detector
+Add:
+calculate_swing_score(ticker, horizon_days=20)
+Outputs:
+swing_probability
+volatility_regime
+compression_score
+volume_anomaly_score
+breakout_risk
+Phase 3: Inflection detector
+Add:
+calculate_inflection_score(ticker, horizon_days=10)
+Outputs:
+bullish_inflection_probability
+bearish_inflection_probability
+no_inflection_probability
+Phase 4: Qualitative catalyst engine
+Add:
+analyze_qualitative_catalysts(ticker)
+Outputs:
+news_summary
+filings_summary
+macro_summary
+consumer_confidence_relevance
+sector_risk
+qualitative_modifier
+Phase 5: Final report
+Then combine them:
+generate_stock_risk_report(ticker)
+Final output:
+Ticker: XYZ
+Current Price: $100
+
+30-Day 90% Confidence Interval:
+$88 – $114
+
+Probability of Large Swing:
+±5% move: 41%
+±10% move: 18%
+
+Inflection Risk:
+Bullish turn: 24%
+Bearish turn: 36%
+No clear turn: 40%
+
+Qualitative Catalysts:
+- Negative consumer confidence trend affects discretionary demand.
+- Recent 8-K indicates management change.
+- Sector ETF volatility is elevated.
+
+Final Assessment:
+High swing setup, bearish-leaning, medium confidence.
+My recommended model stack
+For your first serious version:
+Price interval:
+Historical bootstrap + EWMA volatility + Monte Carlo jump diffusion
+
+Volatility:
+Realized volatility + ATR + GARCH/EGARCH
+
+Swing probability:
+Random Forest or XGBoost classifier
+
+Inflection probability:
+Logistic regression baseline, then Random Forest/XGBoost
+
+Qualitative:
+Structured news/filing/macro scraper + LLM summarizer
+
+Validation:
+Walk-forward backtesting
+I would not start with LSTM or Transformer models yet. Get the labels, features, confidence intervals, and backtesting right first. Deep learning can come later.
+The main shift is this:
+
+Smart Stocks should become a probabilistic market risk and catalyst engine, not a price-prediction engine.
+That means your app tells the user:
+how wide the possible move is, how likely a large move is, whether the trend may be near a turn, and what real-world catalysts could break the historical pattern.

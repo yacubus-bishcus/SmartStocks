@@ -26,6 +26,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--h-s-window", type=int, default=20, help="Head-and-shoulders detection window.")
     parser.add_argument("--incremental-steps", type=int, default=5, help="Intervals over which price adjustments are applied.")
     parser.add_argument("--use-log-returns", action="store_true", help="Use log returns when estimating drift and volatility.")
+    parser.add_argument("--confidence", type=float, default=0.90, help="Confidence level for price interval bands.")
+    parser.add_argument("--disable-empirical-analog", action="store_true", help="Disable historical analog interval analysis.")
+    parser.add_argument("--analog-period", default="5y", help="Historical period to use for empirical analog matching.")
+    parser.add_argument("--analog-min-matches", type=int, default=30, help="Minimum desired empirical analog matches.")
+    parser.add_argument("--disable-inflection-analysis", action="store_true", help="Disable bullish/bearish inflection probability analysis.")
+    parser.add_argument("--inflection-horizon", type=int, default=10, help="Future days used for inflection probability analysis.")
+    parser.add_argument("--inflection-threshold", type=float, default=0.05, help="Percent move threshold for inflection classification, expressed as a decimal.")
     parser.add_argument("--output-dir", type=Path, default=Path("output"), help="Directory to store generated report files.")
     parser.add_argument("--output-file", type=Path, help="Explicit Excel output path. Overrides --output-dir.")
     parser.add_argument("--recipient", action="append", help="Email recipient. Specify multiple times for more recipients.")
@@ -64,6 +71,13 @@ def main() -> None:
                                      h_s_window=args.h_s_window,
                                      incremental_steps=args.incremental_steps,
                                      use_log_returns=args.use_log_returns,
+                                     confidence=args.confidence,
+                                     include_empirical_analog=not args.disable_empirical_analog,
+                                     analog_period=args.analog_period,
+                                     analog_min_matches=args.analog_min_matches,
+                                     include_inflection_analysis=not args.disable_inflection_analysis,
+                                     inflection_horizon_days=args.inflection_horizon,
+                                     inflection_move_threshold=args.inflection_threshold,
                                      seed=getattr(args, "seed", None))
 
     result = generate_forecast(forecast_config)

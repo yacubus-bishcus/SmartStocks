@@ -204,6 +204,59 @@ class MonteCarlo(Simulation_Analysis):
         interval_p95 = np.array(cpp_result["interval_p95"])
         return interval_means, interval_stds, interval_p05, interval_p95
 
+    def execute_log_return_interval_simulation(self,
+                                               initial_price: float,
+                                               drift: float,
+                                               volatility: float,
+                                               horizon_days: int,
+                                               interval_minutes: int = 24 * 60) -> np.ndarray:
+        """Return simulated daily price paths from the C++ log-return interval mode."""
+
+        if horizon_days < 1:
+            raise ValueError("horizon_days must be at least 1.")
+        if self.num_simulations < 1:
+            raise ValueError("num_simulations must be at least 1.")
+        if initial_price <= 0:
+            raise ValueError("initial_price must be greater than zero.")
+        if interval_minutes <= 0:
+            raise ValueError("interval_minutes must be greater than zero.")
+
+        threads = self.processes if self.processes and self.processes > 0 else os.cpu_count() or 1
+        cpp_config = {
+            "num_simulations": int(self.num_simulations),
+            "sim_time": int(horizon_days),
+            "interval_minutes": int(interval_minutes),
+            "initial_condition": float(initial_price),
+            "drift": float(drift),
+            "volatility": float(max(0.0, volatility)),
+            "average_reduction": 0.0,
+            "bull": 0.0,
+            "bear": 0.0,
+            "min_cap": 0.0,
+            "max_cap": float(initial_price * 1.0e9),
+            "incremental_adjustment_steps": 1,
+            "jump_mean": 0.0,
+            "jump_std": 0.0,
+            "jump_intensity": 0.0,
+            "threads": int(max(1, threads)),
+            "window_size": 1,
+            "macd_short_window": 12,
+            "macd_long_window": 26,
+            "macd_signal_window": 9,
+            "simulation_mode": "log_return_interval",
+            "output_simulated_prices": 1,
+        }
+
+        seed = getattr(self, "seed", None)
+        if seed is not None:
+            cpp_config["seed"] = int(seed)
+
+        cpp_result = self._run_cpp_simulation(cpp_config)
+        simulated_prices = np.array(cpp_result["simulated_prices"], dtype=float)
+        if simulated_prices.ndim != 2:
+            raise ValueError("C++ backend did not return a two-dimensional simulated price distribution.")
+        return simulated_prices
+
     def _resolve_cpp_executable(self):
         override = os.environ.get(CPP_EXECUTABLE_ENV)
         if override:

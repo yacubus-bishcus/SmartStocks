@@ -50,8 +50,9 @@ class Simulation_Analysis:
         }
 
     def calculate_drift_and_volatility(self, stock_prices, use_log_returns):
+        stock_prices = pd.Series(stock_prices).astype(float)
         if use_log_returns:
-            returns = stock_prices.pct_change().dropna()
+            returns = np.log(stock_prices / stock_prices.shift(1)).replace([np.inf, -np.inf], np.nan).dropna()
         else:
             returns = stock_prices.diff().dropna()
 

@@ -37,6 +37,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--h-s-window", type=int, default=20, help="Head-and-shoulders detection window.")
     parser.add_argument("--incremental-steps", type=int, default=5, help="Intervals over which price adjustments are applied.")
     parser.add_argument("--use-log-returns", action="store_true", help="Use log returns when estimating drift and volatility.")
+    parser.add_argument("--confidence", type=float, default=0.90, help="Confidence level for price interval bands.")
+    parser.add_argument("--disable-empirical-analog", action="store_true", help="Disable historical analog interval analysis.")
+    parser.add_argument("--analog-period", default="5y", help="Historical period to use for empirical analog matching.")
+    parser.add_argument("--analog-min-matches", type=int, default=30, help="Minimum desired empirical analog matches.")
+    parser.add_argument("--disable-inflection-analysis", action="store_true", help="Disable bullish/bearish inflection probability analysis.")
+    parser.add_argument("--inflection-horizon", type=int, default=10, help="Future days used for inflection probability analysis.")
+    parser.add_argument("--inflection-threshold", type=float, default=0.05, help="Percent move threshold for inflection classification, expressed as a decimal.")
     parser.add_argument("--output-dir", type=Path, default=Path("output"), help="Directory to store generated report files.")
     parser.add_argument("--output-file", type=Path, help="Explicit Excel output path. Overrides --output-dir.")
     parser.add_argument("--seed", type=int, help="Seed used for the Monte Carlo generator.")
@@ -112,6 +119,13 @@ def _generate_forecast_for_ticker(args: argparse.Namespace, ticker: str) -> Fore
                           h_s_window=args.h_s_window,
                           incremental_steps=args.incremental_steps,
                           use_log_returns=args.use_log_returns,
+                          confidence=args.confidence,
+                          include_empirical_analog=not args.disable_empirical_analog,
+                          analog_period=args.analog_period,
+                          analog_min_matches=args.analog_min_matches,
+                          include_inflection_analysis=not args.disable_inflection_analysis,
+                          inflection_horizon_days=args.inflection_horizon,
+                          inflection_move_threshold=args.inflection_threshold,
                           seed=getattr(args, "seed", None))
 
 
@@ -137,6 +151,13 @@ def main() -> None:
         logger.info(f"Head and Shoulders Window: %s", args.h_s_window)
         logger.info(f"Increment Steps: %s", args.incremental_steps)
         logger.info(f"Using Log Returns: %s", args.use_log_returns)
+        logger.info(f"Confidence: %s", args.confidence)
+        logger.info(f"Empirical Analog Enabled: %s", not args.disable_empirical_analog)
+        logger.info(f"Analog Period: %s", args.analog_period)
+        logger.info(f"Analog Min Matches: %s", args.analog_min_matches)
+        logger.info(f"Inflection Analysis Enabled: %s", not args.disable_inflection_analysis)
+        logger.info(f"Inflection Horizon: %s", args.inflection_horizon)
+        logger.info(f"Inflection Threshold: %s", args.inflection_threshold)
         if args.seed is not None:
             logger.info(f"Seed: %s", args.seed)
 
@@ -162,14 +183,42 @@ def main() -> None:
 
     used_sheet_names: set[str] = set()
     summary_rows: list[dict[str, str]] = []
+    interval_frames: list[pd.DataFrame] = []
+    analog_frames: list[pd.DataFrame] = []
+    inflection_frames: list[pd.DataFrame] = []
+    inflection_signal_frames: list[pd.DataFrame] = []
     with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         for ticker, result in forecast_results.items():
             sheet_name = _unique_sheet_name(ticker, used_sheet_names)
             result.forecast.to_excel(writer, sheet_name=sheet_name, index=False)
+            if result.price_interval is not None:
+                interval_frame = result.price_interval.interval_table.copy()
+                interval_frame.insert(0, "Ticker", ticker)
+                interval_frames.append(interval_frame)
+                if (result.price_interval.analog_interval_table is not None and
+                        not result.price_interval.analog_interval_table.empty):
+                    analog_frame = result.price_interval.analog_interval_table.copy()
+                    analog_frame.insert(0, "Ticker", ticker)
+                    analog_frames.append(analog_frame)
+            if result.inflection_result is not None:
+                inflection_frame = result.inflection_result.inflection_table.copy()
+                inflection_frames.append(inflection_frame)
+                if not result.inflection_result.feature_table.empty:
+                    signal_frame = result.inflection_result.feature_table.copy()
+                    signal_frame.insert(0, "Ticker", ticker)
+                    inflection_signal_frames.append(signal_frame)
             summary_rows.append({"Ticker": ticker, "Summary": result.summary.strip()})
 
         if summary_rows:
             pd.DataFrame(summary_rows).to_excel(writer, sheet_name="Summaries", index=False)
+        if interval_frames:
+            pd.concat(interval_frames, ignore_index=True).to_excel(writer, sheet_name="PriceIntervals", index=False)
+        if analog_frames:
+            pd.concat(analog_frames, ignore_index=True).to_excel(writer, sheet_name="EmpiricalAnalogs", index=False)
+        if inflection_frames:
+            pd.concat(inflection_frames, ignore_index=True).to_excel(writer, sheet_name="InflectionRisk", index=False)
+        if inflection_signal_frames:
+            pd.concat(inflection_signal_frames, ignore_index=True).to_excel(writer, sheet_name="InflectionSignals", index=False)
 
     logger.info("Saved multi-ticker forecast results to %s", output_path)
 

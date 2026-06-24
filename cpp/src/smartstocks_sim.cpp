@@ -34,6 +34,8 @@ struct Config {
     std::size_t macd_short_window = 12;
     std::size_t macd_long_window = 26;
     std::size_t macd_signal_window = 9;
+    std::string simulation_mode = "standard";
+    bool output_simulated_prices = false;
     long long seed = -1;
 };
 
@@ -97,6 +99,9 @@ Config load_config(const std::string &path) {
             auto converted = static_cast<std::size_t>(std::stoll(value));
             return converted;
         };
+        auto to_bool = [&]() {
+            return value == "true" || value == "True" || value == "1";
+        };
         if (key == "num_simulations") {
             config.num_simulations = to_size();
         } else if (key == "sim_time") {
@@ -137,6 +142,10 @@ Config load_config(const std::string &path) {
             config.macd_long_window = std::max<std::size_t>(1, to_size());
         } else if (key == "macd_signal_window") {
             config.macd_signal_window = std::max<std::size_t>(1, to_size());
+        } else if (key == "simulation_mode") {
+            config.simulation_mode = value;
+        } else if (key == "output_simulated_prices") {
+            config.output_simulated_prices = to_bool();
         } else if (key == "seed") {
             config.seed = std::stoll(value);
         }
@@ -245,6 +254,8 @@ void run_simulations(std::size_t start,
                      const SimulationContext &ctx,
                      std::vector<double> &results,
                      std::mutex &write_mutex) {
+    (void)write_mutex;
+
     std::mt19937_64 rng;
     if (ctx.config.seed >= 0) {
         rng.seed(static_cast<std::mt19937_64::result_type>(ctx.config.seed) + start);
@@ -320,6 +331,33 @@ void run_simulations(std::size_t start,
     }
 }
 
+void run_log_return_interval_simulations(std::size_t start,
+                                         std::size_t end,
+                                         const SimulationContext &ctx,
+                                         std::vector<double> &results) {
+    std::mt19937_64 rng;
+    if (ctx.config.seed >= 0) {
+        rng.seed(static_cast<std::mt19937_64::result_type>(ctx.config.seed) + start);
+    } else {
+        std::random_device rd;
+        rng.seed(rd() + static_cast<unsigned>(start));
+    }
+
+    std::normal_distribution<double> log_return_dist(ctx.config.drift * ctx.dt,
+                                                     ctx.config.volatility * std::sqrt(ctx.dt));
+
+    const std::size_t intervals = ctx.total_intervals;
+    for (std::size_t sim = start; sim < end; ++sim) {
+        double price = ctx.config.initial_condition;
+        const std::size_t offset = sim * intervals;
+        for (std::size_t step = 0; step < intervals; ++step) {
+            const double future_log_return = log_return_dist(rng);
+            price *= std::exp(future_log_return);
+            results[offset + step] = price;
+        }
+    }
+}
+
 double interpolate_percentile(const std::vector<double> &sorted_values, double percentile) {
     if (sorted_values.empty()) {
         return std::numeric_limits<double>::quiet_NaN();
@@ -340,59 +378,79 @@ double interpolate_percentile(const std::vector<double> &sorted_values, double p
     return lower_value + fraction * (upper_value - lower_value);
 }
 
+void write_numeric(std::ofstream &output, double value) {
+    if (std::isfinite(value)) {
+        output << value;
+    } else {
+        output << "null";
+    }
+}
+
+void write_flat_array(std::ofstream &output, const std::vector<double> &values) {
+    output << "[";
+    for (std::size_t i = 0; i < values.size(); ++i) {
+        write_numeric(output, values[i]);
+        if (i + 1 != values.size()) {
+            output << ", ";
+        }
+    }
+    output << "]";
+}
+
+void write_matrix(std::ofstream &output,
+                  const std::vector<double> &values,
+                  std::size_t rows,
+                  std::size_t columns) {
+    output << "[";
+    for (std::size_t row = 0; row < rows; ++row) {
+        output << "[";
+        const std::size_t offset = row * columns;
+        for (std::size_t column = 0; column < columns; ++column) {
+            write_numeric(output, values[offset + column]);
+            if (column + 1 != columns) {
+                output << ", ";
+            }
+        }
+        output << "]";
+        if (row + 1 != rows) {
+            output << ", ";
+        }
+    }
+    output << "]";
+}
+
 void write_output(const std::string &path,
                   const std::vector<double> &means,
                   const std::vector<double> &stds,
                   const std::vector<double> &percentile_05,
-                  const std::vector<double> &percentile_95) {
+                  const std::vector<double> &percentile_95,
+                  const std::vector<double> *simulated_prices = nullptr,
+                  std::size_t simulation_rows = 0,
+                  std::size_t simulation_columns = 0) {
     std::ofstream output(path);
     if (!output.is_open()) {
         throw std::runtime_error("Unable to open output file: " + path);
     }
 
-    const auto write_numeric = [&output](double value) {
-        if (std::isfinite(value)) {
-            output << value;
-        } else {
-            output << "null";
-        }
-    };
-
     output << "{\n";
-    output << "  \"interval_means\": [";
-    for (std::size_t i = 0; i < means.size(); ++i) {
-        write_numeric(means[i]);
-        if (i + 1 != means.size()) {
-            output << ", ";
-        }
-    }
-    output << "],\n";
-    output << "  \"interval_stds\": [";
-    for (std::size_t i = 0; i < stds.size(); ++i) {
-        write_numeric(stds[i]);
-        if (i + 1 != stds.size()) {
-            output << ", ";
-        }
-    }
-    output << "],\n";
+    output << "  \"interval_means\": ";
+    write_flat_array(output, means);
+    output << ",\n";
+    output << "  \"interval_stds\": ";
+    write_flat_array(output, stds);
+    output << ",\n";
+    output << "  \"interval_p05\": ";
+    write_flat_array(output, percentile_05);
+    output << ",\n";
+    output << "  \"interval_p95\": ";
+    write_flat_array(output, percentile_95);
 
-    output << "  \"interval_p05\": [";
-    for (std::size_t i = 0; i < percentile_05.size(); ++i) {
-        write_numeric(percentile_05[i]);
-        if (i + 1 != percentile_05.size()) {
-            output << ", ";
-        }
+    if (simulated_prices != nullptr) {
+        output << ",\n";
+        output << "  \"simulated_prices\": ";
+        write_matrix(output, *simulated_prices, simulation_rows, simulation_columns);
     }
-    output << "],\n";
-
-    output << "  \"interval_p95\": [";
-    for (std::size_t i = 0; i < percentile_95.size(); ++i) {
-        write_numeric(percentile_95[i]);
-        if (i + 1 != percentile_95.size()) {
-            output << ", ";
-        }
-    }
-    output << "]\n";
+    output << "\n";
     output << "}\n";
 }
 
@@ -435,10 +493,15 @@ int main(int argc, char **argv) {
         const std::size_t remainder = config.num_simulations % threads_to_use;
 
         std::size_t start = 0;
+        const bool log_return_interval_mode = config.simulation_mode == "log_return_interval";
         for (std::size_t t = 0; t < threads_to_use; ++t) {
             std::size_t chunk = base_chunk + (t < remainder ? 1 : 0);
             std::size_t end = start + chunk;
-            workers.emplace_back(run_simulations, start, end, std::cref(ctx), std::ref(results), std::ref(write_mutex));
+            if (log_return_interval_mode) {
+                workers.emplace_back(run_log_return_interval_simulations, start, end, std::cref(ctx), std::ref(results));
+            } else {
+                workers.emplace_back(run_simulations, start, end, std::cref(ctx), std::ref(results), std::ref(write_mutex));
+            }
             start = end;
         }
 
@@ -482,7 +545,18 @@ int main(int argc, char **argv) {
             percentile_95[interval] = interpolate_percentile(workspace, 0.95);
         }
 
-        write_output(output_path, means, stds, percentile_05, percentile_95);
+        if (config.output_simulated_prices) {
+            write_output(output_path,
+                         means,
+                         stds,
+                         percentile_05,
+                         percentile_95,
+                         &results,
+                         config.num_simulations,
+                         total_intervals);
+        } else {
+            write_output(output_path, means, stds, percentile_05, percentile_95);
+        }
     } catch (const std::exception &ex) {
         std::cerr << "Error: " << ex.what() << std::endl;
         return 1;
