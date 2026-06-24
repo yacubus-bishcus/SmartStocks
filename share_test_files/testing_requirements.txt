@@ -1,0 +1,5 @@
+yfinance
+matplotlib
+scipy
+numpy
+PyWavelets>=1.5
